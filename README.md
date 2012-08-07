@@ -8,7 +8,7 @@ Java virtual machine. So far, we provide two modules:
   (www.cs.uu.nl/research/techreps/repo/CS-2004/2004-052.pd), by Daan Leijen 
   (Utretch University, 2001). The runtime is a Java rendition of the spec, with
   a couple of additions to handle ad-hoc polymorphism and to construct non-updatable
-  thunks, so enabling front ends to take advantage of update analysis. Experiments
+  thunks, thus enabling front ends to take advantage of update analysis. Experiments
   show that the performance improvements resulting from removing spurious updates 
   can be dramatic.
 * **The Bluejelly Assembler:** An implementation of a pure lazy assembly language,
@@ -23,7 +23,7 @@ on top of that).
 
 ## Development
 
-The project is distributed a a set of Eclipse projects under a common root. You can 
+The project is distributed as a set of Eclipse projects under a common root. You can 
 pull the repository, create an Eclipse workspace, and import the projects to that
 workspace using the "Import External Project" option. You need:
 
@@ -35,14 +35,14 @@ workspace using the "Import External Project" option. You need:
 I tried using sbt and Maven, but I was not satisfied with the results:
 
 * Due to unknown (for me!) class loader issues, sbt failed to execute the Bluejelly
- runtime test suite. Namely, calls to `ClassLoader.loadSystemClass` made by ObjectWeb
- `ClassReader` class were failing. In addition, I found sbt rather slow.
+ runtime test suite. Namely, calls to `ClassLoader.getSystemClassLoader().loadClass()` 
+  made by ObjectWeb `ClassReader` class were failing. In addition, I found sbt rather slow.
 * Maven was my next option. Unlike sbt it worked, but the scala compiler plugin is
- _horribly_ slow (taking +30 secs to compile the Assembler). Conversely, Eclipse
- compiles Scala code in a background process (mostly) in a Breeze.
-* I tried to use ny Maven project structure from Eclipse using m2e and m2eclipse-scala,
-  but without success (m2eclipse-scala just did not work). IntelliJ-IDEA worked fine on
-  the Maven project structure, but I did not like it --guess I am too used to Eclipse :(
+ _horribly_ slow (taking +30 secs to compile the whole Assembler). Conversely, Eclipse
+ compiles Scala code in a background process (mostly) in a breeze.
+* I tried to use my Maven project structure in Eclipse using m2e and m2eclipse-scala, but
+  without success (m2eclipse-scala just did not work). IntelliJ-IDEA worked fine on the
+  Maven project structure, but I did not like it --guess I am too used to Eclipse :(
 
 The downside of using Eclipse is that I loose the notion of repository. Hence, the 
 Bluejelly.Libs project providing the libraries used by the Runtime and the Assembler.
@@ -52,4 +52,12 @@ Bluejelly.Libs project providing the libraries used by the Runtime and the Assem
 I am using plain old Ant. Each project holding code includes a `build.xml` file either
 building a library or creating a distribution tarball. For deploying the Runtime or the
 Assembler, just run the default targets of the build scripts.
+
+## Examples
+
+The `samples` folder include three assembler files:
+
+1. `List.jas`: implentation of some classic functions on lists, such as `take` and `filter`
+2. `Fib.jas`: compute the fibonacci sequence as an infinite list, take the initial 100 elements.
+3. `Primes.jas`: compute the first 10000 primes using trail-division.
 
