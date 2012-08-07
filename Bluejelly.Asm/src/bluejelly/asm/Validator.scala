@@ -25,7 +25,7 @@ class ErrorItem(val what:String, val where:String, val msg:String) {
 class Validator(val m:Module) {
 
   import bluejelly.utils.State
-  import bluejelly.utils.States._
+  import bluejelly.utils.St._
   
   // State for collecting names and detecting duplicate declarations
   type E = Queue[ErrorItem]

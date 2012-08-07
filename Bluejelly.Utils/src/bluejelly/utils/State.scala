@@ -19,7 +19,7 @@ package bluejelly.utils
  * automatically by Scala's [[yield]] construction.
  */
 trait State[S,A] {  
-  import States._
+  import St._
   def apply(s:S):(A,S)
   def map[B](f:A => B):State[S,B] = state(this(_) match {
     case (a,s) => (f(a),s)
@@ -39,7 +39,7 @@ trait State[S,A] {
  * <li> [[upd]] mutate state
  * </ol>
  */
-object States {
+object St {
   def state[S,A](f:S => (A,S)) = new State[S,A] { def apply(errs:S) = f(errs) }
   def ret[S,A](a:A):State[S,A] = state(s => (a,s))
   def get[S]:State[S,S] = state(s => (s,s))
