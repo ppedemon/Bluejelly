@@ -1,0 +1,29 @@
+.module asm.Fail_1:
+
+.dict a: .end
+.dict s1: .end
+.dict s2: .end
+.dict s3: .end
+
+.dict d:
+  .super a
+  .method m
+  .specific s1 s2 s3
+.end
+
+.dict e: .method asm.Bogus.z .end
+
+.fun m: ret .end
+
+.fun wrong:
+  pushcont notHere
+  pushcode notThere
+  matchcon
+  .case 0: pushdict dd
+  .case 1: ret
+  .case 0: ret
+  .default: evalvar 0,what
+  .end
+.end
+
+.end

@@ -1,0 +1,397 @@
+
+#
+# Test module
+#
+
+.module asm.Test:
+
+.fun id[arity=1]:
+  stack 1
+  pushvar 0
+  slide 1,1
+  enter
+.end
+
+.fun const[arity=2]:
+  stack 1
+  pushvar 0
+  slide 1,2
+  enter
+.end
+
+# This one is the entry point
+.fun main:
+  stack 1
+  pushcode f
+  jmp ev
+.end
+
+.fun f:
+  stack 3
+  pushcont g
+  pushint 2
+  pushint 1
+  jmp const
+.end
+
+.fun g:
+  stack 2
+  pushcont h
+  pushstr "It works!"
+  jmp const
+.end
+
+.fun h:
+  stack 1
+  pushcode id
+  enter
+.end
+
+.fun ev[arity=1]:
+  stack 1
+  evalvar 0,ev$1
+.end
+
+.fun ev$1:
+  slide 1,1
+  enter
+.end
+
+.fun i: retint 42 .end
+.fun s: retstr "Hey!" .end
+.fun d: retdbl 3.14159 .end
+.fun t: retcon 0,0 .end
+
+.fun trycatch:
+  stack 1
+  pushcode handler
+  catch
+  jmp faulty
+.end
+
+.fun faulty:
+  stack 1
+  pushstr "error!"
+  raise
+.end
+
+.fun handler[arity=1]:
+  stack 1
+  pushcode id
+  enter
+.end
+
+.fun app:
+  stack 4
+  pushint 1
+  pushint 2
+  pushint 3
+  pushcode const
+  mkapp 3
+  jmp const
+.end
+
+.fun napp:
+  stack 3
+  pushint 1
+  pushint 2
+  pushcode const
+  mknapp 1
+  mknapp 2
+  jmp const
+.end
+
+.fun packapp:
+  stack 4
+  newapp
+  pushint 1
+  pushint 2
+  newnapp
+  pushcode const
+  packnapp 0,1 
+  packapp 0,3
+  enter
+.end
+
+.fun list:
+  stack 2
+  mkcon 0,0
+  pushint 3
+  mkcon 1,2
+  pushint 2
+  mkcon 1,2
+  pushint 1
+  retcon 1,2
+.end
+
+.fun add:
+  stack 4
+  pushint 1
+  pushint 2
+  pushcode bluejelly.Int.add
+  mkapp 3
+  pushint 3
+  pushint 4
+  pushcode bluejelly.Int.add
+  mkapp 3
+  jmp bluejelly.Int.mul
+.end
+
+.fun sub:
+  stack 2
+  pushint 4
+  pushint 1
+  jmp bluejelly.Int.sub
+.end
+
+.fun div:
+  stack 2
+  pushint 5
+  pushint 10
+  jmp bluejelly.Int.div
+.end
+
+.fun divByZero:
+  stack 2
+  pushcode divHandler
+  catch
+  pushint 0
+  pushint 10
+  jmp bluejelly.Int.div
+.end
+
+.fun divHandler[arity=1]:
+  stack 1
+  pushstr "You are not supposed to divide by zero"
+  slide 1,1
+  ret
+.end
+
+.fun rem:
+  stack 2
+  pushint 2
+  pushint 3
+  jmp bluejelly.Int.rem
+.end
+
+.fun remByZero:
+  stack 2
+  pushint 0
+  pushint 3
+  jmp bluejelly.Int.rem
+.end
+
+.fun neg:
+  stack 1
+  pushint 42
+  jmp bluejelly.Int.neg
+.end
+
+.fun not:
+  stack 1
+  pushint 0
+  jmp bluejelly.Int.not
+.end
+
+.fun or:
+  stack 2
+  pushint 7
+  pushint 0o10
+  jmp bluejelly.Int.or
+.end
+
+.fun and:
+  stack 2
+  pushint 07
+  pushint 0xA
+  jmp bluejelly.Int.and
+.end
+
+.fun xor:
+  stack 2
+  pushint 3
+  pushint 3
+  jmp bluejelly.Int.xor
+.end
+
+.fun shl:
+  stack 2
+  pushint 3
+  pushint 1
+  jmp bluejelly.Int.shl
+.end
+
+.fun shr:
+  stack 2
+  pushint 1
+  pushint -128
+  jmp bluejelly.Int.shr
+.end
+
+.fun lshr:
+  stack 2
+  pushint 1
+  pushint -1
+  jmp bluejelly.Int.lshr
+.end
+
+.fun eq:
+  stack 3
+  pushcode add
+  pushcode add
+  pushcode bluejelly.Int.eq
+  mkapp 3
+  enter
+.end
+
+.fun neq:
+  stack 3
+  pushcode add
+  pushcode lshr
+  pushcode bluejelly.Int.neq
+  mkapp 3
+  enter 
+.end
+
+.fun lt:
+  stack 3
+  pushcode add
+  pushcode lshr
+  pushcode bluejelly.Int.lt
+  mkapp 3
+  enter 
+.end
+
+.fun gt:
+  stack 3
+  pushcode add
+  pushcode lshr
+  pushcode bluejelly.Int.gt
+  mkapp 3
+  enter 
+.end
+
+.fun leq:
+  stack 3
+  pushcode add
+  pushcode add
+  pushcode bluejelly.Int.leq
+  mkapp 3
+  enter
+.end
+
+.fun geq:
+  stack 3
+  pushcode add
+  pushcode add
+  pushcode bluejelly.Int.geq
+  mkapp 3
+  enter
+.end
+
+.fun addd:
+  stack 4
+  pushdbl 3.14159
+  pushdbl 2.71828
+  pushcode bluejelly.Double.add
+  mkapp 3
+  pushdbl 1.61803
+  pushdbl 0.110001
+  pushcode bluejelly.Double.add
+  mkapp 3
+  jmp bluejelly.Double.mul
+.end
+
+.fun subd:
+  stack 2
+  pushdbl 4.56
+  pushdbl 3.18
+  jmp bluejelly.Double.sub
+.end
+
+.fun divd:
+  stack 2
+  pushdbl 4.56
+  pushdbl 2.28
+  jmp bluejelly.Double.div
+.end
+
+.fun divinf:
+  stack 2
+  pushdbl 0
+  pushdbl 4.56
+  jmp bluejelly.Double.div
+.end
+
+.fun remd:
+  stack 3
+  pushdbl 3.14159
+  pushcode addd
+  pushcode bluejelly.Double.rem
+  mkapp 3
+  jmp bluejelly.Double.neg
+.end
+
+.fun eqd:
+  stack 3
+  pushcode addd
+  pushcode addd
+  pushcode bluejelly.Double.eq
+  mkapp 3
+  enter
+.end
+
+.fun neqd:
+  stack 3
+  pushcode addd
+  pushdbl 0.0
+  pushcode bluejelly.Double.neq
+  mkapp 3
+  enter 
+.end
+
+.fun ltd:
+  stack 3
+  pushcode addd
+  pushdbl 0.0
+  pushcode bluejelly.Double.lt
+  mkapp 3
+  enter 
+.end
+
+.fun gtd:
+  stack 3
+  pushcode addd
+  pushdbl 0.0
+  pushcode bluejelly.Double.gt
+  mkapp 3
+  enter 
+.end
+
+.fun leqd:
+  stack 3
+  pushcode addd
+  pushcode addd
+  pushcode bluejelly.Double.leq
+  mkapp 3
+  enter
+.end
+
+.fun geqd:
+  stack 3
+  pushcode addd
+  pushcode addd
+  pushcode bluejelly.Double.geq
+  mkapp 3
+  enter
+.end
+
+# Little knot
+.fun ones:
+  stack 2
+  pushcode ones
+  pushint 1
+  retcon 1,2
+.end
+
+.end # End of module! Don't forget this one

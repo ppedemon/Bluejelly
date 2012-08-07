@@ -1,0 +1,53 @@
+.module asm.MatchStr:
+
+.fun m[matcher]:
+  matchstr
+  .case "a": stack 1 pushstr "aa" ret
+  #.default: slide 0,1 pushstr "forro!" ret
+  .end
+.end
+
+.fun match:
+  stack 1
+  pushcont m
+  retstr "x"
+.end
+
+.fun complex[matcher]:
+  matchstr
+  .case "hola": stack 1 retstr "a"
+  .case "a": stack 1 retstr "b"
+  .case "todos!": stack 1 retstr "c"
+  .default: slide 0,1 retstr "\"\u594f\nHello\ncrazy\nworld\""
+  .end
+.end
+
+.fun matchComplex:
+  stack 1
+  pushcode handler
+  catch
+  pushcont complex
+  retstr "xxxx"
+.end
+
+.fun handler[arity=1]:
+  stack 1
+  slide 0,1
+  retstr "wrong option!"
+.end
+
+.fun matchChr[matcher]:
+  matchchr
+  .case 'a' : stack 1 pushchr '\u58ff' ret
+  .case '\n': stack 1 retchr '\n' 
+  .end
+.end
+
+.fun matchc:
+  stack 1
+  pushcont matchChr
+  pushchr '\141'
+  ret
+.end
+
+.end

@@ -1,0 +1,20 @@
+<project name="Bluejelly.Runtime" default="lib.jar" basedir=".">
+
+	<property name="bindir" location="${basedir}/bin"/>
+	<property name="libdir" location="${basedir}/lib"/>
+	<property name="version" value="1.0"/>
+	
+	<!-- Generate this project's jar -->
+	<target name="lib.jar" depends="lib.clean">
+	    <jar destfile="${libdir}/bluejelly.utils-${version}.jar" 
+	    	basedir="${bindir}"/>
+	</target>
+
+	<!-- Clean up stuff before generating code -->
+	<target name="lib.clean">
+		<delete>
+			<fileset dir="${libdir}" includes="**/*.jar"/>
+		</delete>
+	</target>
+
+</project>

@@ -1,0 +1,91 @@
+.module asm.Poly:
+
+# Let's play with dictionaries and polymorphism!
+
+.dict Eq$Int: 
+  .method bluejelly.Int.eq
+  .method bluejelly.Int.neq
+.end
+
+.dict Eq$Dbl:
+  .method bluejelly.Double.eq
+  .method bluejelly.Double.neq
+.end
+
+.dict X$Int: .super Eq$Int .end
+
+.dict Eq$Con:
+  .method eqCon
+  .specific Eq$Int
+.end
+
+.fun eqCon[arity=3]:
+  stack 3
+  pushvar 2
+  pushvar 2
+  pushvar 2
+  getspec 0
+  getmethod 0
+  slide 3,3
+  enter
+.end
+
+.fun polyEq[arity=3]:
+  stack 3
+  pushvar 2
+  pushvar 2
+  pushvar 2
+  getmethod 0
+  slide 3,3
+  enter
+.end
+
+.fun testPoly:
+  stack 5
+  
+  # Closure for polyEq with 2 ints
+  pushint 0
+  pushint 1
+  pushdict Eq$Int
+  pushcode polyEq
+  mkapp 4
+  
+  # Closure for polyEq with 2 doubles
+  pushdbl 3.14159
+  pushvar 0
+  pushdict Eq$Dbl
+  pushcode polyEq
+  mkapp 4
+  
+  # Return a pair with the two closures
+  retcon 0,2
+.end
+
+.fun testSuper:
+  stack 3
+  pushint 8
+  pushint 0o10
+  pushdict X$Int
+  getsuper 0
+  jmp polyEq
+.end
+
+.fun testSpec:
+  stack 3
+  pushint 2
+  pushint 2
+  pushdict Eq$Con
+  jmp eqCon
+.end
+
+.fun testDirect:
+  pushint 1
+  pushint 2
+  jmpmethod Eq$Int,0
+.end
+
+# Let's try repeated names
+.dict d: .end
+.fun d: ret .end
+
+.end

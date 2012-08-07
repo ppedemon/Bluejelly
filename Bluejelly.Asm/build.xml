@@ -1,0 +1,66 @@
+<project name="Bluejelly.Runtime" default="dist" basedir=".">
+
+	<property name="bindir" location="${basedir}/bin"/>
+	<property name="libdir" location="${basedir}/lib"/>
+	<property name="distdir" location="${basedir}/dist"/>
+	<property name="version" value="1.0"/>
+	<property name="appname" value="bas"/>
+	
+	<!-- Dependencies -->
+    <property name="bluejelly.libs" location="${basedir}/../Bluejelly.Libs"/>
+	<property name="bluejelly.utils" location="${basedir}/../Bluejelly.Utils"/>
+	
+	<!-- Generate the bluejelly assembler distribution -->
+	<target name="dist" depends="dist.clean,dist.jar">
+        <property name="prefix" value="bas-${version}"/>
+		<replaceregexp file="${basedir}/bas.sh" 
+        	match="\$\{version\}"
+            replace="${version}"
+            flags="g"/>
+        <replaceregexp file="${basedir}/bas.sh" 
+            match="\$\{appname\}"
+            replace="${appname}"
+            flags="g"/>
+		<tar destfile="${distdir}/bas.tar">
+        	<tarfileset dir="${distdir}" 
+        		includes="bas-${version}.jar" prefix="${prefix}/lib"/>
+        	<tarfileset dir="${libdir}" 
+        		includes="**/*.jar" prefix="${prefix}/lib"/>
+            <tarfileset dir="${bluejelly.libs}/lib" prefix="${prefix}/lib">
+			    <include name="asm-all-3.2.jar"/>
+                <include name="scala-library.jar"/>
+            </tarfileset>
+			<tarfileset dir="${bluejelly.utils}/lib" 
+				includes="**/*.jar" prefix="${prefix}/lib"/>
+        	<tarfileset dir="${basedir}" 
+        		includes="bas.sh" filemode="744" prefix="${prefix}"/>
+        </tar>
+		<gzip destfile="${distdir}/bas.tar.gz" src="${distdir}/bas.tar"/>
+        <delete>
+            <fileset dir="${distdir}" includes="**/*.jar"/>
+        	<fileset dir="${distdir}" includes="**/*.tar"/>
+        </delete>
+	</target>
+	
+	<!-- Generate the runtime jar -->
+	<target name="dist.jar" depends="deps.jar">
+	    <jar destfile="${distdir}/bas-${version}.jar" 
+	    	basedir="${bindir}" 
+	    	excludes="**/test/**">
+	    </jar>
+	</target>
+	
+	<!-- Process dependencies -->
+	<target name="deps.jar">
+	    <ant dir="${bluejelly.utils}" inheritall="no"/>
+	</target>
+	
+	<!-- Clean up stuff before generating code -->
+	<target name="dist.clean">
+		<delete>
+			<fileset dir="${distdir}" includes="**/*.jar"/>
+			<fileset dir="${distdir}" includes="**/*.tar.gz"/>
+		</delete>
+	</target>
+
+</project>
