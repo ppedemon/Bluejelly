@@ -6,5 +6,5 @@ package bluejelly.runtime;
  * 
  * @author ppedemon
  */
-public interface Module {	
+public interface Module {    
 }

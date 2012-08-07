@@ -29,110 +29,110 @@ import bluejelly.runtime.Module;
  */
 public class Caf extends Updatable implements Executable {
 
-	// Module providing the CAF
-	protected final Module module;
-	
-	// CAF name
-	private final String functionName;
-	
-	// Whether this CAF is used as a continuation for pattern
-	// matching over a type constructor on top of the stack
-	private boolean matcher;
-	
-	/**
-	 * Construct an instance representing a CAF named 
-	 * <code>functionName</code>, declared in module<code>module</code>.
-	 * 
-	 * @param module          module declaring the CAF
-	 * @param functionName    CAF name
-	 */
-	public Caf(Module module, String functionName) {
-		this.module = module;
-		this.functionName = functionName;
-	}
-	
-	/* (non-Javadoc)
-	 * @see org.bluejelly.nodes.Executable#getArity()
-	 */
-	@Override
-	public int getArity() {
-		return 0;
-	}
+    // Module providing the CAF
+    protected final Module module;
+    
+    // CAF name
+    private final String functionName;
+    
+    // Whether this CAF is used as a continuation for pattern
+    // matching over a type constructor on top of the stack
+    private boolean matcher;
+    
+    /**
+     * Construct an instance representing a CAF named 
+     * <code>functionName</code>, declared in module<code>module</code>.
+     * 
+     * @param module          module declaring the CAF
+     * @param functionName    CAF name
+     */
+    public Caf(Module module, String functionName) {
+        this.module = module;
+        this.functionName = functionName;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.bluejelly.nodes.Executable#getArity()
+     */
+    @Override
+    public int getArity() {
+        return 0;
+    }
 
-	/* (non-Javadoc)
-	 * @see org.bluejelly.nodes.Executable#getModule()
-	 */
-	@Override
-	public Module getModule() {
-		return this.module;
-	}
+    /* (non-Javadoc)
+     * @see org.bluejelly.nodes.Executable#getModule()
+     */
+    @Override
+    public Module getModule() {
+        return this.module;
+    }
 
-	/* (non-Javadoc)
-	 * @see org.bluejelly.nodes.Executable#getFunctionName()
-	 */
-	@Override
-	public String getFunctionName() {
-		return this.functionName;
-	}
+    /* (non-Javadoc)
+     * @see org.bluejelly.nodes.Executable#getFunctionName()
+     */
+    @Override
+    public String getFunctionName() {
+        return this.functionName;
+    }
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.bluejelly.nodes.Executable#isTyconMatcher()
-	 */
-	@Override
-	public boolean isMatcher() {
-		return this.matcher;
-	}
+    /*
+     * (non-Javadoc)
+     * @see org.bluejelly.nodes.Executable#isTyconMatcher()
+     */
+    @Override
+    public boolean isMatcher() {
+        return this.matcher;
+    }
 
-	/**
-	 * Mark this CAF as a continuation that does pattern matching 
-	 * over a type constructor on top of the stack. Knowing this
-	 * allows us to implement the &quot;return in registers&quot; 
-	 * convention.
-	 */
-	public void markAsMatcher() {
-		this.matcher = true;
-	}
-	
-	/* (non-Javadoc)
-	 * @see org.bluejelly.nodes.Executable#fastEnter(bluejelly.runtime.ExecutionContext)
-	 */
-	@Override
-	public void fastEnter(ExecutionContext ctx) {
-		/*
-		 * As with Code nodes, subclasses will override this method
-		 * with a call to this.module.<functionName>(ctx). The real
-		 * works is done here.
-		 */
-	}
+    /**
+     * Mark this CAF as a continuation that does pattern matching 
+     * over a type constructor on top of the stack. Knowing this
+     * allows us to implement the &quot;return in registers&quot; 
+     * convention.
+     */
+    public void markAsMatcher() {
+        this.matcher = true;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.bluejelly.nodes.Executable#fastEnter(bluejelly.runtime.ExecutionContext)
+     */
+    @Override
+    public void fastEnter(ExecutionContext ctx) {
+        /*
+         * As with Code nodes, subclasses will override this method
+         * with a call to this.module.<functionName>(ctx). The real
+         * works is done here.
+         */
+    }
 
-	/* (non-Javadoc)
-	 * @see org.bluejelly.nodes.Updatable#reduce(bluejelly.runtime.ExecutionContext)
-	 */
-	@Override
-	public void reduce(ExecutionContext ctx) {
-		// Just pop this node from the stack and execute CAF's code
-		ctx.s[ctx.sp--] = null;
-		this.fastEnter(ctx);
-	}
+    /* (non-Javadoc)
+     * @see org.bluejelly.nodes.Updatable#reduce(bluejelly.runtime.ExecutionContext)
+     */
+    @Override
+    public void reduce(ExecutionContext ctx) {
+        // Just pop this node from the stack and execute CAF's code
+        ctx.s[ctx.sp--] = null;
+        this.fastEnter(ctx);
+    }
 
-	/*
-	 * (non-Javadoc)
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString() {
-		//if (this.isUpdated()) {
-		//	return this.getInd().toString();
-		//} else {
-			return new StringBuffer()
-			.append("*<")
-			.append(this.module.getClass().getName())
-			.append(':')
-			.append(this.functionName)
-			.append('>')
-			.toString();
-		//}
-	}
+    /*
+     * (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        //if (this.isUpdated()) {
+        //    return this.getInd().toString();
+        //} else {
+            return new StringBuffer()
+            .append("*<")
+            .append(this.module.getClass().getName())
+            .append(':')
+            .append(this.functionName)
+            .append('>')
+            .toString();
+        //}
+    }
 
 }

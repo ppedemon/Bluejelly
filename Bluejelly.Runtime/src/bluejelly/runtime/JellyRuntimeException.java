@@ -10,21 +10,21 @@ package bluejelly.runtime;
  */
 public class JellyRuntimeException extends RuntimeException {
 
-	private static final long serialVersionUID = 5320923491329464413L;
+    private static final long serialVersionUID = 5320923491329464413L;
 
-	public JellyRuntimeException() {
-	}
+    public JellyRuntimeException() {
+    }
 
-	public JellyRuntimeException(String message) {
-		super(message);
-	}
+    public JellyRuntimeException(String message) {
+        super(message);
+    }
 
-	public JellyRuntimeException(Throwable cause) {
-		super(cause);
-	}
+    public JellyRuntimeException(Throwable cause) {
+        super(cause);
+    }
 
-	public JellyRuntimeException(String message, Throwable cause) {
-		super(message, cause);
-	}
+    public JellyRuntimeException(String message, Throwable cause) {
+        super(message, cause);
+    }
 
 }

@@ -9,11 +9,11 @@ import bluejelly.runtime.ExecutionContext;
  * @author ppedemon
  */
 public interface Node {
-	
-	/**
-	 * Enter this node, evaluating it to normal form.
-	 * @param ctx    {@link ExecutionContext} where this node is executing
-	 */
-	void enter(ExecutionContext ctx);
-	
+    
+    /**
+     * Enter this node, evaluating it to normal form.
+     * @param ctx    {@link ExecutionContext} where this node is executing
+     */
+    void enter(ExecutionContext ctx);
+    
 }

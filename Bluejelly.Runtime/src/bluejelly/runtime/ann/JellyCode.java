@@ -15,6 +15,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface JellyCode {
-	int arity() default 0;
-	boolean matcher() default false;
+    int arity() default 0;
+    boolean matcher() default false;
 }
