@@ -57,7 +57,7 @@ Assembler, just run the default targets of the build scripts.
 
 The `samples` folder include three assembler files:
 
-1. `List.jas`: implentation of some classic functions on lists, such as `take` and `filter`
-2. `Fib.jas`: compute the fibonacci sequence as an infinite list, take the initial 100 elements.
+1. `List.jas`: implementation of some classic functions on lists, such as `take` and `filter`
+2. `Fib.jas`: compute the Fibonacci sequence as an infinite list, take the first 100 elements.
 3. `Primes.jas`: compute the first 10000 primes using trail-division.
 
