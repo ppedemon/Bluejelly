@@ -1,7 +1,6 @@
 <project name="Bluejelly.Runtime" default="dist" basedir=".">
 
 	<property name="bindir" location="${basedir}/bin"/>
-	<property name="libdir" location="${basedir}/lib"/>
 	<property name="distdir" location="${basedir}/dist"/>
 	<property name="version" value="1.0"/>
 	<property name="appname" value="bas"/>
@@ -21,11 +20,10 @@
             match="\$\{appname\}"
             replace="${appname}"
             flags="g"/>
+		<mkdir dir="${distdir}"/>
 		<tar destfile="${distdir}/bas.tar">
         	<tarfileset dir="${distdir}" 
         		includes="bas-${version}.jar" prefix="${prefix}/lib"/>
-        	<tarfileset dir="${libdir}" 
-        		includes="**/*.jar" prefix="${prefix}/lib"/>
             <tarfileset dir="${bluejelly.libs}/lib" prefix="${prefix}/lib">
 			    <include name="asm-all-3.2.jar"/>
                 <include name="scala-library.jar"/>
@@ -57,10 +55,30 @@
 	
 	<!-- Clean up stuff before generating code -->
 	<target name="dist.clean">
-		<delete>
+		<delete quiet="true">
 			<fileset dir="${distdir}" includes="**/*.jar"/>
 			<fileset dir="${distdir}" includes="**/*.tar.gz"/>
 		</delete>
 	</target>
 
+	<!-- Run tests (separate target, not tied to build). You MUST run this 
+	     in the same JVM as the workspace, otherwise it wont find the junit 
+	     jars (See External Tools Configurations...)
+	-->
+	<target name="asm.tests">
+		<junit printsummary="on" fork="true" dir="${basedir}">
+			<classpath>
+				<fileset dir="${eclipse.home}/plugins">
+					<include name="**/junit*.jar"/>
+					<include name="**/*hamcrest*.jar"/>
+				</fileset>
+				<fileset dir="${bluejelly.libs}/lib/" includes="**/*.jar"/>
+				<fileset dir="${bluejelly.utils}/lib/" includes="**/*.jar"/>
+				<pathelement path="${bindir}"/>
+			</classpath>
+			<formatter type="plain" usefile="false"/>
+			<test name="bluejelly.asm.test.AsmTest"/>
+		</junit>
+	</target>
+	
 </project>
