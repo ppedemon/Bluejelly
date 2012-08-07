@@ -1,3 +1,4 @@
+.cache
 bin/
 dist/
 lib/
