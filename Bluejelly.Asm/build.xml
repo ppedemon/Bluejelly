@@ -33,7 +33,10 @@
                 includes="**/*.jar" prefix="${prefix}/lib"/>
             <tarfileset dir="${basedir}" 
                 includes="bas.sh" filemode="744" prefix="${prefix}"/>
-        	<tarfileset dir="${basedir}/.." prefix="${prefix}" includes="LICENSE"/>
+        	<tarfileset dir="${basedir}/.." prefix="${prefix}">
+        	   <include name="LICENSE"/>
+        	   <include name="NOTICE"/>
+        	</tarfileset>
         </tar>
         <gzip destfile="${distdir}/bas.tar.gz" src="${distdir}/bas.tar"/>
         <delete>
