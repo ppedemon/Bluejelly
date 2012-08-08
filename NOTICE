@@ -4,11 +4,8 @@ its binary distribution:
  - ObjectWeb ASM. Copryright 2000-2011 INRIA, France Telecom
  - Scala library. Copyright 2002-2012 EPFL, Lausanne
 
-In addition, it uses for testing purposes only Scalacheck, Copyright 
-2009-2012 Artima Inc. 
-
 Since we are purposedly not relying on Maven nor sbt, we are distributing 
-the three aforementioned libraries in the Bluejelly source code. The file
+the two aforementioned libraries in the Bluejelly source code. The file
 Bluejelly.Libs/lib/3rd-party-licences contains the corresponding licenses 
-and disclaimers for each library.
+and disclaimers for the two libraries.
 

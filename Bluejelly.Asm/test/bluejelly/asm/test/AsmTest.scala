@@ -7,44 +7,13 @@
 
 package bluejelly.asm.test
 
-import org.junit.runner.RunWith
-import org.scalatest.matchers.MatchResult
-import org.scalatest.matchers.Matcher
-import org.scalatest.matchers.MustMatchers
-import org.scalatest.Spec
-import org.scalatest.junit.JUnitRunner
+import java.io.File
+
+import scala.Array.canBuildFrom
+
 import bluejelly.asm.AsmConfig
 import bluejelly.asm.Assembler
-import java.io.File
-import org.scalatest.FunSpec
-
-/**
- * Custom matchers here.
- */
-trait CustomMatchers {
-
-  // Simple &quot;file exists?&quot; matcher.
-  class FileExistsMatcher extends Matcher[java.io.File] {
-    def apply(f:java.io.File) = {
-      val fileOrDir = if (f.isFile) "file" else "directory"
-      val failureMessageSuffix = 
-        fileOrDir + " named " + f.getName + " did not exist"
-      val negatedFailureMessageSuffix = 
-        fileOrDir + " named " + f.getName + " existed"
-      MatchResult(
-        f.exists,
-        "The " + failureMessageSuffix,
-        "The " + negatedFailureMessageSuffix,
-        "the " + failureMessageSuffix,
-        "the " + negatedFailureMessageSuffix
-      )
-    }
-  }
-  val exist = new FileExistsMatcher
-  
-}
-
-object CustomMatchers extends CustomMatchers
+import junit.framework.TestCase
 
 /**
  * Very simple testing of the Bluejelly asembler. Ideally, we should
@@ -60,18 +29,16 @@ object CustomMatchers extends CustomMatchers
  * 
  * @author ppedemon
  */
-@RunWith(classOf[JUnitRunner])
-class AsmTest extends FunSpec with MustMatchers with CustomMatchers { 
-   
-  describe("The assembler") {
-    it("generates class files from a valid set of modules") {
-      assemble(validMods)
-      new File("mods/asm").listFiles() foreach (_ must exist)
-    }
-    it("does not generate classes for invalid modules") {
+class AsmTest extends TestCase {
+  
+  def testValidModules() {
+    assemble(validMods)
+    new File("mods/asm").listFiles foreach (_ exists)
+  }
+  
+  def testInvalidModules() {
       assemble(invalidMods)
-      invalidMods map classFile map (_ must not (exist))
-    }
+      invalidMods map classFile forall (f => !(f exists))    
   }
   
   private def modsWhere(p:String => Boolean):Array[String] = {
@@ -90,4 +57,5 @@ class AsmTest extends FunSpec with MustMatchers with CustomMatchers {
     cfg.outDir = "mods"
     modules foreach (Assembler.assemble(cfg,_))
   }
+  
 }

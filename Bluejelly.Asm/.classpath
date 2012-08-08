@@ -7,6 +7,5 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/Bluejelly.Utils"/>
 	<classpathentry kind="lib" path="/Bluejelly.Libs/lib/asm-all-3.2.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
-	<classpathentry kind="lib" path="/Bluejelly.Libs/lib/scalatest-1.7.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
