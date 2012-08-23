@@ -30,11 +30,10 @@ class Validator(val m:Module) {
   // State for collecting names and detecting duplicate declarations
   type E = Queue[ErrorItem]
   
-  // Simple state for validating dictionaries and instructions:
+  // Simple state for validating a module:
   //  E: error queue where we will accumulate errors as we traverse a module
-  //  1st Set[String]: namespace for declared dictionaries
-  //  2nd Set[String]: namespace for declared functions
-  type T = (E,Set[String],Set[String])
+  //  Set[String]: namespace for declared functions
+  type T = (E,Set[String])
   
   // Nop over the T state
   private def nop:State[T,Unit] = upd(identity:T=>T)
@@ -53,16 +52,11 @@ class Validator(val m:Module) {
     } yield (seen + n)
   }
   
-  // Collect dictionary and function names
-  private def collect():State[E,(Set[String],Set[String])] = {
-     def dictDup(s:String)(e:E) = 
-       new ErrorItem("module", m.name, "duplicated dictionary " + quote(s)) +: e
+  // Collect function names
+  private def collect():State[E,Set[String]] = {
      def funDup(s:String)(e:E) = 
        new ErrorItem("module", m.name, "duplicated function " + quote(s)) +: e
-     for {
-       fs <- collectNames(m.funcs.map(_.name), funDup)
-       ds <- collectNames(m.dicts.map(_.name), dictDup)
-     } yield (ds,fs)
+     collectNames(m.funcs.map(_.name), funDup)
   }
 
   /*
@@ -74,73 +68,24 @@ class Validator(val m:Module) {
     if (ix == -1) (m.name,s) else (s substring (0,ix), s substring (ix+1))
   } 
   
-  // Is the given name a valid dictionary reference?
-  private def validateDictRef(d:String):State[T,Boolean] = {
+  // Is the given name a valid function reference?
+  private def validateFunRef(d:String):State[T,Boolean] = {
     val (q,id) = unqual(d)
     if (q != m.name) ret(true) else for {st <- get} yield (st._2 contains id)
   }
 
-  // Is the given name a valid function reference?
-  private def validateFunRef(d:String):State[T,Boolean] = {
-    val (q,id) = unqual(d)
-    if (q != m.name) ret(true) else for {st <- get} yield (st._3 contains id)
-  }
-
-  // Handle an invalid reference to a method or a 
-  // dictionary in the dictionary named [dictName]
-  private def invalidRefInDict(
-      dictName:String, 
-      what:String, 
-      refName:String):State[T,Unit] = {
-    val msg = "invalid %s reference `%s'" format (what,refName)
-    val item = new ErrorItem("dictionary", dictName, msg)
-    upd {case (e,ds,fs) => (item +: e,ds,fs)}
-  }
-
-  // Handle an invalid reference to a function or 
-  // a dictionary in the function named [funName]
+  // Handle an invalid reference to a function in the function named [funName]
   private def invalidRefInFun(
       funName:String, 
       what:String, 
       refName:String):State[T,Unit] = {
     val msg = "invalid %s reference `%s'" format (what,refName)
     val item = new ErrorItem("function", funName, msg)
-    upd {case (e,ds,fs) => (item +: e,ds,fs)}    
+    upd {case (e,fs) => (item +: e,fs)}    
   }
-  
-  // Is some dictionary component in a dictionary named [dictName] valid? 
-  private def validateDictComponent(
-      dictName:String,
-      what:String,
-      ns:List[String],
-      v:String => State[T,Boolean]):State[T,Boolean] = ns match {
-    case List() => ret(true)
-    case n::ns  => for {
-      restOk <- validateDictComponent(dictName,what,ns,v)
-      thisOk <- v(n)
-      _ <- (if (thisOk) nop else invalidRefInDict(dictName,what,n))
-    } yield (thisOk && restOk)
-  }
-  
-  // Is the given dictionary valid?
-  private def validateDict(d:Dictionary):State[T,Boolean] = {
-    for {
-      specsOk   <- validateDictComponent(d.name, "specific", d.specifics, validateDictRef)
-      methodsOk <- validateDictComponent(d.name, "method", d.methods, validateFunRef)
-      supersOk  <- validateDictComponent(d.name, "super", d.supers, validateDictRef)
-    } yield (supersOk && methodsOk && specsOk)
-  }
-  
-  // Validate all dictionaries in a module
-  private def validateDicts(ds:List[Dictionary]):State[T,Boolean] = ds match {
-    case List() => ret(true)
-    case d::ds  => for {
-      restOk <- validateDicts(ds)
-      thisOk <- validateDict(d)
-    } yield (thisOk && restOk)
-  }
-  
-  // Validate the reference [refName] found inside function [funName]
+    
+  // Validate the reference [refName] found in an instruction 
+  // inside function [funName] definition
   private def validateInstrRef(
       funName:String, 
       what:String, 
@@ -161,10 +106,6 @@ class Validator(val m:Module) {
       => validateInstrRef(funName, "function", funId, validateFunRef)
     case PushCont(funId)
       => validateInstrRef(funName, "function", funId, validateFunRef)
-    case PushDict(dictId)
-      => validateInstrRef(funName, "dictionary", dictId, validateDictRef)
-    case JumpMethod(dictId,_) 
-      => validateInstrRef(funName, "dictionary", dictId, validateDictRef)
     case MatchCon(alts,mdef)
       => validateMatch(funName, alts, mdef)
     case MatchInt(alts,mdef)
@@ -183,7 +124,7 @@ class Validator(val m:Module) {
       mdef:Option[Block]):State[T,Boolean] = {
     if (repeatedAlts(alts)) {
       val item = new ErrorItem("function", where, "repeated values in case alternatives")
-      for {_ <- upd {s:T => (item +: s._1,s._2,s._3)}} yield false
+      for {_ <- upd {s:T => (item +: s._1,s._2)}} yield false
     } else {
       for {
         defltOk <- validateBlock(where, mdef map (_.is) getOrElse List())
@@ -247,12 +188,11 @@ class Validator(val m:Module) {
    * succeeded, and a queue of error items (empty on successful validation)
    */
   def validate():(Boolean,Queue[ErrorItem]) = {
-    val ((ds,fs),e) = collect()(Queue())
+    val (fs,e) = collect()(Queue())
     if (!(e isEmpty)) return (false,e)
     
-    val st = (e,ds,fs)
-    val (ok1,(e1,_,_)) = validateDicts(m.dicts)(st)    
-    val (ok2,(e2,_,_)) = validateFuns(m.funcs)(st)
-    return (ok1 && ok2, e1 ++ e2)
+    val st = (e,fs)
+    val (ok,(e1,_)) = validateFuns(m.funcs)(st)
+    return (ok, e1)
   }
 }

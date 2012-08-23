@@ -1,91 +1,327 @@
 .module asm.Poly:
 
-# Let's play with dictionaries and polymorphism!
+#
+# Auxliary booleans: not and (&&)
+#
 
-.dict Eq$Int: 
-  .method bluejelly.Int.eq
-  .method bluejelly.Int.neq
+.fun not[arity=1]:
+  stack 1
+  evalvar 0, not$1 
 .end
 
-.dict Eq$Dbl:
-  .method bluejelly.Double.eq
-  .method bluejelly.Double.neq
+.fun not$1[matcher]:
+  matchcon
+  .case 0:
+    slide 0,1
+    retcon 1,0
+  .case 1:
+    slide 0,1
+    retcon 0,0
+  .end
 .end
 
-.dict X$Int: .super Eq$Int .end
-
-.dict Eq$Con:
-  .method eqCon
-  .specific Eq$Int
+.fun and[arity=2]:
+  stack 2
+  evalvar 1, and$1 
 .end
 
-.fun eqCon[arity=3]:
-  stack 3
-  pushvar 2
-  pushvar 2
-  pushvar 2
-  getspec 0
-  getmethod 0
-  slide 3,3
-  enter
+.fun and$1[matcher]:
+  matchcon
+  .case 0:
+    slide 0,2
+    retcon 0,0
+  .case 1:
+    stack 1
+    evalvar 0,and$2
+  .end
 .end
 
-.fun polyEq[arity=3]:
-  stack 3
-  pushvar 2
-  pushvar 2
-  pushvar 2
-  getmethod 0
-  slide 3,3
-  enter
+.fun and$2[matcher]:
+  matchcon
+  .case 0:
+    slide 0,2
+    retcon 0,0
+  .case 1:
+    slide 0,2
+    retcon 1,0
+  .end
 .end
 
-.fun testPoly:
-  stack 5
-  
-  # Closure for polyEq with 2 ints
-  pushint 0
-  pushint 1
-  pushdict Eq$Int
-  pushcode polyEq
-  mkapp 4
-  
-  # Closure for polyEq with 2 doubles
-  pushdbl 3.14159
-  pushvar 0
-  pushdict Eq$Dbl
-  pushcode polyEq
-  mkapp 4
-  
-  # Return a pair with the two closures
+#
+# class Eq a where 
+#   eq :: a -> a -> Bool
+#   ne :: a -> a -> Bool
+#   ne x y = not (x == y)
+#
+# This generates two accessors (eq and ne) and a definition for the default ne
+#
+
+.fun eq[arity=3]:
+  stack 1
+  evalvar 0,eq$1
+.end
+
+.fun eq$1[matcher]:
+  matchcon 
+  .case 0: 
+    slide 1,2 
+    enter 
+  .end
+.end
+
+.fun ne[arity=3]:
+  stack 1
+  evalvar 0,ne$1
+.end
+
+.fun ne$1[matcher]:
+  matchcon
+  .case 0:
+    stack 1
+    pushvar 1
+    slide 1,3
+    enter
+  .end
+.end
+
+.fun ne$def[arity=3]:
+  stack 4
+  pushvar 2
+  pushvar 2
+  pushvar 2
+  pushcode eq
+  mknapp 4
+  slide 1,3
+  jmp not
+.end
+
+#
+# instance Eq Int where
+#   eq = bluejelly.Int.eq
+#   ne = bluejelly.Int.neq
+#
+# This generates code to build a dictionary (namely, a tycon)
+#
+
+.fun $dEqInt:
+  stack 2
+  pushcode bluejelly.Int.neq
+  pushcode bluejelly.Int.eq
   retcon 0,2
 .end
 
-.fun testSuper:
-  stack 3
-  pushint 8
-  pushint 0o10
-  pushdict X$Int
-  getsuper 0
-  jmp polyEq
+#
+# instance Eq a => Eq [a] where
+#  eq [] [] = True
+#  eq (x:xs) (y:ys) = x == y && xs == ys
+#  eq _ _ = False
+#
+
+# This requires 3 parameters: dict for comparing elements, and the two lists
+.fun eqList[arity=3]:
+  stack 1
+  evalvar 1,eqList$1
 .end
 
-.fun testSpec:
-  stack 3
-  pushint 2
-  pushint 2
-  pushdict Eq$Con
-  jmp eqCon
+.fun eqList$1[matcher]:
+  matchcon
+  .case 0:
+    stack 1
+    evalvar 2,eqList$2
+  .case 1:
+    stack 1
+    evalvar 4,eqList$3 
+  .end
 .end
 
-.fun testDirect:
+.fun eqList$2[matcher]:
+  matchcon
+  .case 0:
+    slide 0,3
+    retcon 1,0
+  .case 1:
+    slide 0,5
+    retcon 0,0
+  .end
+.end
+
+.fun eqList$3[matcher]:
+  matchcon
+  .case 0:
+    slide 0,5
+    retcon 0,0
+  .case 1:
+    stack 4
+    pushvar 1
+    pushvar 4
+    pushvar 6
+    pushcode eqList
+    mknapp 4
+    pushvar 1
+    pushvar 4
+    pushvar 7
+    pushcode eq
+    mknapp 4
+    slide 2,7
+    jmp and
+  .end
+.end
+
+.fun $dEqList[arity=1]:
+  stack 2
+  pushvar 0
+  pushcode $dEqList
+  mknapp 2
+  pushcode ne$def
+  mknapp 2
+  pushvar 1
+  pushcode eqList
+  mknapp 2
+  slide 2,1
+  retcon 0,2 
+.end
+
+#
+# Our generic equality functions:
+# 
+# equals,notEquals :: Eq a => a -> a -> Bool
+# equals d x y = (==) d x y
+# notEquals d x y = (/=) d x y
+#
+
+.fun equals[arity=3]: jmp eq .end
+.fun notEquals[arity=3]: jmp ne .end
+
+#
+# Test everything
+#
+
+.fun eqInt:
   pushint 1
-  pushint 2
-  jmpmethod Eq$Int,0
+  pushint 1
+  pushcode $dEqInt
+  jmp equals
 .end
 
-# Let's try repeated names
-.dict d: .end
-.fun d: ret .end
+.fun neqInt:
+  pushint 1
+  pushint 1
+  pushcode $dEqInt
+  jmp notEquals
+.end
+
+.fun emptyList:
+  stack 1
+  retcon 0,0
+.end
+
+.fun nonEmptyList:
+  stack 2
+  mkcon 0,0
+  pushint 3
+  mkcon 1,2
+  pushint 2
+  mkcon 1,2
+  pushint 1
+  retcon 1,2
+.end
+
+.fun anotherNonEmptyList:
+  stack 2
+  mkcon 0,0
+  pushint 3
+  mkcon 1,2
+  pushint 4
+  mkcon 1,2
+  pushint 1
+  retcon 1,2
+.end
+
+.fun eqListEE:
+  stack 4
+  pushcode emptyList
+  pushcode emptyList
+  pushcode $dEqInt
+  pushcode $dEqList
+  mknapp 2
+  jmp equals
+.end
+
+.fun neqListEE:
+  stack 4
+  pushcode emptyList
+  pushcode emptyList
+  pushcode $dEqInt
+  pushcode $dEqList
+  mknapp 2
+  jmp notEquals
+.end
+
+.fun eqListNN:
+  stack 4
+  pushcode nonEmptyList
+  pushcode nonEmptyList
+  pushcode $dEqInt
+  pushcode $dEqList
+  mknapp 2
+  jmp equals
+.end
+
+.fun neqListNN:
+  stack 4
+  pushcode nonEmptyList
+  pushcode nonEmptyList
+  pushcode $dEqInt
+  pushcode $dEqList
+  mknapp 2
+  jmp notEquals
+.end
+
+.fun eqListEN:
+  stack 4
+  pushcode nonEmptyList
+  pushcode emptyList
+  pushcode $dEqInt
+  pushcode $dEqList
+  mknapp 2
+  jmp equals
+.end
+
+.fun eqList1:
+  stack 4
+  pushcode nonEmptyList
+  pushcode anotherNonEmptyList
+  pushcode $dEqInt
+  pushcode $dEqList
+  mknapp 2
+  jmp equals
+.end
+
+.fun eqList2:
+  stack 4
+  pushcode anotherNonEmptyList
+  pushcode nonEmptyList
+  pushcode $dEqInt
+  pushcode $dEqList
+  mknapp 2
+  jmp notEquals
+.end
+
+.fun neqListEN:
+  stack 4
+  pushcode nonEmptyList
+  pushcode emptyList
+  pushcode $dEqInt
+  pushcode $dEqList
+  mknapp 2
+  jmp notEquals
+.end
+
+.fun notF: stack 1 mkcon 0,0 jmp not .end
+.fun notT: stack 1 mkcon 1,0 jmp not .end
+.fun andTT: stack 2 mkcon 1,0 mkcon 1,0 jmp and .end
+.fun andTF: stack 2 mkcon 0,0 mkcon 1,0 jmp and .end
+.fun andFT: stack 2 mkcon 1,0 mkcon 0,0 jmp and .end
+.fun andFF: stack 2 mkcon 0,0 mkcon 0,0 jmp and .end
 
 .end

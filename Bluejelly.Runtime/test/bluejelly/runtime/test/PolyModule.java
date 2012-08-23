@@ -7,14 +7,11 @@
 
 package bluejelly.runtime.test;
 
-import bluejelly.runtime.Dictionary;
 import bluejelly.runtime.ExecutionContext;
 import bluejelly.runtime.Module;
 import bluejelly.runtime.ann.JellyCode;
-import bluejelly.runtime.ann.JellyDict;
 import bluejelly.runtime.nodes.Double;
 import bluejelly.runtime.nodes.Int;
-import bluejelly.runtime.nodes.Node;
 
 /**
  * Dummy module for checking dictionary usage.
@@ -22,71 +19,117 @@ import bluejelly.runtime.nodes.Node;
  */
 public class PolyModule implements Module {
     
-    @JellyDict
-    public Dictionary fd = new Dictionary(null, 
-            new String[] {"bluejelly.runtime.test.PolyModule.fFlt"}, null);
-
-    @JellyDict
-    public Dictionary id = new Dictionary(null, 
-            new String[] {"bluejelly.runtime.test.PolyModule.fInt"}, null);
-
+    /*
+     * Pretend we have this:
+     * 
+     * module PolyModule where
+     * 
+     * class C a where f :: a -> a
+     * instance C Double where f _ = PI
+     * instance C Int where f x = 1 + x
+     * 
+     * poly :: C a => a -> a
+     * poly = f
+     * 
+     * polyInt = poly 41
+     * polyDbl = poly 1.0
+     */
+    
+    /*
+     * Get dictionary's `f' function:
+     *   f d = case d of C x -> x
+     */
+    @JellyCode(arity=2)
+    public void f(ExecutionContext ctx) {
+        ctx.stackCheck(1);
+        ctx.evalVar(0, "bluejelly.runtime.test.PolyModule.f$1");
+    }
+    
+    @JellyCode(matcher=true)
+    public void f$1(ExecutionContext ctx) {
+        int tag = ctx.getTag();
+        switch(tag) {
+        case 0: 
+            ctx.altTyConPrologue();
+            ctx.slide(1,1);
+        }
+    }
+    
+    /*
+     * Definition of `f' for C Int instance:
+     * f_CInt x = 1 + x
+     */
     @JellyCode(arity=1)
-    public void fFlt(ExecutionContext ctx) {
+    public void $fCInt(ExecutionContext ctx) {
+        ctx.stackCheck(2);
+        ctx.s[ctx.sp + 1] = ctx.s[ctx.sp]; ++ctx.sp;
+        ctx.s[++ctx.sp] = Int.mkInt(1);
+        ctx.slide(2,1);
+        ctx.jump("bluejelly.Int.add");
+    }
+
+    /*
+     * Definition of `f' for C Double instance:
+     * f_CInt x = 1 + x
+     */
+    @JellyCode(arity=1)
+    public void $fCDbl(ExecutionContext ctx) {
         ctx.stackCheck(1);
         ctx.slide(0,1);
         ctx.retDouble(Math.PI);
     }
-
-    @JellyCode(arity=1)
-    public void fInt(ExecutionContext ctx) {
+    
+    /*
+     * Dictionary for C Int instance.
+     */
+    @JellyCode
+    public void $instCInt(ExecutionContext ctx) {
         ctx.stackCheck(1);
-        Node[] s = ctx.s;
-        int sp = ctx.sp;
-        
-        // PushInt 1
-        s[++sp] = Int.mkInt(1);
-        
-        // EnterCode primAddInt
-        ctx.sp = sp;
-        ctx.jump("bluejelly.runtime.test.BazModule.primAddInt");
+        ctx.s[++ctx.sp] = ctx.getFun("bluejelly.runtime.test.PolyModule.$fCInt");
+        ctx.retTyCon(0, 1);
     }
 
+    /*
+     * Dictionary for C Double instance.
+     */
     @JellyCode
-    public void callFlt(ExecutionContext ctx) {
-        ctx.stackCheck(3);
-        Node[] s = ctx.s;
-        int sp = ctx.sp;
-        
-        // PushFloat .0
-        s[++sp] = new Double(0);
-        // PushDict org.bluejelly.test.runtime.PolyModule.fd
-        s[++sp] = ctx.getDict("bluejelly.runtime.test.PolyModule.fd");
-        // PushMethod 0
-        ctx.sp = sp;
-        ctx.getMethod(0);
-        // Enter
-        return;
+    public void $instCDbl(ExecutionContext ctx) {
+        ctx.stackCheck(1);
+        ctx.s[++ctx.sp] = ctx.getFun("bluejelly.runtime.test.PolyModule.$fCDbl");
+        ctx.retTyCon(0, 1);
+    }
+
+    /*
+     * poly :: C a => a -> a
+     * poly = f
+     */
+    @JellyCode(arity=2)
+    public void poly(ExecutionContext ctx) {
+        ctx.stackCheck(1);
+        ctx.s[ctx.sp + 1] = ctx.s[ctx.sp]; ++ctx.sp;
+        ctx.slide(1,1);
+        ctx.jump("bluejelly.runtime.test.PolyModule.f");
     }
     
     /*
-     * NB: Technically, exactly the same as callFlt. Just using the
-     * int dictionary "id", and passing an integer instead of a float.
+     * polyInt = poly 41
      */
     @JellyCode
-    public void callInt(ExecutionContext ctx) {
-        ctx.stackCheck(3);
-        Node[] s = ctx.s;
-        int sp = ctx.sp;
-
-        // PushInt 41
-        s[++sp] = Int.mkInt(41);
-        // PushDict org.bluejelly.test.runtime.PolyModule.id
-        s[++sp] = ctx.getDict("bluejelly.runtime.test.PolyModule.id");
-        // PushMethod 0
-        ctx.sp = sp;
-        ctx.getMethod(0);
-        // Enter
-        return;
+    public void polyInt(ExecutionContext ctx) {
+        ctx.stackCheck(2);
+        ctx.s[++ctx.sp] = Int.mkInt(41);
+        ctx.s[++ctx.sp] = ctx.getFun("bluejelly.runtime.test.PolyModule.$instCInt");
+        ctx.jump("bluejelly.runtime.test.PolyModule.poly");
     }
-    
+
+    /*
+     * polyDbl = poly 1.0
+     */
+    @JellyCode
+    public void polyDbl(ExecutionContext ctx) {
+        ctx.stackCheck(2);
+        ctx.s[++ctx.sp] = new Double(1.0);
+        ctx.s[++ctx.sp] = ctx.getFun("bluejelly.runtime.test.PolyModule.$instCDbl");
+        ctx.jump("bluejelly.runtime.test.PolyModule.poly");
+    }    
 }

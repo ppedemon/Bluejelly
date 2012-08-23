@@ -48,7 +48,7 @@ object Parser extends JavaTokenParsers {
     list.reverse.mkString
   }
 
-  def id = """[a-zA-Z_][\w\$]*"""
+  def id = """[a-zA-Z_\$][\w\$]*"""
   def simpleIdent = id.r
   override val whiteSpace = """([ \t\x0B\f\r\n]|#[^\n]*)*""".r
   override def ident = (id + "(\\." + id + ")*").r
@@ -111,13 +111,7 @@ object Parser extends JavaTokenParsers {
     "mkcon"   -> intint (new MkTyCon(_,_)),
     "newcon"  -> (pint ^^ {new AllocTyCon(_)}),
     "packcon" -> intint (new PackTyCon(_,_)), 
-    
-    "pushdict"  -> (ident ^^ {new PushDict(_)}),
-    "getsuper"  -> (pint ^^ {new GetSuper(_)}),
-    "getmethod" -> (pint ^^ {new GetMethod(_)}),
-    "getspec"   -> (pint ^^ {new GetSpecific(_)}),
-    "jmpmethod" -> idint (new JumpMethod(_,_)),
-    
+        
     "matchcon" -> genMatch[Int](pint, new MatchCon(_,_)),
     "matchint" -> genMatch[Int](pint, new MatchInt(_,_)),
     "matchstr" -> genMatch[String](stringLiteral, new MatchStr(_,_)),
@@ -141,7 +135,7 @@ object Parser extends JavaTokenParsers {
     (".case" ~> p <~ ":") ~ block ^^ {case v ~ b => new Alt(v,b)}
   
   // Parse a sequence of one or more case alternatives
-  def manyAlts[T](p:Parser[T]):Parser[List[Alt[T]]] = alt(p)+
+  def manyAlts[T](p:Parser[T]):Parser[List[Alt[T]]] = alt(p)*
   
   // Parse a default alternative
   def deflt:Parser[Block] = ".default" ~ ":" ~> block
@@ -174,38 +168,11 @@ object Parser extends JavaTokenParsers {
   def fun:Parser[Function] = 
     (".fun" ~> funHeader <~ ":") ~ block <~ ".end" ^^
           {case n ~ a ~ b => new Function(n, a._1, a._2, b)}
-
-  // Parse a dictionary item: super, method or instance specific
-  def dictItem(p:Parser[String]):Parser[~[String,List[String]]] = p ~ (ident+)
-  
-  // Parse a dictionary
-  def dict:Parser[Dictionary] = {
-    val p = """\.super|\.method|\.specific""".r
-    (".dict" ~> simpleIdent <~ ":") ~ (dictItem(p)*) <~ ".end" ^^ { 
-      case n ~ items =>
-        val supers = MutableList[String]()
-        val methods = MutableList[String]()
-        val specifics = MutableList[String]()
-        for (x <- items) x._1 match {
-          case ".super" => supers ++= x._2 
-          case ".method" => methods ++= x._2
-          case ".specific" => specifics ++= x._2
-        }
-        new Dictionary(n, supers.toList, methods.toList, specifics.toList)
-      }
-  }
   
   // Parse a whole module
   def module:Parser[Module] = {
-    (".module" ~> ident <~ ":") ~ ((dict|fun)*) <~ ".end" ^^ { 
-      case n ~ items =>
-        val dicts = MutableList[Dictionary]()
-        val funs = MutableList[Function]()
-        for (i <- items) i match {
-          case d:Dictionary => dicts += d
-          case f:Function => funs += f
-        }
-        new Module(n, dicts.toList, funs.toList)
-      }
+    (".module" ~> ident <~ ":") ~ (fun*) <~ ".end" ^^ { 
+      case n ~ funs => new Module(n, funs)
+    }
   }
 }

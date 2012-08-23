@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import bluejelly.runtime.Config.OutStyle;
-import bluejelly.runtime.nodes.Dict;
 import bluejelly.runtime.nodes.Executable;
 import bluejelly.runtime.nodes.NApp;
 import bluejelly.runtime.nodes.Node;
@@ -47,10 +46,6 @@ public class Runtime {
     // Table of executable heap nodes
     private final Map<String,Executable> codeTable = 
         new HashMap<String,Executable>(31);    
-    
-    // Table of loaded dictionaries
-    private final Map<String,Dict> dictTable =
-        new HashMap<String,Dict>(31);
     
     // Module loader component
     private final ModuleLoader loader = new ModuleLoader(this);
@@ -119,36 +114,7 @@ public class Runtime {
             return getFun(funId);
         }
     }
-
-    /**
-     * Register a {@link Dict} in the runtime.
-     * 
-     * @param dictId    dictionary name
-     * @param d         {@link Dict} node to register
-     */
-    protected void register(String dictId, Dict d) {
-        this.dictTable.put(dictId, d);
-    }
-    
-    /**
-     * Get a {@link Dict} node for the given dictionary id.
-     * We ensure thread-safe usage of the loader by making this
-     * method synchronized.
-     *  
-     * @param dictId    id of the {@link Dict} node to retrieve
-     * @return          intended {@link Dict} node
-     */
-    public synchronized Dict getDict(String dictId) {
-        String moduleName = IdUtils.qualifier(dictId); 
-        this.loadIfNecessary(moduleName);
-        Dict d = this.dictTable.get(dictId);
-        if (d == null) {
-            throw new JellyRuntimeException("No dictionary named: " + dictId);
-        } else {
-            return d;
-        }
-    }
-    
+       
     /**
      * Evaluate a function with the given Id in a new {@link ExecutionContext}.
      * Module defining the function must have been loaded first.

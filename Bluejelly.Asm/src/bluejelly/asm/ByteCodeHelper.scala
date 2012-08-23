@@ -101,15 +101,6 @@ object ByteCodeHelper {
     v.visitLdcInsn(s)
     v.visitMethodInsn(INVOKEVIRTUAL, ctx, method, "(ILjava/lang/String;)V")
   }
-
-  // Invoke a method with signature "(Ljava/lang/String;I)V" 
-  // on an ExecutionContext instance
-  def invokeStrIntCtxMethod(method:String, s:String, n:Int)(v:MethodVisitor) {
-    v.visitVarInsn(ALOAD, 1)
-    v.visitLdcInsn(s)
-    pushIntConst(v, n)
-    v.visitMethodInsn(INVOKEVIRTUAL, ctx, method, "(Ljava/lang/String;I)V")
-  }
   
   // Mark the code emitted by f as the final instruction of a function,
   // by adding a RETURN instruction after it.
@@ -179,22 +170,6 @@ object ByteCodeHelper {
     v.visitInsn(DUP)
     v.visitLdcInsn(s)
     v.visitMethodInsn(INVOKESPECIAL, str, "<init>", "(Ljava/lang/String;)V")
-  }
-
-  // Create and initializes a constant string array
-  def createStrConstArray(elems:List[String])(v:MethodVisitor) {
-    if (elems.isEmpty) {
-      v.visitInsn(ACONST_NULL)
-    } else {
-      pushIntConst(v,elems.length)
-      v.visitTypeInsn(ANEWARRAY, "java/lang/String")
-      elems.view.zipWithIndex foreach { case (x,i) =>
-        v.visitInsn(DUP)
-        pushIntConst(v, i)
-        v.visitLdcInsn(x)
-        v.visitInsn(AASTORE)
-      }
-    }
   }
 
   def pushInt(v:MethodVisitor, n:Int) {

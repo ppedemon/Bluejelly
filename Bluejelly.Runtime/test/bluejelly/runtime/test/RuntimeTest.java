@@ -261,8 +261,8 @@ public class RuntimeTest extends TestCase {
     }
         
     @Test
-    public void testPolyFlt() throws JellyException {
-        String funId = IdUtils.qualify(this.poly, "callFlt");
+    public void testPolyDbl() throws JellyException {
+        String funId = IdUtils.qualify(this.poly, "polyDbl");
         Future<ExecutionContext> f = this.runtime.eval(funId);
         ExecutionContext ctx = f.get();
         assertEquals(Math.PI,((Double)ctx.getWhnf()).d);
@@ -270,7 +270,7 @@ public class RuntimeTest extends TestCase {
     
     @Test
     public void testPolyInt() throws JellyException {
-        String funId = IdUtils.qualify(this.poly, "callInt");
+        String funId = IdUtils.qualify(this.poly, "polyInt");
         Future<ExecutionContext> f = this.runtime.eval(funId);
         ExecutionContext ctx = f.get();
         assertEquals(42,((Int)ctx.getWhnf()).i);

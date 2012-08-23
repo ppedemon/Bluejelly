@@ -110,15 +110,6 @@ case class MatchDbl(alts:List[Alt[Double]], deflt:Option[Block]) extends Instr
 case class MatchChr(alts:List[Alt[Char]], deflt:Option[Block]) extends Instr
 
 // -----------------------------------------------------------------------
-// Overloading
-// -----------------------------------------------------------------------
-case class PushDict(dictId:String) extends Instr
-case class GetSuper(i:Int) extends Instr
-case class GetMethod(i:Int) extends Instr
-case class GetSpecific(i:Int) extends Instr
-case class JumpMethod(dictId:String, i:Int) extends Instr
-
-// -----------------------------------------------------------------------
 // Pretty printing
 // -----------------------------------------------------------------------
 
@@ -181,12 +172,6 @@ object Instr {
     case MkTyCon(tag, n)    => pref(x, w, "mkcon %d,%d" format (tag, n))
     case AllocTyCon(tag)    => pref(x, w, "newcon " + tag)
     case PackTyCon(off, n)  => pref(x, w, "packcon %d,%d" format (off, n))
-    
-    case PushDict(dictId)      => pref(x, w, "pushdict " + dictId)
-    case GetSuper(i)           => pref(x, w, "getsuper " + i)
-    case GetMethod(i)          => pref(x, w, "getmethod " + i)
-    case GetSpecific(i)        => pref(x, w, "getspec " + i)
-    case JumpMethod(dictId, i) => pref(x, w, "jmpmethod %s,%d" format (dictId,i))
     
     case MatchCon(as,d) => ppr(x, w, "matchcon", as, d)
     case MatchInt(as,d) => ppr(x, w, "matchint", as, d)

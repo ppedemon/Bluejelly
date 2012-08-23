@@ -69,22 +69,13 @@ class Assembler(cfg:AsmConfig, m:Module) {
     val w:ClassWriter = new ClassWriter(COMPUTE_FRAMES)
   	w.visit(V1_6, ACC_PUBLIC + ACC_FINAL, name, null, 
   	  "java/lang/Object", Array("bluejelly/runtime/Module"));
-    
-    // Every dictionary goes to a field, generate them here
-    for (d <- m.dicts) {
-      val f:FieldVisitor = w.visitField(
-        ACC_PUBLIC + ACC_FINAL, d.name, toDesc(dict), null, null)
-      annotate(f)
-      f.visitEnd()
-    }
-    
+        
     // Generate default constructor, initialization of 
     // the fields representing dictionaries goes here
     val v = w.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null)
     v.visitCode
     v.visitIntInsn(ALOAD, 0)
     v.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V")
-    for (d <- m.dicts) assemble(v, name, d)
     v.visitInsn(RETURN)
     v.visitMaxs(0,0)
     v.visitEnd
@@ -97,20 +88,7 @@ class Assembler(cfg:AsmConfig, m:Module) {
     val bytes:Array[Byte] = w.toByteArray
     save(name, bytes)
   }
-  
-  // Assemble a dictionary
-  private def assemble(v:MethodVisitor, modName:String, d:Dictionary) {
-    val ctor = "([Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;)V"
-    v.visitIntInsn(ALOAD, 0)
-    v.visitTypeInsn(NEW, dict)
-    v.visitInsn(DUP)
-    createStrConstArray(d.supers.map(qual.ensureQual))(v)
-    createStrConstArray(d.methods.map(qual.ensureQual))(v)
-    createStrConstArray(d.specifics.map(qual.ensureQual))(v)
-    v.visitMethodInsn(INVOKESPECIAL, dict, "<init>", ctor)
-    v.visitFieldInsn(PUTFIELD, modName, d.name, toDesc(dict))
-  }
-  
+    
   // Assemble a function
   private def assemble(w:ClassWriter, f:Function) {
     val desc = "(Lbluejelly/runtime/ExecutionContext;)V"
@@ -199,14 +177,7 @@ class Assembler(cfg:AsmConfig, m:Module) {
     case MkTyCon(tag,n)   => invokeIntIntCtxMethod("mkTyCon", tag, n)(v)
     case AllocTyCon(tag)  => invokeIntCtxMethod("allocTyCon", tag)(v)
     case PackTyCon(off,n) => invokeIntIntCtxMethod("packTyCon", off, n)(v)
-    
-    case PushDict(dictId) => pushDict(v, qual.ensureQual(dictId))
-    case GetSuper(i)      => invokeIntCtxMethod("getSuper", i)(v)
-    case GetMethod(i)     => invokeIntCtxMethod("getMethod", i)(v)
-    case GetSpecific(i)   => invokeIntCtxMethod("getSpecific", i)(v)
-    case JumpMethod(dictId,i) => mkFinal(
-      invokeStrIntCtxMethod("jumpMethod", qual.ensureQual(dictId), i))(v)
-    
+        
     case MatchCon(alts,mdef) => {
       v.visitIntInsn(ALOAD, 1)
       v.visitMethodInsn(INVOKEVIRTUAL, ctx, "getTag", "()I")
@@ -242,8 +213,11 @@ class Assembler(cfg:AsmConfig, m:Module) {
   // Convenience type pairing an alternative to the label used to identify it
   type CaseOpt[T] = (Label,Alt[T])
   
-  private def altBounds(alts:List[Alt[Int]]) = 
-    (alts.minBy(_.v).v,alts.maxBy(_.v).v)
+  private def altBounds(alts:List[Alt[Int]]) = alts match {
+    case Nil => (0,0)
+    case _   => (alts.minBy(_.v).v,alts.maxBy(_.v).v)
+  }
+    
   
   private def denseEnough(alts:List[Alt[Int]], min:Int, max:Int):Boolean =
     alts.length.toDouble/(max - min + 1) >= minDensity

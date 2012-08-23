@@ -12,7 +12,6 @@ import java.util.Arrays;
 import bluejelly.runtime.nodes.App;
 import bluejelly.runtime.nodes.Char;
 import bluejelly.runtime.nodes.Code;
-import bluejelly.runtime.nodes.Dict;
 import bluejelly.runtime.nodes.Double;
 import bluejelly.runtime.nodes.Executable;
 import bluejelly.runtime.nodes.Int;
@@ -146,16 +145,6 @@ public class ExecutionContext implements Runnable {
     public Executable getFun(String funId) {
         return this.runtime.getFun(funId);
     }    
-
-    /**
-     * Get dictionary node for the given dictionary id.
-     * 
-     * @param dictId    id for the dictionary we want to retrieve
-     * @return          intended {@link Dict} node
-     */
-    public Dict getDict(String dictId) {
-        return this.runtime.getDict(dictId);
-    }
     
     /**
      * Horrible hack to cope with stupid indirection updates: we must
@@ -773,55 +762,6 @@ public class ExecutionContext implements Runnable {
         this.raise();
     }
     
-    /**
-     * Replaces the {@link Dict} node on top of the stack with 
-     * its <code>i</code>-th super class.
-     * 
-     * @param i
-     *   index for superclass of the intended dictionary
-     */
-    public void getSuper(int i) {
-         Dictionary d = ((Dict)this.getWhnf()).getDict();
-         this.s[this.sp] = this.runtime.getDict(d.getSuper(i));
-    }
-
-    /**
-     * Replaces the {@link Dict} node on top of the stack with the
-     * {@link Code} corresponding to its <code>i</code>-th method.
-     * 
-     * @param i
-     *   index for method of the intended dictionary
-     */
-    public void getMethod(int i) {
-         Dictionary d = ((Dict)this.getWhnf()).getDict();
-         this.s[this.sp] = this.runtime.getFun(d.getMethod(i));        
-    }
-
-    /**
-     * Replaces the {@link Dict} node on top of the stack with 
-     * its <code>i</code>-th specific {@link Dict}.
-     * 
-     * @param i
-     *   index for superclass of the intended dictionary
-     */
-    public void getSpecific(int i) {
-         Dictionary d = ((Dict)this.getWhnf()).getDict();
-         this.s[this.sp] = this.runtime.getDict(d.getSpecific(i));        
-    }
-
-    /**
-     * Jump to the <code>i</code>-th method of the given dictionary.
-     * 
-     * @param dictId
-     *     id of dictionary whose method we will jump to
-     * @param i
-     *   index for method of intended dictionary
-     */
-    public void jumpMethod(String dictId, int i) {
-        String funId = this.getDict(dictId).getDict().getMethod(i);
-        this.jump(funId);
-    }
-
     /**
      * Mini-interpreter evaluating the initial node for this context.
      */

@@ -27,11 +27,9 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 
 import bluejelly.runtime.ModuleReader.CodeInfo;
-import bluejelly.runtime.ModuleReader.DictInfo;
 import bluejelly.runtime.ModuleReader.ModuleInfo;
 import bluejelly.runtime.nodes.Caf;
 import bluejelly.runtime.nodes.Code;
-import bluejelly.runtime.nodes.Dict;
 
 /**
  * Loads a single module.
@@ -49,11 +47,9 @@ public class ModuleLoader {
      * Ad-hoc, trivial class loader.
      */
     private static class CodeLoader extends ClassLoader {
-
         public CodeLoader(ClassLoader parent) {
             super(parent);
         }
-        
         public Class<?> defineClass(String name, byte[] b) {
             String normalizedName = name.replace('/', '.');
             return this.defineClass(normalizedName , b, 0, b.length);
@@ -114,13 +110,7 @@ public class ModuleLoader {
             // Read code and dictionaries from a module
             ModuleReader c = new ModuleReader();
             ModuleInfo mInfo = c.read(module);
-            
-            // Register dictionaries in runtime
-            for (DictInfo di : mInfo.getDictionaries()) {
-                Dict dictNode = new Dict(module, di.getName(), di.getDict());
-                this.runtime.register(IdUtils.qualify(module, di.getName()), dictNode);
-            }
-            
+                        
             // Register code in runtime
             for (CodeInfo ci : mInfo.getFunctions()) {
                 if (ci.getArity() == 0) {
