@@ -5,7 +5,7 @@
  * the BSD license, see the LICENSE file for details.
  */
 
-package bluejelly.asm
+package bluejelly.utils
 
 import java.io.FilterReader
 import java.io.Reader
