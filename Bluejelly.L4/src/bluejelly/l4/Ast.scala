@@ -61,12 +61,20 @@ object PrettyPrinter {
   import scala.text._
   import scala.text.Document._
   
+  def cat(d0:Document, d1:Document):Document = d0 match {
+    case DocNil => d1
+    case _ => d1 match {
+      case DocNil => d0
+      case _ => d0 :/: d1
+    }
+  }
+  
   def ppr(v:Var):Document = text(v.n.toString)
   def ppr(c:ConRef):Document = text(c.n.toString)
   def ppr(con:ConDef):Document = text("{%d,%d}" format (con.tag, con.arity))
   
   def pprVars(vars:List[Var]):Document = 
-    group((vars :\ (empty:Document)) (ppr(_) :/: _))
+    (vars :\ (empty:Document))((v,d) => cat(ppr(v),d))
   
   def ppr(occ:Occ):Document = occ match {
     case Never => text("[0]")
@@ -84,23 +92,25 @@ object PrettyPrinter {
   def ppr(p:Pat):Document = p match {
     case PVar(v)      => ppr(v)
     case PLit(lit)    => ppr(lit)
-    case PCon(c,args) => group(ppr(c) :: pprVars(args))
+    case PCon(c,args) => group(cat(ppr(c),pprVars(args)))
   }
 
   def pprArg(arg:Expr):Document = arg match {
+    case ELit(lit) => ppr(lit)
     case App(e,List()) => ppr(e)
+    case ECon(c,List()) => ppr(c)
     case _ => group ("(" :: ppr(arg) :: text(")"))
   }
 
   def pprArgs(args:List[Expr]):Document = 
-    (args :\ (empty:Document)) (pprArg(_) :/: _)
+    (args :\ (empty:Document)) ((v,d) => cat(pprArg(v),d))
   
-  def pprApp(app:App):Document   = group(ppr(app.fun) :/: pprArgs(app.args))
-  def pprNApp(app:NApp):Document = group("@" :: ppr(app.fun) :/: pprArgs(app.args))
-  def pprCon(con:ECon):Document  = group(ppr(con.c) :/: pprArgs(con.args)) 
+  def pprApp(app:App):Document   = group(cat(ppr(app.fun), pprArgs(app.args)))
+  def pprNApp(app:NApp):Document = group("@" :: cat(ppr(app.fun), pprArgs(app.args)))
+  def pprCon(con:ECon):Document  = group(cat(ppr(con.c), pprArgs(con.args))) 
   
   def pprDecl:((Var,Expr)) => Document = {case (v,e) => 
-    group(ppr(v) :: "=" :/: ppr(e))
+    nest(2,group(ppr(v) :/: "=" :/: ppr(e)))
   }
 
   def pprDecls(ds:List[(Var,Expr)]):Document = ds match {
@@ -109,35 +119,41 @@ object PrettyPrinter {
     case d :: ds => pprDecl(d) :/: "and" :/: pprDecls(ds)
   }
 
-  def pprAlt(alt:Alt):Document = group(ppr(alt.p) :: "->" :/: ppr(alt.e))
+  def pprAlt(alt:Alt):Document = 
+    group(nest(2, group(ppr(alt.p) :/: text("->")) :/: ppr(alt.e)))
   
   def pprAlts(alts:List[Alt]):Document = 
-    group((alts :\ (empty:Document)) ("|" :: pprAlt(_) :/: _))
+    group((alts :\ (empty:Document)) ((v,d) => "| " :: cat(pprAlt(v),d)))
   
   def ppr(e:Expr):Document = e match {
     case ELit(lit)     => ppr(lit)
     case e@ECon(_,_)   => pprCon(e)
     case e@App(_,_)    => pprApp(e)
     case e@NApp(_,_)   => pprNApp(e)
-    case Let(v,e,b)    => group ("let" :/: pprDecl(v,e) :/: "in" :/: ppr(b))
-    case Eval(v,e,b)   => group ("let!" :/: pprDecl(v,e) :/: "in" :/: ppr(b))
-    case Note(occ,e)   => group(ppr(occ) :/: group("(" :: ppr(e) :: text(")")))
-    case Match(v,alts) => group("match" :: ppr(v) :: "with" :/: nest(2, pprAlts(alts)))
-    case LetRec(ds,b)  => group ("let rec" :/: nest(2, group(pprDecls(ds))) :/: "in" :/: ppr(b))
+    case Let(v,e,b)    => 
+      group(nest(2, group("let" :/: pprDecl(v,e) :/: text("in")) :/: ppr(b)))
+    case Eval(v,e,b)   => 
+      group(nest(2, group("let!":/: pprDecl(v,e) :/: text("in")) :/: ppr(b)))
+    case Note(occ,e)   => 
+      group(nest(2, ppr(occ) :/: group("(" :: ppr(e) :: text(")"))))
+    case Match(v,alts) => 
+      group(nest(2, group("match" :/: ppr(v) :/: text("with")) :/: pprAlts(alts)))
+    case LetRec(ds,b)  => 
+      group(nest(2, group("let rec" :/: pprDecls(ds) :/: text("in")) :/: ppr(b)))
   }
   
   def ppr(d:Decl):Document = d match {
     case DataDecl(cref,cdef) => 
       group("data" :/: ppr(cref) :: ppr(cdef))
     case FunDecl(n,args,e) =>
-      group("fun" :/: ppr(n) :/: pprVars(args) :/: "=" :/: ppr(e))
+      group(nest(2,group("fun" :/: ppr(n) :/: cat(pprVars(args),text("="))) :/: ppr(e)))
   }
   
-  def nl2:Document = text("\n\n")
+  def nl:Document = text("\n")
   
   def pprTopDecls(decls:List[Decl]):Document = 
-    group((decls :\ (empty:Document)) (ppr(_) :: nl2 :/: _))
+    (decls :\ (empty:Document))((v,d) => cat(ppr(v), nl :: d))
   
   def ppr(m:Module):Document = 
-    group("module" :: m.n.toString :: nl2 :/: pprTopDecls(m.decls))
+    "module " :: text(m.n.toString) :: nl :: group(pprTopDecls(m.decls))
 }

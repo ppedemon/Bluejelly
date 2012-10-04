@@ -99,8 +99,9 @@ object Parser extends JavaTokenParsers {
   def pat:Parser[Pat] = 
     ( lit ^^ {PLit(_)}
     | id ^^ {s => PVar(new Var(Name(s)))}
-    | con ~! (id*) ^^ {case c ~ ps => 
-        PCon(new ConRef(Name(c)), ps map {s => new Var(Name(s))})}
+    | conRef ~! (id*) ^^ {case c ~ ps => 
+        PCon(c, ps map {s => new Var(Name(s))})
+      }
     )
   
   def alt:Parser[Alt] = (pat <~ "->") ~ expr ^^ {case p ~ e => new Alt(p,e)} 
@@ -148,17 +149,17 @@ object Parser extends JavaTokenParsers {
     )
 
   def dataDecl:Parser[DataDecl] =
-    ("data" ~> conRef) ~ ("{" ~> pint <~ ",")  ~ (pint <~ "}") ^^ 
+    ("data" ~> conRef) ~! ("{" ~> pint <~ ",")  ~! (pint <~ "}") ^^ 
       {case cref ~ tag ~ arity => DataDecl(cref, new ConDef(tag, arity))}
   
   def funDecl:Parser[FunDecl] =
-    ("fun" ~> variable) ~ (variable+) ~ expr ^^ 
+    ("fun" ~> variable) ~ (variable*) ~ ("=" ~> expr) ^^ 
       {case n ~ args ~ b => FunDecl(n,args,b)}
   
   def topDecl = dataDecl | funDecl
   
   def module:Parser[Module] =
-    ("module" ~> conRef) ~ (topDecl*) ^^ 
-      {case cref ~ decls => new Module(cref.n, decls)}
+    ("module" ~> (qualifier.r|con)) ~ (topDecl*) ^^ 
+      {case name ~ decls => new Module(Name(name), decls)}
 
 }
