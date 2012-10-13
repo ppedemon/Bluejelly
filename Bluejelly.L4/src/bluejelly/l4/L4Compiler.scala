@@ -15,19 +15,18 @@ import java.io.StringWriter
  * @author ppedemon
  */
 object L4Compiler {
-  
   def main(argv:Array[String]) {
     //val r = new UnicodeFilter(new FileReader(argv(0)))
     val p = Parser.parseAll(Parser.module, argv(0))
     p match {
       case f@Parser.Failure(_,_) => println(f)
       case Parser.Success(m,_) => {
-        val d = PrettyPrinter.ppr(m)
+        val m1 = OccAnalysis.analyze(m)
+        val d = PrettyPrinter.ppr(m1)
         val w = new StringWriter
         d.format(75, w)
         print(w)
       }
     }
   }
-  
 }

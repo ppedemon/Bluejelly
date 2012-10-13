@@ -13,10 +13,17 @@ import bluejelly.utils.Name
  * @author ppedemon
  */
 
-sealed trait Id
-class Var(val n:Name) extends Id
-class ConRef(val n:Name) extends Id
 class ConDef(val tag:Int, val arity:Int)
+
+sealed abstract class Id(val n:Name) {
+  override def equals(v:Any) = v match { 
+    case v:Var => v.n equals n
+    case _ => false
+  }
+  override def hashCode = n hashCode  
+}
+class Var(n:Name) extends Id(n)
+class ConRef(n:Name) extends Id(n)
 
 sealed trait Occ
 case object Never extends Occ
@@ -42,10 +49,10 @@ case class Note(val occ:Occ, val expr:Expr) extends Expr
 
 class Alt(val p:Pat, val e:Expr)
 
-sealed trait Pat
-case class PVar(val v:Var) extends Pat
+sealed trait Pat { val vars:List[Var] }
+case class PVar(val v:Var) extends Pat { val vars = List(v) }
 case class PCon(val c:ConRef, val vars:List[Var]) extends Pat
-case class PLit(val lit:Lit) extends Pat
+case class PLit(val lit:Lit) extends Pat { val vars = List() }
 
 sealed trait Decl
 case class DataDecl(val ref:ConRef, val con:ConDef) extends Decl
@@ -135,7 +142,7 @@ object PrettyPrinter {
     case Eval(v,e,b)   => 
       group(nest(2, group("let!":/: pprDecl(v,e) :/: text("in")) :/: ppr(b)))
     case Note(occ,e)   => 
-      group(nest(2, ppr(occ) :/: group("(" :: ppr(e) :: text(")"))))
+      group(nest(2, ppr(occ) :: group("(" :: ppr(e) :: text(")"))))
     case Match(v,alts) => 
       group(nest(2, group("match" :/: ppr(v) :/: text("with")) :/: pprAlts(alts)))
     case LetRec(ds,b)  => 
