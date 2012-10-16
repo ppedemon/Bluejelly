@@ -117,7 +117,7 @@ object PrettyPrinter {
   def pprCon(con:ECon):Document  = group(cat(ppr(con.c), pprArgs(con.args))) 
   
   def pprDecl:((Var,Expr)) => Document = {case (v,e) => 
-    nest(2,group(ppr(v) :/: "=" :/: ppr(e)))
+    nest(2,group(ppr(v) :: " =" :/: ppr(e)))
   }
 
   def pprDecls(ds:List[(Var,Expr)]):Document = ds match {
