@@ -21,7 +21,7 @@ object L4Compiler {
     p match {
       case f@Parser.Failure(_,_) => println(f)
       case Parser.Success(m,_) => {
-        val m1 = OccAnalysis.analyze(m)
+        val m1 = Inliner.inline(OccAnalysis.analyze(m))
         val d = PrettyPrinter.ppr(m1)
         val w = new StringWriter
         d.format(75, w)

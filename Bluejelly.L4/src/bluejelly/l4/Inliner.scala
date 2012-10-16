@@ -5,7 +5,9 @@
  * the BSD license, see the LICENSE file for details.
  */
 package bluejelly.l4
+
 import scala.collection.immutable.Nil
+import scala.util.control.Exception._
 
 /**
  * Poor man's inliner. Dead simple.
@@ -14,7 +16,7 @@ import scala.collection.immutable.Nil
 object Inliner {
   private type Env = Map[Var,Expr]
   
-  def inlineExpr(expr:Expr,env:Env):Expr = expr match {
+  private def inlineExpr(expr:Expr,env:Env):Expr = expr match {
     case ELit(_) => expr
     case ECon(c,args) => ECon(c, args map (e => inlineExpr(e,env)))
     case App(v,args)  => inlineApp(v, args, env, true)
@@ -22,7 +24,7 @@ object Inliner {
     
     case Let(v,Note(Never,e),b) => inlineExpr(b,env)
     case Let(v,Note(Once,e),b)  => inlineExpr(b, env + (v -> inlineExpr(e,env)))
-    case Let(v,e,b) if isVar(e) => inlineExpr(b, env + (v -> deAnn(e)))
+    case Let(v,e,b) if whnfVar(e,env) => inlineExpr(b, env + (v -> inlineExpr(deAnn(e),env)))
     case Let(v,e,b) if whnf(e) => inlineExpr(b, env + (v -> inlineExpr(deAnn(e),env)))
     case Let(v,e,b) => Let(v, inlineExpr(e,env), inlineExpr(b, env - v))
     
@@ -82,11 +84,12 @@ object Inliner {
   private def mkApp(v:Var, args:List[Expr], isUpd:Boolean) = 
     if (isUpd) App(v, args) else NApp(v, args)
   
-  private def isVar(e:Expr):Boolean = e match {
-    case App(v,Nil) => true
-    case Note(_,e) => isVar(e)
+  private def whnfVar(e:Expr, env:Env):Boolean = e match {
+    case App(v,Nil) => 
+      (handling(classOf[NoSuchElementException]) by (_ => false))(whnf(env(v)))
+    case Note(_,e) => whnfVar(e,env)
     case _ => false
-  }  
+  }
     
   private def whnf(e:Expr):Boolean = e match {
     case ELit(_) | ECon(_,Nil) | NApp(_,Nil) => true
@@ -117,4 +120,12 @@ object Inliner {
     if ((args isEmpty) && id == v) true
     else (f /: (App(id,Nil)::args))(first(v))
     
+    
+  private def inlineDecl(d:Decl) = d match {
+    case d@DataDecl(_,_) => d
+    case FunDecl(n, args, b) => FunDecl(n, args, inlineExpr(b, Map()))
+  }
+  
+  def inline(m:Module) = new Module(m.n, m.decls map inlineDecl)
+  
 }
