@@ -24,11 +24,11 @@ object Inliner {
     
     case Let(v,Note(Never,e),b) => inlineExpr(b,env)
     case Let(v,Note(Once,e),b)  => inlineExpr(b, env + (v -> inlineExpr(e,env)))
-    case Let(v,e,b) if whnfVar(e,env) => inlineExpr(b, env + (v -> inlineExpr(deAnn(e),env)))
-    case Let(v,e,b) if whnf(e) => inlineExpr(b, env + (v -> inlineExpr(deAnn(e),env)))
+    case Let(v,e,b) if trivialVar(e,env) => inlineExpr(b, env + (v -> inlineExpr(deAnn(e),env)))
+    case Let(v,e,b) if trivial(e) => inlineExpr(b, env + (v -> inlineExpr(deAnn(e),env)))
     case Let(v,e,b) => Let(v, inlineExpr(e,env), inlineExpr(b, env - v))
     
-    case Eval(v,e,b) if whnf(e) => 
+    case Eval(v,e,b) if trivial(e) => 
       inlineExpr(b, env + (v -> inlineExpr(deAnn(e),env)))
     case Eval(v,Note(Once,e),b) => {
       val ie = inlineExpr(e,env)
@@ -84,16 +84,16 @@ object Inliner {
   private def mkApp(v:Var, args:List[Expr], isUpd:Boolean) = 
     if (isUpd) App(v, args) else NApp(v, args)
   
-  private def whnfVar(e:Expr, env:Env):Boolean = e match {
+  private def trivialVar(e:Expr, env:Env):Boolean = e match {
     case App(v,Nil) => 
-      (handling(classOf[NoSuchElementException]) by (_ => false))(whnf(env(v)))
-    case Note(_,e) => whnfVar(e,env)
+      (handling(classOf[NoSuchElementException]) by (_ => false))(trivial(env(v)))
+    case Note(_,e) => trivialVar(e,env)
     case _ => false
   }
     
-  private def whnf(e:Expr):Boolean = e match {
+  private def trivial(e:Expr):Boolean = e match {
     case ELit(_) | ECon(_,Nil) | NApp(_,Nil) => true
-    case Note(_,e) => whnf(e)
+    case Note(_,e) => trivial(e)
     case _ => false
   }
   
@@ -116,10 +116,11 @@ object Inliner {
     case Note(_,e) => first(v)(f,e)
   }
   
-  private def firstApp(v:Var, f:Boolean, id:Var, args:List[Expr]) = 
-    if ((args isEmpty) && id == v) true
-    else (f /: (App(id,Nil)::args))(first(v))
-    
+  private def firstApp(v:Var, f:Boolean, id:Var, args:List[Expr]) = args match {
+    case Nil if id == v => true
+    case Nil => f
+    case _ => (f /: (App(id,Nil)::args))(first(v))
+  }
     
   private def inlineDecl(d:Decl) = d match {
     case d@DataDecl(_,_) => d
