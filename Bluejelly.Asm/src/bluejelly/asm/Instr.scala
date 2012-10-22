@@ -27,7 +27,7 @@ trait PrettyPrintable {
 /**
   * Base class for an assembler instruction. 
   */
-sealed abstract class Instr extends PrettyPrintable {
+abstract class Instr extends PrettyPrintable {
   def ppr(w:Writer)(implicit x:Int) = Instr.ppr(this,w,x)
 }
 
