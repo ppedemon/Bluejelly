@@ -16,14 +16,23 @@ import bluejelly.utils.Name
 class ConDef(val tag:Int, val arity:Int)
 
 sealed abstract class Id(val n:Name) {
+  override def toString = n toString
+  override def hashCode = n hashCode
+}
+
+class Var(n:Name) extends Id(n) {
   override def equals(v:Any) = v match { 
     case v:Var => v.n equals n
     case _ => false
   }
-  override def hashCode = n hashCode  
 }
-class Var(n:Name) extends Id(n)
-class ConRef(n:Name) extends Id(n)
+
+class ConRef(n:Name) extends Id(n) {
+  override def equals(c:Any) = c match { 
+    case c:ConRef => c.n equals n
+    case _ => false
+  }
+}
 
 sealed trait Occ
 case object Never extends Occ

@@ -22,6 +22,8 @@ object L4Compiler {
       case f@Parser.Failure(_,_) => println(f)
       case Parser.Success(m,_) => {
         val m1 = Inliner.inline(OccAnalysis.analyze(m))
+        new L4ToAsm(m1) compile
+        
         val d = PrettyPrinter.ppr(m1)
         val w = new StringWriter
         d.format(75, w)

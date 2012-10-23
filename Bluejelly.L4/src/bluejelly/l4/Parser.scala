@@ -49,7 +49,7 @@ object Parser extends JavaTokenParsers {
   // Possibly qualified identifiers and constructors
   def idRe = """[a-z_\$][\w\$]*"""
   def conRe = """[A-Z][\w\$]*"""
-  def qualifier = idRe + "(\\." + idRe + ")*\\." + conRe
+  def qualifier = "(" + idRe + "\\.)*" + conRe
   
   def keywords = 
     Set("and", "data", "fun", "in", "let", "match", "module", "rec", "with")
@@ -59,7 +59,7 @@ object Parser extends JavaTokenParsers {
   def qid  = (qualifier + "\\." + idRe).r
   def qcon = (qualifier + "\\." + conRe).r
     
-  // Floating point numberslet 
+  // Floating point numbers
   override def floatingPointNumber = """-?(\d+(\.\d*)|\d*\.\d+)([eE][+-]?\d+)?""".r
   
   // String literals
@@ -159,7 +159,7 @@ object Parser extends JavaTokenParsers {
   def topDecl = dataDecl | funDecl
   
   def module:Parser[Module] =
-    ("module" ~> (qualifier.r|con)) ~ (topDecl*) ^^ 
+    ("module" ~> qualifier.r) ~ (topDecl*) ^^ 
       {case name ~ decls => new Module(Name(name), decls)}
 
 }

@@ -11,7 +11,7 @@ import bluejelly.asm.Block
 import java.io.Writer
 
 /**
- * Push a symbolic [Var] onto the stack. This will be resolved
+ * Push a symbolic [Var] onto the stack. This will be solved
  * into a [PushVar] instructions using the stack offset.
  */
 case class PushSym(val v:Var) extends Instr {
@@ -21,9 +21,40 @@ case class PushSym(val v:Var) extends Instr {
 }
 
 /**
+ * Create an application node for a symbolic [Var]. The var will be
+ * solved to an offset, and we will replace this with a [PackApp].
+ */
+case class PackAppSym(val v:Var, n:Int) extends Instr {
+  override def ppr(w:Writer)(implicit x:Int) {
+    w write (" "*x + "packappsym " + v)
+  }  
+}
+
+/**
+ * Create an non-updatable application node for a symbolic [Var]. 
+ * The var will be solved to an offset, and we will replace this 
+ * with a [PackNapp].
+ */
+case class PackNappSym(val v:Var, n:Int) extends Instr {
+  override def ppr(w:Writer)(implicit x:Int) {
+    w write (" "*x + "packnappsym " + v)
+  }  
+}
+
+/**
+ * Create an constructor node for a symbolic [Var]. The var will be
+ * solved to an offset, and we will replace this with a [PackTyCon].
+ */
+case class PackTyConSym(val v:Var, n:Int) extends Instr {
+  override def ppr(w:Writer)(implicit x:Int) {
+    w write (" "*x + "packconsym " + v)
+  }  
+}
+
+/**
  * Pseudo-instruction for a function parameter. This allows to
  * compute the stack offset for the parameter, thus replacing
- * [PushSym] by [PushVar] instructions
+ * [PushSym] with [PushVar] instructions
  */
 case class Param(val v:Var) extends Instr {
   override def ppr(w:Writer)(implicit x:Int) {
@@ -34,7 +65,7 @@ case class Param(val v:Var) extends Instr {
 /**
  * Pseudo-instruction for local bindings introduced by let!, let or 
  * let rec. This allows to compute the stack offset for the local 
- * binding, thus replacing [PushSym]s by [PushVar] instructions.
+ * binding, thus replacing [PushSym]s with [PushVar] instructions.
  */
 case class Local(val v:Var) extends Instr {
   override def ppr(w:Writer)(implicit x:Int) {

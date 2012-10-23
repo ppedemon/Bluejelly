@@ -12,6 +12,8 @@ package bluejelly.utils
  */
 class Name private (val qual:Option[Symbol], val name:Symbol) {
   def isQual = !(qual isEmpty)
+
+  def qualEquals(s:Symbol) = isQual && qual.get == s
   
   override def toString = {
     if (!isQual) name.toString substring 1
