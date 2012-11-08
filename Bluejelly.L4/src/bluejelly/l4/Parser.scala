@@ -2,6 +2,8 @@ package bluejelly.l4
 
 import scala.util.parsing.combinator.JavaTokenParsers
 import bluejelly.utils.Name
+import scala.util.parsing.input.Positional
+import scala.util.parsing.input.NoPosition
 
 /**
  * L4 parser.
@@ -81,9 +83,8 @@ object Parser extends JavaTokenParsers {
   def pdbl:Parser[Double] = floatingPointNumber ^^ {_.toDouble}
 
   // Possibly qualified Vars and ConRefs
-  def variable = 
-    qid ^^ {s => new Var(qname(s))} | 
-    id  ^^ {s => new Var(Name(s))}  
+  def localVar = id ^^ {s => new Var(Name(s))}
+  def variable = qid ^^ {s => new Var(qname(s))} | localVar
   def conRef =
     qcon ^^ {s => new ConRef(qname(s))} |
     con  ^^ {s => new ConRef(Name(s))}
@@ -97,13 +98,16 @@ object Parser extends JavaTokenParsers {
   
   // Patterns
   def pat:Parser[Pat] = 
-    ( lit ^^ {PLit(_)}
-    | id ^^ {s => PVar(new Var(Name(s)))}
-    | conRef ~! (id*) ^^ {case c ~ ps => 
-        PCon(c, ps map {s => new Var(Name(s))})
-      }
-    )
+    $( lit ^^ {PLit(_)}
+     | id ^^ {s => PVar(new Var(Name(s)))}
+     | conRef ~! (id*) ^^ {case c ~ ps => 
+         PCon(c, ps map {s => new Var(Name(s))})
+       }
+     )
   
+  // Shorthand for positioned combinator
+  def $[T <: Positional](p:Parser[T]) = positioned(p)
+    
   def alt:Parser[Alt] = (pat <~ "->") ~ expr ^^ {case p ~ e => new Alt(p,e)} 
   
   def alts:Parser[List[Alt]] = ("|"?) ~> rep1sep(alt, "|")
@@ -141,20 +145,20 @@ object Parser extends JavaTokenParsers {
     )
   
   def expr:Parser[Expr] =
-    ( let 
-    | eval 
-    | letRec
-    | matchAlts
-    | fexp
-    )
+    $( let 
+     | eval 
+     | letRec
+     | matchAlts
+     | fexp
+     )
 
   def dataDecl:Parser[DataDecl] =
-    ("data" ~> conRef) ~! ("{" ~> pint <~ ",")  ~! (pint <~ "}") ^^ 
-      {case cref ~ tag ~ arity => DataDecl(cref, new ConDef(tag, arity))}
+    $(("data" ~> conRef) ~! ("{" ~> pint <~ ",")  ~! (pint <~ "}") ^^ 
+      {case cref ~ tag ~ arity => DataDecl(cref, new ConDef(tag, arity))})
   
   def funDecl:Parser[FunDecl] =
-    ("fun" ~> variable) ~ (variable*) ~ ("=" ~> expr) ^^ 
-      {case n ~ args ~ b => FunDecl(n,args,b)}
+    $(("fun" ~> localVar) ~ (localVar*) ~ ("=" ~> expr) ^^ 
+      {case n ~ args ~ b => FunDecl(n,args,b)})
   
   def topDecl = dataDecl | funDecl
   

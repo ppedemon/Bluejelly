@@ -124,7 +124,7 @@ object Inliner {
     
   private def inlineDecl(d:Decl) = d match {
     case d@DataDecl(_,_) => d
-    case FunDecl(n, args, b) => FunDecl(n, args, inlineExpr(b, Map()))
+    case f@FunDecl(n, args, b) => FunDecl(n, args, inlineExpr(b, Map())) at f
   }
   
   def inline(m:Module) = new Module(m.n, m.decls map inlineDecl)

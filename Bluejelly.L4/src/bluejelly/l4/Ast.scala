@@ -7,11 +7,20 @@
 package bluejelly.l4
 
 import bluejelly.utils.Name
+import scala.util.parsing.input.Positional
+import scala.util.parsing.input.Position
 
 /**
  * Big bag of AST classes for l4 (low level lazy language).
  * @author ppedemon
  */
+
+trait Positionable extends Positional {
+  def at[T <: Positional](p:T):this.type = { 
+    this.pos = p.pos
+    this
+  }
+}
 
 class ConDef(val tag:Int, val arity:Int)
 
@@ -45,7 +54,7 @@ case class DblLit(val d:Double) extends Lit
 case class ChrLit(val c:Char) extends Lit
 case class StrLit(val s:String) extends Lit
 
-sealed trait Expr
+sealed trait Expr extends Positionable
 case class ELit(val lit:Lit) extends Expr
 case class ECon(val c:ConRef, val args:List[Expr]) extends Expr
 case class App(val fun:Var, val args:List[Expr]) extends Expr
@@ -58,12 +67,12 @@ case class Note(val occ:Occ, val expr:Expr) extends Expr
 
 class Alt(val p:Pat, val e:Expr)
 
-sealed trait Pat { val vars:List[Var] }
+sealed trait Pat extends Positionable { val vars:List[Var] }
 case class PVar(val v:Var) extends Pat { val vars = List(v) }
 case class PCon(val c:ConRef, val vars:List[Var]) extends Pat
 case class PLit(val lit:Lit) extends Pat { val vars = List() }
 
-sealed trait Decl
+sealed trait Decl extends Positionable
 case class DataDecl(val ref:ConRef, val con:ConDef) extends Decl
 case class FunDecl(val n:Var, val args:List[Var], val body:Expr) extends Decl
 

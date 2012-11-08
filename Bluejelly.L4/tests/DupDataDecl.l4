@@ -1,0 +1,4 @@
+module tests.DupDataDecl
+
+data X{0,0}
+data tests.DupDataDecl.X{0,0}

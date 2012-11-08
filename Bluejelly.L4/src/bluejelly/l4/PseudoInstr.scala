@@ -74,25 +74,33 @@ case class Local(val v:Var) extends Instr {
 }
 
 /**
+ * Mark signaling the start of a let!.
+ */
+case object Reduce extends Instr {
+  override def ppr(w:Writer)(implicit x:Int) {
+    w write (" "*x + "reduce")
+  }
+}
+
+/**
+ * Mark signaling the beginning of a continuation.
+ */
+case class Cont(val name:String, val matcher:Boolean) extends Instr {
+  override def ppr(w:Writer)(implicit x:Int) {
+    w write (" "*x + "cont ")
+    w write name
+    if (matcher) w write "[matcher]:\n" else w write ":\n"
+  }  
+}
+
+/**
  * A block producing a value on the stack. This allows to compute
  * the number of stack positions to slide when leaving the block.
  */
 case class Atom(val b:Block) extends Instr {
   override def ppr(w:Writer)(implicit x:Int) {
     w write (" "*x)
-    w write ("atom:\n")
-    b.ppr(w)(x+2)
-  }
-}
-
-/**
- * A block evaluating an expression to whnf. The code for the block
- * will be emitted to a new function.
- */
-case class Reduce(val b:Block) extends Instr {
-  override def ppr(w:Writer)(implicit x:Int) {
-    w write (" "*x)
-    w write ("reduce:\n")
+    w write "atom:\n"
     b.ppr(w)(x+2)
   }
 }
