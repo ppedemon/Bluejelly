@@ -138,11 +138,11 @@ object Parser extends JavaTokenParsers {
     )
 
   def aexp:Parser[Expr] =
-    ( lit ^^ {ELit(_)}
-    | conRef ^^ {ECon(_,List())}
-    | variable ^^ {App(_,List())}
-    |"(" ~> expr <~ ")"
-    )
+    $( lit ^^ {ELit(_)}
+     | conRef ^^ {ECon(_,List())}
+     | variable ^^ {App(_,List())}
+     |"(" ~> expr <~ ")"
+     )
   
   def expr:Parser[Expr] =
     $( let 

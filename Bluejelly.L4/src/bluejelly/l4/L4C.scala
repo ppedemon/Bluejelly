@@ -25,13 +25,13 @@ object L4C {
       case Parser.Success(m,_) => {
           // Static analysis
           val result = StaticAnalysis.analyze(m)
-          if (result.isRight) return
+          if (!result.isRight) return
           
           // Optimize
           val m1 = Inliner.inline(OccAnalysis.analyze(m))
 
           // Compile
-          new L4ToAsm(m1, result.left.get) compile
+          new L4ToAsm(m1, result.right.get) compile
           val d = PrettyPrinter.ppr(m1)
           val w = new StringWriter
           d.format(75, w)

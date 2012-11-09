@@ -53,6 +53,14 @@ case class IntLit(val i:Int) extends Lit
 case class DblLit(val d:Double) extends Lit
 case class ChrLit(val c:Char) extends Lit
 case class StrLit(val s:String) extends Lit
+object Lit {
+  def value(n:Lit):Any = n match {
+    case IntLit(x) => x
+    case DblLit(x) => x
+    case ChrLit(x) => x
+    case StrLit(x) => x
+  }
+}
 
 sealed abstract class Expr extends Positionable
 case class ELit(val lit:Lit) extends Expr
@@ -65,12 +73,26 @@ case class Eval(val v:Var, val exp:Expr, val body:Expr) extends Expr
 case class Match(var v:Var, val alts:List[Alt]) extends Expr
 case class Note(val occ:Occ, val expr:Expr) extends Expr
 
-class Alt(val p:Pat, val e:Expr)
+class Alt(val p:Pat, val e:Expr) {
+  def isVarAlt = p match {
+    case PVar(_) => true
+    case _ => false
+  }  
+}
 
 sealed abstract class Pat(val vars:List[Var]) extends Positionable
 case class PVar(val v:Var) extends Pat(List(v))
 case class PCon(val c:ConRef, override val vars:List[Var]) extends Pat(vars)
 case class PLit(val lit:Lit) extends Pat(List())
+object Pat {
+  def sameType(p:Pat, q:Pat):Boolean = (p,q) match {
+    case (PVar(_),_) => true
+    case (_,PVar(_)) => true
+    case (PCon(_,_),PCon(_,_)) => true
+    case (PLit(lp),PLit(lq)) => lp.getClass == lq.getClass
+    case _ => false
+  }
+}
 
 sealed trait Decl extends Positionable
 case class DataDecl(val ref:ConRef, val con:ConDef) extends Decl
