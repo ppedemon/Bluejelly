@@ -32,33 +32,33 @@ object OccAnalysis {
       
   private def occExpr(expr:Expr):(Expr,OccMap) = expr match {
     case ELit(_) => (expr,Map())
-    case ECon(c,args) => val (es,m) = occExps(args); (ECon(c,es) at expr,m)
-    case App(f,args)  => val (es,m) = occExps(args); (App(f,es) at expr, addOcc(m,f))
-    case NApp(f,args) => val (es,m) = occExps(args); (NApp(f,es) at expr, addOcc(m,f))
-    case Note(occ,e)  => val (e1,m) = occExpr(e); (Note(occ,e1) at expr,m)
+    case ECon(c,args) => val (es,m) = occExps(args); (ECon(c,es), m)
+    case App(f,args)  => val (es,m) = occExps(args); (App(f,es), addOcc(m,f))
+    case NApp(f,args) => val (es,m) = occExps(args); (NApp(f,es), addOcc(m,f))
+    case Note(occ,e)  => val (e1,m) = occExpr(e); (Note(occ,e1), m)
     case Let(v,e,b) => {
       val (e1,m) = occExpr(e)
       val (b1,n) = occExpr(b) 
       val u = union(m,n)
-      (Let(v, Note(getOcc(u,v),e1) at e,b1) at expr, u - v)
+      (Let(v, Note(getOcc(u,v),e1), b1), u - v)
     }
     case Eval(v,e,b) => {
       val (e1,m) = occExpr(e)
       val (b1,n) = occExpr(b)
       val u = union(m,n)
-      (Eval(v, Note(getOcc(u,v),e1) at e,b1) at expr, u - v)
+      (Eval(v, Note(getOcc(u,v),e1), b1), u - v)
     }
     case LetRec(decls,e) => {
       val (e1,m1) = occExpr(e)
       val (ids,es) = decls unzip
       val (es1,ms) = es map occExpr unzip
       val m = union(m1::ms)
-      val decls1 = (ids,es1).zipped map {case (id,e) => (id, Note(getOcc(m,id),e) at e)}
-      (LetRec(decls1,e1 at e) at expr, m -- ids)
+      val decls1 = (ids,es1).zipped map {case (id,e) => (id, Note(getOcc(m,id),e))}
+      (LetRec(decls1,e1), m -- ids)
     }
     case Match(v,alts) => {
       val (alts1,m) = alts map occAlt unzip;
-      (Match(v,alts1) at expr, addOcc(union(m),v))
+      (Match(v,alts1), addOcc(union(m),v))
     }
   }
    
@@ -74,7 +74,7 @@ object OccAnalysis {
   
   private def occFun(f:FunDecl) = {
     val (e,_) = occExpr(f.body)
-    FunDecl(f.n, f.args, e) at f
+    FunDecl(f.n, f.args, e)
   }
   
   def analyze(m:Module) = new Module(m.n, m.decls map {

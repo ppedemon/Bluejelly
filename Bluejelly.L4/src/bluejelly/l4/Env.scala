@@ -15,7 +15,8 @@ import bluejelly.utils.Name
 class Env(
     val mname:Name, 
     val ddecls:Map[ConRef, DataDecl], 
-    val fdecls:Map[Var, FunDecl]) {
+    val fdecls:Map[Var, FunDecl],
+    val locals:Set[Var] = Set()) {
   
   // Is the given Id referring to the current module?
   def isLocal(id:Id) = 
@@ -55,6 +56,10 @@ class Env(
   
   def apply(c:ConRef) = ddecls(c)
   def apply(v:Var) = fdecls(v)
+  
+  def inScope(v:Var) = (locals contains v) || hasFun(v)
+  def addLocal(v:Var) = new Env(mname, ddecls, fdecls, locals + v)
+  def addLocals(vs:List[Var]) = new Env(mname, ddecls, fdecls, locals ++ vs)
 }
 
 object Env {

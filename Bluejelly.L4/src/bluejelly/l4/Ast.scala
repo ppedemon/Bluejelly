@@ -43,18 +43,18 @@ class ConRef(n:Name) extends Id(n) {
   }
 }
 
-sealed trait Occ
+sealed abstract class Occ
 case object Never extends Occ
 case object Once extends Occ
 case object Many extends Occ
 
-sealed trait Lit
+sealed abstract class Lit
 case class IntLit(val i:Int) extends Lit
 case class DblLit(val d:Double) extends Lit
 case class ChrLit(val c:Char) extends Lit
 case class StrLit(val s:String) extends Lit
 
-sealed trait Expr extends Positionable
+sealed abstract class Expr extends Positionable
 case class ELit(val lit:Lit) extends Expr
 case class ECon(val c:ConRef, val args:List[Expr]) extends Expr
 case class App(val fun:Var, val args:List[Expr]) extends Expr
@@ -67,10 +67,10 @@ case class Note(val occ:Occ, val expr:Expr) extends Expr
 
 class Alt(val p:Pat, val e:Expr)
 
-sealed trait Pat extends Positionable { val vars:List[Var] }
-case class PVar(val v:Var) extends Pat { val vars = List(v) }
-case class PCon(val c:ConRef, val vars:List[Var]) extends Pat
-case class PLit(val lit:Lit) extends Pat { val vars = List() }
+sealed abstract class Pat(val vars:List[Var]) extends Positionable
+case class PVar(val v:Var) extends Pat(List(v))
+case class PCon(val c:ConRef, override val vars:List[Var]) extends Pat(vars)
+case class PLit(val lit:Lit) extends Pat(List())
 
 sealed trait Decl extends Positionable
 case class DataDecl(val ref:ConRef, val con:ConDef) extends Decl

@@ -1,0 +1,114 @@
+module InlineTest
+
+data Nil{0,0}
+data Cons{1,2}
+
+# Inlining constructor arguments
+fun c =
+  let x = 1 in 
+  let y = 2 in
+  let z = 3 in
+  Cons x y z
+
+# Inline app function and arguments
+fun d x y = 
+  let a = @f x y in
+  let z = bluejelly.Int.add x y in
+  let w = Cons 1 Nil in
+  @a z w 
+
+# App function is a let!
+fun e x y =
+  let f = let! g = bluejelly.Int.add x (bluejelly.Int.mul y 2) in g in
+  let w = bluejelly.Int.add x y in
+  let z = Cons 1 Nil in
+  f w z
+
+# App term can't be inlined :(
+fun h x y =
+  let f = let! g = e x y in bluejelly.Int.add g 1 in
+  let w = bluejelly.Int.add x y in
+  let z = Cons 1 Nil in
+  f w z
+
+# Dead code
+fun dead = let f = add 3 1 in 2
+
+# Simple inline in case binding occurs once
+fun f0 x = 
+  let y = 43
+  in blujelly.Int.add x y
+
+# z occurs multiple times. Since it's an alias to y,
+# which is a whnf binding, we can safely inline it.
+fun f1 x = 
+  let y = Nil in
+  let z = y
+  in Cons (f z) z
+
+# z occurs multiple times, but looks like we can inline
+# it since it's just an alias to y. However, y is not a
+# whnf expression, so we inline y but not z.
+fun f2 x = 
+  let y = bluejelly.Int.add 1 2 in
+  let z = y in Cons (f z) z
+
+# This is not inlineable
+fun notInline x y z =
+  let f = add x y z in
+  sub f f
+
+# Inline of a trivial strict expression
+fun tStrict = 
+  let! x = 1 in
+  add (add x x) x
+
+# Inline non-trivial strict binding occuring once
+fun once x =
+  let! z = add x 1 in
+  someFun (f z) 1
+
+# Inline non-trivial strict binding. At first glance
+# z in not the first atom used in the body after the
+# let!, yet it is after inlining w.
+fun sInline = 
+  let! z = add x 1 in
+  let w = add 1 z
+  in f w
+
+# Non-trivial strict binding occurring more 
+# than once, can't be inlined.
+fun nInline x = 
+  let! f = let z = x in add 1 z
+  in add f f
+
+# Inline recursive bindings
+fun irec x = 
+  let y = add x 2 in
+  let rec a = add x b
+      and b = sub y a
+  in f a b
+
+# match acts on evaluated variables, hance this
+# shouldn't inline
+fun mInline  = 
+  let! x = add 1 2 in
+  match x with
+    | 1 -> 1
+    | x -> x
+
+# Neither this, even thou strict binding is trivial
+fun f3 = 
+  let! x = 1 in
+  match x with
+    1 -> 1
+  | x -> x
+
+# This will inline
+fun g =
+  let x = Cons 1 (Cons 1 Nil) in
+  let! z = irec (add 1 2 ) in
+  match z with
+   | Nil -> x
+   | x   -> Cons 1 Nil
+
