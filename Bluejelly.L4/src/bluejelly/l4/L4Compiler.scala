@@ -23,7 +23,7 @@ import java.io.StringWriter
  * Compile a L4 module to an Assembler module.
  * @author ppedemon
  */
-class L4ToAsm(val m:Module, val env:Env) {
+class L4Compiler(val m:Module, val env:Env) {
 
   def compile:bluejelly.asm.Module = {
     val fc = new FunCompiler(env)

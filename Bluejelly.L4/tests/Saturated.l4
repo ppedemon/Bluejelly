@@ -1,0 +1,24 @@
+module Saturated
+
+# tag = 0, arity = 3
+data Saturated.C{0,3}
+data D{0,0}
+
+#fun f = C
+
+# Too much arguments!
+#fun g x = match x with
+#  | Saturated.C w x y z -> 0
+
+#fun app x = @f (C x) (let! z = g x in z)
+
+#fun atom x = 
+#  let i = 
+#    let z = f x in let! i = f z in i in
+#  let! y = g i in y
+
+fun m x = match x with
+  | C a b c -> m a b c
+  | D -> 2
+  | C w y z -> 2
+  | x -> 2

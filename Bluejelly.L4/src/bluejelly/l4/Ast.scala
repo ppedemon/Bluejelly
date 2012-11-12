@@ -132,8 +132,8 @@ object PrettyPrinter {
   def ppr(lit:Lit):Document = lit match {
     case IntLit(i) => text(i.toString)
     case DblLit(d) => text(d.toString)
-    case ChrLit(c) => text(c.toString)
-    case StrLit(s) => text(s)
+    case ChrLit(c) => text("'%s'" format c.toString)
+    case StrLit(s) => text(""""%s"""" format s)
   }
 
   def ppr(p:Pat):Document = p match {

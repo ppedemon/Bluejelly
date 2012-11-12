@@ -64,8 +64,9 @@ private class L4Errors extends Errors(false) {
     wrongPat(f, p, gnest(text("non-linear variable(s):") :/: pprList(vs)))
   }
   
-  def unsaturatedPat(f:FunDecl, p:Pat, c:ConRef) {
-    wrongPat(f, p, gnest("unsaturated constructor:" :/: text(quote(c))))
+  def unsaturatedPat(f:FunDecl, p:Pat, c:ConRef, over:Boolean) {
+    val s = "%ssaturated constructor" format (if (over) "over" else "un")
+    wrongPat(f, p, gnest(s :/: text(quote(c))))
   }
   
   def nonLinearParams(f:FunDecl, vs:List[Var]) {
@@ -83,7 +84,7 @@ private class L4Errors extends Errors(false) {
       gnest(
         group("in function:" :/: text(f.n.toString)) :/: 
         group("at:" :/: text(f.pos.toString))))
-      error(ppr(doc))
+      act(ppr(doc))
   }
   
   def wrongExpr = genExprMsg(error)_
@@ -93,8 +94,9 @@ private class L4Errors extends Errors(false) {
     wrongExpr(f, expr, gnest("undefined data constructor" :/: text(quote(c))))
   }
   
-  def unsaturatedDataCon(f:FunDecl, expr:Expr) {
-    wrongExpr(f, expr, text("wrong number of parameters for data constructor application"))
+  def unsaturatedDataCon(f:FunDecl, expr:Expr, c:ConRef, over:Boolean) {
+    val s = "%ssaturated constructor" format (if (over) "over" else "un")
+    wrongExpr(f, expr, gnest(s :/: text(quote(c))))
   }
   
   def nonAtomicExpr(f:FunDecl, parent:Expr, expr:Expr) {
@@ -118,12 +120,12 @@ private class L4Errors extends Errors(false) {
   }
   
   def duplicatedAlt(f:FunDecl, expr:Expr, alt:Alt) {
-    val d = gnest("uplicated alternative:" :/: PrettyPrinter.pprAlt(alt))
+    val d = gnest("duplicated alternative:" :/: PrettyPrinter.pprAlt(alt))
     fishyExpr(f, expr, d)
   }
   
   def unreachableAlts(f:FunDecl, expr:Expr, alt:Alt) {
-    val d = gnest("unreachable alternatives after" :/: PrettyPrinter.ppr(alt.p))
+    val d = gnest("unreachable alternatives after" :/: PrettyPrinter.pprAlt(alt))
     fishyExpr(f, expr, d)
   }
 }
@@ -154,6 +156,9 @@ class StaticAnalysis(m:Module) {
     }
     if (hasErrors) return Left(err) else Right(env)
   }
+
+  // Check for over or unsaturated constructors
+  private def arity(env:Env, c:ConRef):Int = env(c).con.arity
 
   // Get repeated elements in the given list. 
   // If every element is unique, return Nil.
@@ -186,14 +191,10 @@ class StaticAnalysis(m:Module) {
   // giving proper error messages if not
   private def allAtoms(f:FunDecl, parent:Expr, es:List[Expr]):Boolean = es match {
     case Nil => true
-    case expr::es if isAtom(expr) => allAtoms (f, expr, es)
+    case expr::es if isAtom(expr) => allAtoms (f, parent, es)
     case expr::_ => err nonAtomicExpr (f, parent, expr); false
   }
-  
-  // Check if the given constructor application is saturated
-  private def isSaturated[T](env:Env, c:ConRef, args:List[T]):Boolean = 
-    env(c).con.arity == args.length
-  
+    
   // Collect top-level declarations, checking for duplicates
   private def collectDecls(m:Module):Env = {
     (Env(m.n) /: m.decls) ((env,d) => d match {
@@ -209,7 +210,11 @@ class StaticAnalysis(m:Module) {
     case PLit(_) => env
     case PVar(v) => env addLocal v
     case PCon(c,_) if !(env hasDataCon c) => err undefPat (f,p,c); env
-    case PCon(c,args) if !isSaturated(env,c,args) => err unsaturatedPat (f,p,c); env
+    case PCon(c,args) if args.length != arity(env,c) => {
+      val a = arity(env,c)
+      err unsaturatedPat (f, p, c, args.length > a)
+      env 
+    }
     case PCon(c,vs) => repeated(vs) match {
       case Nil => env addLocals vs
       case vs => err nonLinearPat (f,p,vs); env
@@ -241,11 +246,12 @@ class StaticAnalysis(m:Module) {
       case Nil => true
       case a::as => a.p match {
         case PVar(_) => check(as, values)
-        case PCon(c,_) if (env hasDataCon c) && (values contains env(c).con.tag) => 
+        case PCon(c,_) if (env hasDataCon c) && (values contains c) => 
           err duplicatedAlt(f, expr, a); false
+        case PCon(c,_) => check(as, values + c)
         case PLit(x) if values contains Lit.value(x) => 
           err duplicatedAlt(f, expr, a); false
-        case _ => check(as, values)
+        case PLit(x) => check(as, values + Lit.value(x))
       }
     }
     check(alts, Set())
@@ -283,7 +289,8 @@ class StaticAnalysis(m:Module) {
     
     case con@ECon(c,args) => {
       if (!(env hasDataCon c)) err undefDataCon (f,expr,c)
-      if (!isSaturated(env,c,args)) err unsaturatedDataCon (f,expr)
+      val a = arity(env,c)
+      if (args.length != a) err unsaturatedDataCon(f, expr, c, args.length > a)
       val argsOk = allAtoms(f, expr, args)
       if (argsOk) args foreach analyzeExpr(env,f)
     }
