@@ -94,6 +94,10 @@ class Block(val is:List[Instr]) extends PrettyPrintable {
     }
   }
 }
+object Block {
+  def apply(is:List[Instr]) = new Block(is)
+  def apply(is:Instr*) = new Block(is.toList)
+}
 
 class Alt[T](val v:T, val b:Block) extends PrettyPrintable {
   def ppr(w:Writer)(implicit x:Int) {

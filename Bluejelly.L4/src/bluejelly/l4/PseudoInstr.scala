@@ -86,6 +86,12 @@ case class Reduce(val name:String, val matcher:Boolean, val b:Block) extends Ins
     w write ("\n" + " "*x + ".end")
   }
 }
+object Reduce{
+  def apply(name:String, matcher:Boolean, is:List[Instr]) = 
+    new Reduce(name,matcher,new Block(is))
+  def apply(name:String, macher:Boolean, is:Instr*) = 
+    new Init(new Block(is.toList))
+}
 
 /**
  * A block producing a value on the stack. This allows to compute
@@ -98,6 +104,10 @@ case class Atom(val b:Block) extends Instr {
     b.ppr(w)(x+2)
     w write ("\n" + " "*x + ".end")
   }
+}
+object Atom {
+  def apply(is:List[Instr]) = new Atom(new Block(is))
+  def apply(is:Instr*) = new Atom(new Block(is.toList))
 }
 
 /**
@@ -112,4 +122,8 @@ case class Init(val b:Block) extends Instr {
     b.ppr(w)(x+2)
     w write ("\n" + " "*x + ".end")
   }
+}
+object Init {
+  def apply(is:List[Instr]) = new Init(new Block(is))
+  def apply(is:Instr*) = new Init(new Block(is.toList))
 }
