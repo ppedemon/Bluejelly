@@ -18,7 +18,8 @@ data D{0,0}
 #  let! y = g i in y
 
 fun m x = match x with
-  | C a b c -> m a b c
+  | C a b c -> m zzz b c
   | D -> 2
-  | C w y z -> 2
   | x -> 2
+
+fun f x = f x

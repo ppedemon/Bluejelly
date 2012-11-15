@@ -206,18 +206,18 @@ class StaticAnalysis(m:Module) {
   }
   
   // Check if the given path is valid
-  private def analyzePat(env:Env, f:FunDecl)(p:Pat):Env = p match {
-    case PLit(_) => env
-    case PVar(v) => env addLocal v
-    case PCon(c,_) if !(env hasDataCon c) => err undefPat (f,p,c); env
+  private def analyzePat(env:Env, f:FunDecl)(p:Pat):(Env,Boolean) = p match {
+    case PLit(_) => (env,true)
+    case PVar(v) => (env addLocal v,true)
+    case PCon(c,_) if !(env hasDataCon c) => err undefPat (f,p,c); (env,false)
     case PCon(c,args) if args.length != arity(env,c) => {
       val a = arity(env,c)
       err unsaturatedPat (f, p, c, args.length > a)
-      env 
+      (env,false) 
     }
     case PCon(c,vs) => repeated(vs) match {
-      case Nil => env addLocals vs
-      case vs => err nonLinearPat (f,p,vs); env
+      case Nil => (env addLocals vs,true)
+      case vs => err nonLinearPat (f,p,vs); (env,false)
     }
   }
   
@@ -226,7 +226,11 @@ class StaticAnalysis(m:Module) {
   private def analyzeApp(env:Env, f:FunDecl, parent:Expr, fun:Var, args:List[Expr]) {
     if (env.isLocal(fun) && !(env inScope fun)) err undefVar (f, parent, fun)
     val argsOk = allAtoms(f, parent, args)
-    if (argsOk) args foreach analyzeExpr(env,f)
+    // Treat arg variables specially, so we get better error messages
+    if (argsOk) args foreach {
+      case App(v,Nil) => analyzeApp(env, f, parent, v,Nil)
+      case expr => analyzeExpr(env,f)(expr)
+    }
   }
    
   // Check that types are compatible in the given list of alternatives
@@ -267,8 +271,8 @@ class StaticAnalysis(m:Module) {
   
   // Analyze a case alternative
   private def analyzeAlt(env:Env, f:FunDecl)(alt:Alt) {
-    val extEnv = analyzePat(env, f)(alt.p)
-    analyzeExpr(extEnv, f)(alt.e)
+    val (extEnv,patOk) = analyzePat(env, f)(alt.p)
+    if (patOk) analyzeExpr(extEnv, f)(alt.e)
   }
 
   // Analyze a list of case alternatives
