@@ -62,9 +62,11 @@ private class FunCompiler(env:Env) {
       // Optimized eval cases
       case Eval(x, Note(Once,e), Match(y,alts)) if x == y && isWhnf(e) =>
         Atom(new Block(compileExpr(e))) :: compileAlts(alts)
-      case Eval(x, Note(Once,e), Match(y,alts)) if x == y =>
-        Reduce :: Atom(new Block(compileExpr(e))) :: 
-          Cont(fresh(env),true) :: compileAlts(alts)
+      case Eval(x, Note(Once,e), Match(y,alts)) if x == y => {
+        val atom = Atom(new Block(compileExpr(e)))
+        val ev = new Block(List(atom,Enter))
+        Reduce(fresh(env),true,ev) :: Local(x) :: compileAlts(alts)
+      }
       case Eval(x,e,b) if isWhnf(e) => 
         Atom(new Block(compileExpr(e))) :: Local(x) :: compileExpr(b)
       case Eval(x,e,App(y,Nil)) if x == y => compileExpr(e)

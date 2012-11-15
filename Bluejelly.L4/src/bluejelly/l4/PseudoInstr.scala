@@ -58,7 +58,7 @@ case class PackTyConSym(val v:Var, n:Int) extends Instr {
  */
 case class Param(val v:Var) extends Instr {
   override def ppr(w:Writer)(implicit x:Int) {
-    w write (" "*x + "param " + v)
+    w write (" "*x + ".param " + v)
   }  
 }
 
@@ -69,28 +69,22 @@ case class Param(val v:Var) extends Instr {
  */
 case class Local(val v:Var) extends Instr {
   override def ppr(w:Writer)(implicit x:Int) {
-    w write (" "*x + "local " + v)
+    w write (" "*x + ".local " + v)
   }
 }
 
 /**
- * Mark signaling the start of a let!.
+ * Block to evaluate. Parameter name is continuation name, and
+ * matcher flags indicated whether the continuation is a matcher.
  */
-case object Reduce extends Instr {
+case class Reduce(val name:String, val matcher:Boolean, val b:Block) extends Instr {
   override def ppr(w:Writer)(implicit x:Int) {
-    w write (" "*x + "reduce")
-  }
-}
-
-/**
- * Mark signaling the beginning of a continuation.
- */
-case class Cont(val name:String, val matcher:Boolean) extends Instr {
-  override def ppr(w:Writer)(implicit x:Int) {
-    w write (" "*x + "cont ")
+    w write (" "*x + ".reduce ")
     w write name
     if (matcher) w write "[matcher]:\n" else w write ":\n"
-  }  
+    b.ppr(w)(x+2)
+    w write ("\n" + " "*x + ".end")
+  }
 }
 
 /**
@@ -100,8 +94,9 @@ case class Cont(val name:String, val matcher:Boolean) extends Instr {
 case class Atom(val b:Block) extends Instr {
   override def ppr(w:Writer)(implicit x:Int) {
     w write (" "*x)
-    w write "atom:\n"
+    w write ".atom:\n"
     b.ppr(w)(x+2)
+    w write ("\n" + " "*x + ".end")
   }
 }
 
@@ -113,7 +108,8 @@ case class Atom(val b:Block) extends Instr {
 case class Init(val b:Block) extends Instr {
   override def ppr(w:Writer)(implicit x:Int) {
     w write (" "*x)
-    w write ("init:\n")
+    w write (".init:\n")
     b.ppr(w)(x+2)
+    w write ("\n" + " "*x + ".end")
   }
 }

@@ -17,9 +17,14 @@ data D{0,0}
 #    let z = f x in let! i = f z in i in
 #  let! y = g i in y
 
-fun m x = match x with
-  | C a b c -> m zzz b c
-  | D -> 2
-  | x -> 2
+#fun m x = match x with
+#  | C a b c -> m zzz b c
+#  | D -> 2
+#  | x -> 2
 
-fun f x = f x
+#fun f x = f x
+
+fun f x y = 
+  let! u = 
+    let! v = bluejelly.Int.add x y in bluejelly.Int.add v 1
+  in bluejelly.Int.add u 1
