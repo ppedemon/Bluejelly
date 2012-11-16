@@ -26,7 +26,7 @@ case class PushSym(val v:Var) extends Instr {
  */
 case class PackAppSym(val v:Var, n:Int) extends Instr {
   override def ppr(w:Writer)(implicit x:Int) {
-    w write (" "*x + "packappsym " + v)
+    w write (" "*x + ("packappsym %s,%d" format (v,n)))
   }  
 }
 
@@ -37,7 +37,7 @@ case class PackAppSym(val v:Var, n:Int) extends Instr {
  */
 case class PackNappSym(val v:Var, n:Int) extends Instr {
   override def ppr(w:Writer)(implicit x:Int) {
-    w write (" "*x + "packnappsym " + v)
+    w write (" "*x + ("packnappsym %s,%d" format (v,n)))
   }  
 }
 
@@ -47,7 +47,7 @@ case class PackNappSym(val v:Var, n:Int) extends Instr {
  */
 case class PackTyConSym(val v:Var, n:Int) extends Instr {
   override def ppr(w:Writer)(implicit x:Int) {
-    w write (" "*x + "packconsym " + v)
+    w write (" "*x + ("packtyconsym %s,%d" format (v,n)))
   }  
 }
 

@@ -1,0 +1,28 @@
+module Simple
+
+fun one = 1
+
+fun inc = bluejelly.Int.add 1
+
+fun shadow x = let x = x in x
+
+fun k x y = x
+fun s x y z = x z (y z)
+
+data Nil{0,0}
+data Cons{1,2}
+
+fun map f xs = 
+  let! xs$ = xs in
+  match xs$ with
+    | Nil -> Nil
+    | Cons x xs -> Cons (f x) (map f xs)
+
+fun tricky x = 
+  let map = map bluejelly.Int.add x in map (map 1)
+
+fun recursive x = 
+  let rec xs = map zs
+      and zs = map ys
+      and ys = Cons 2 xs
+  in Cons 1 xs

@@ -68,7 +68,7 @@ private class FunCompiler {
       val params = (fun.args reverse) map {Param(_)}
       val instrs = compileExpr(env addLocals(fun.args))(fun.body)
       val block = Block(Atom(params ::: instrs),Enter)
-      new Function(fun.n.n.toString, 0, false, block)
+      new Function(fun.n.n.toString, fun.args.length, false, block)
     }
 
     // -------------------------------------------------------------------
@@ -108,7 +108,7 @@ private class FunCompiler {
       case Note(_,e) => 
         compileExpr(env)(e)
         
-      case _ => compileAtom(env, expr)
+      case _ => compileAtom(env)(expr)
     }
     
     // -------------------------------------------------------------------
@@ -183,7 +183,7 @@ private class FunCompiler {
     // Compile let and let recs bindings
     // -------------------------------------------------------------------
     def compileBind(env:Env, x:Var, e:Expr):List[Instr] =
-      compileAtom(env,e) ::: List(Local(x))
+      compileAtom(env)(e) ::: List(Local(x))
 
     def compileDecls(env:Env,decls:List[(Var,Expr)]):List[Instr] = {
       val as = decls map {
@@ -229,7 +229,7 @@ private class FunCompiler {
     // -------------------------------------------------------------------
     // Compile atoms
     // -------------------------------------------------------------------
-    def compileAtom(env:Env,expr:Expr):List[Instr] = 
+    def compileAtom(env:Env)(expr:Expr):List[Instr] = 
       List(Atom(compileAtomAux(env,expr)))
     
     def compileAtomAux(env:Env,expr:Expr):List[Instr] = expr match {
@@ -264,7 +264,7 @@ private class FunCompiler {
     }
 
     def compileArgs(env:Env,args:List[Expr]):List[Instr] = 
-      (args reverse) map compileExpr(env) flatten
+      (args reverse) map compileAtom(env) flatten
     
     def compileVar(env:Env, v:Var):Instr = 
       if (env isLocal v) PushSym(v) else PushCode(v.n.toString)
@@ -282,11 +282,11 @@ private class FunCompiler {
     def isWhnf(expr:Expr):Boolean = expr match {
       case ELit(_)  | ECon(_,_) => true
       case App(_,_) | NApp(_,_) => false
-      case Let(_,_,e)  => isWhnf(e)
-      case Eval(_,_,e) => isWhnf(e)
-      case LetRec(_,e) => isWhnf(e)
+      case Let(_,_,e)    => isWhnf(e)
+      case Eval(_,_,e)   => isWhnf(e)
+      case LetRec(_,e)   => isWhnf(e)
       case Match(_,alts) => alts forall (a => isWhnf(a.e))
-      case Note(_,e) => isWhnf(e)
+      case Note(_,e)     => isWhnf(e)
     }
     
     def fresh(env:Env):String = {

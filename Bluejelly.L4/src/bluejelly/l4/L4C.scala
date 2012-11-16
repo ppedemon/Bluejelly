@@ -7,9 +7,12 @@
 package bluejelly.l4
 
 import bluejelly.utils.UnicodeFilter
+import bluejelly.asm.Module
+
+import scala.util.parsing.input.StreamReader
+
 import java.io.FileReader
 import java.io.StringWriter
-import scala.util.parsing.input.StreamReader
 import java.io.StringReader
 
 /**
@@ -31,11 +34,18 @@ object L4C {
           val m1 = Inliner.inline(OccAnalysis.analyze(m))
 
           // Compile
-          new L4Compiler(m1, result.right.get) compile
+          val m2 = new L4Compiler(m1, result.right.get).compile
+          print(m2)
+          
+//          val w = new StringWriter
+//          m2.ppr(w)(2)
+//          print(w)
+          /*
           val d = PrettyPrinter.ppr(m1)
           val w = new StringWriter
           d.format(75, w)
           print(w)
+          */
       }
     }
   }

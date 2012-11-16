@@ -90,7 +90,7 @@ class Block(val is:List[Instr]) extends PrettyPrintable {
     var first = true
     for (i <- is) { 
       if (first) first = false; else w write '\n'
-      Instr.ppr(i,w,x); 
+      i.ppr(w)(x)
     }
   }
 }
