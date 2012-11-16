@@ -28,3 +28,15 @@ fun f x y =
   let! u = 
     let! v = bluejelly.Int.add x y in bluejelly.Int.add v 1
   in bluejelly.Int.add u 1
+
+fun fishy x = 
+  let! ev = x in match ev with
+    | 1 ->   let! u = 
+    let! v = bluejelly.Int.add x x in bluejelly.Int.add v 1
+  in bluejelly.Int.add u 1
+    | y -> 2
+    | 1 ->   let! u = 
+    let! v = bluejelly.Int.add x x in bluejelly.Int.add v 1
+  in bluejelly.Int.add u 1
+    | z -> 3
+ 

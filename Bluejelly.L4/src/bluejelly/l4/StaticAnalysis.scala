@@ -113,7 +113,19 @@ private class L4Errors extends Errors(false) {
   def undefVar(f:FunDecl, expr:Expr, v:Var) {
     wrongExpr(f, expr, gnest("undefined variable" :/: text(quote(v))))
   }
-   
+
+  def multipleDefaults(f:FunDecl, expr:Expr, alts:List[Alt]) {
+    val a = (alts.tail foldLeft (PrettyPrinter.pprAlt(alts.head)))((d,a) => 
+      d :/: group("and:" :/: PrettyPrinter.pprAlt(a)))
+    val d = gnest(text("mutltiple default alternatives:") :/: group(a))
+    wrongExpr(f, expr, d)
+  }
+
+  def ambiguousMatch(f:FunDecl, expr:Expr) {
+    val d = text("Ambiguous match expression")
+    wrongExpr(f, expr, d)
+  }
+  
   def wrongType(f:FunDecl, expr:Expr, alt:Alt) {
     val d = gnest("incompatible alternative:" :/: PrettyPrinter.pprAlt(alt))
     wrongExpr(f, expr, d)
@@ -125,7 +137,7 @@ private class L4Errors extends Errors(false) {
   }
   
   def unreachableAlts(f:FunDecl, expr:Expr, alt:Alt) {
-    val d = gnest("unreachable alternatives after" :/: PrettyPrinter.pprAlt(alt))
+    val d = gnest("unreachable alternatives after:" :/: PrettyPrinter.pprAlt(alt))
     fishyExpr(f, expr, d)
   }
 }
@@ -232,7 +244,15 @@ class StaticAnalysis(m:Module) {
       case expr => analyzeExpr(env,f)(expr)
     }
   }
-   
+  
+  // Check that there is at most one default alternative
+  private def defOk(f:FunDecl, expr:Expr, alts:List[Alt]):Boolean = {
+    val (vs,as) = alts.partition(_.isVarAlt)
+    if (vs.length > 1) err multipleDefaults(f, expr, vs)
+    if (as.isEmpty) err ambiguousMatch(f,expr)
+    vs.length <= 1
+  }
+
   // Check that types are compatible in the given list of alternatives
   private def typesOk(f:FunDecl, expr:Expr, alts:List[Alt]):Boolean = {
     def check(alts:List[Alt]):Boolean = alts match {
@@ -243,7 +263,7 @@ class StaticAnalysis(m:Module) {
     }
     check(alts filter {!_.isVarAlt})
   }
-  
+    
   // Check that there are no duplicated in the given list of alternatives
   private def dupsOk(env:Env, f:FunDecl, expr:Expr, alts:List[Alt]):Boolean = {
     def check(alts:List[Alt], values:Set[Any]):Boolean = alts match {
@@ -277,6 +297,8 @@ class StaticAnalysis(m:Module) {
 
   // Analyze a list of case alternatives
   private def analyzeAlts(env:Env, f:FunDecl, expr:Expr, alts:List[Alt]) {
+    val dOk = defOk(f, expr, alts)
+    if (!dOk) return 
     val tysOk = typesOk(f, expr, alts)
     if (!tysOk) return;
     val reachOk = reachableOk(f, expr, alts)

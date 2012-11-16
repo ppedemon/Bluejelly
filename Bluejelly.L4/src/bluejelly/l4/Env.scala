@@ -57,9 +57,11 @@ class Env(
   def apply(c:ConRef) = ddecls(c)
   def apply(v:Var) = fdecls(v)
   
-  def inScope(v:Var) = (locals contains v) || hasFun(v)
+  def isLocal(v:Var) = locals contains v
   def addLocal(v:Var) = new Env(mname, ddecls, fdecls, locals + v)
   def addLocals(vs:List[Var]) = new Env(mname, ddecls, fdecls, locals ++ vs)
+  
+  def inScope(v:Var) = isLocal(v) || hasFun(v)
 }
 
 object Env {
