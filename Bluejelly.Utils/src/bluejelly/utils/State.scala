@@ -40,7 +40,7 @@ trait State[S,A] {
  * </ol>
  */
 object St {
-  def state[S,A](f:S => (A,S)) = new State[S,A] { def apply(errs:S) = f(errs) }
+  def state[S,A](f:S => (A,S)) = new State[S,A] { def apply(s:S) = f(s) }
   def ret[S,A](a:A):State[S,A] = state(s => (a,s))
   def get[S]:State[S,S] = state(s => (s,s))
   def upd[S](f:S => S):State[S,Unit] = get flatMap (s => state(_ => ((),f(s))))

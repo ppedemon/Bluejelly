@@ -6,30 +6,27 @@
  */
 package bluejelly.l4
 
-import bluejelly.utils.Name
-import bluejelly.asm.Function
-import bluejelly.asm.Block
-import bluejelly.asm.Instr
-import bluejelly.asm.PushInt
-import bluejelly.asm.PushDbl
-import bluejelly.asm.PushChr
-import bluejelly.asm.PushStr
-import bluejelly.asm.Enter
 import bluejelly.asm.AllocApp
 import bluejelly.asm.AllocNapp
 import bluejelly.asm.AllocTyCon
-import scala.text._
-import scala.text.Document._
-import java.io.StringWriter
-import bluejelly.asm.PushCode
-import bluejelly.asm.MatchInt
-import bluejelly.asm.MatchDbl
+import bluejelly.asm.Block
+import bluejelly.asm.Enter
+import bluejelly.asm.Function
+import bluejelly.asm.Instr
 import bluejelly.asm.MatchChr
-import bluejelly.asm.MatchStr
 import bluejelly.asm.MatchCon
+import bluejelly.asm.MatchDbl
+import bluejelly.asm.MatchInt
+import bluejelly.asm.MatchStr
 import bluejelly.asm.MkApp
 import bluejelly.asm.MkNapp
 import bluejelly.asm.MkTyCon
+import bluejelly.asm.PushChr
+import bluejelly.asm.PushCode
+import bluejelly.asm.PushDbl
+import bluejelly.asm.PushInt
+import bluejelly.asm.PushStr
+import bluejelly.utils.Name
 
 /**
  * Compile a L4 module to an Assembler module.
