@@ -6,6 +6,10 @@
  */
 package bluejelly.l4
 
+import bluejelly.asm.Function
+import bluejelly.asm.Instr
+import bluejelly.asm.Block
+
 /**
  * Resolve symbolic instructions to stack offsets.
  * @author ppedemon
@@ -61,5 +65,25 @@ class Resolver {
     val (x,(_,d)) = f((Map(),0))
     assert(d == 0, "resolver[run]: invalid stack")
     x
-  } 
+  }
+  
+  // ---------------------------------------------------------------------
+  // Solve instructions
+  // ---------------------------------------------------------------------
+
+  def resolve(f:Function):Function = {
+    val instrs = run(resolve(f.b.is))
+    new Function(f.name, f.arity, f.matcher, Block(instrs))
+  }
+  
+  def resolve(instrs:List[Instr]):State[S,List[Instr]] = instrs match {
+    case Nil => ret(Nil)
+    case Param(v)::is => for {_ <- push(1); rs <- bind(v,resolve(is))} yield rs
+    case Local(v)::is => bind(v,resolve(is))
+    case i::is => for {r <- resolve(i); rs <- resolve(is)} yield r:::rs
+  }
+  
+  // TODO: Implement me!
+  def resolve(i:Instr):State[S,List[Instr]] = null
+
 }
