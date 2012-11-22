@@ -139,7 +139,7 @@ private class FunCompiler {
     
     // Compile default alternative
     def compileDefAlt(env:Env)(e:Expr,v:Var) = 
-      Block(Atom(Param(v) :: compileExpr(env)(e)))
+      Block(Atom(Param(v) :: compileExpr(env addLocal v)(e)))
 
     // Compile alternative to a block
     def compileAlt[T](env:Env)(

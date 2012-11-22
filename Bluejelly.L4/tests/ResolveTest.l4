@@ -1,0 +1,7 @@
+module ResolveTest
+
+fun id x = x
+
+fun x = let x = x in x
+
+fun g x = let! x$ = x in match x$ with 1 -> 2 | 2 -> 3 | z -> x$

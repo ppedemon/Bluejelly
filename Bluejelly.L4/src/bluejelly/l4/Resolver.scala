@@ -13,6 +13,29 @@ import bluejelly.asm.PushVar
 import bluejelly.asm.PackApp
 import bluejelly.asm.PackNapp
 import bluejelly.asm.PackTyCon
+import bluejelly.asm.Slide
+import bluejelly.asm.MatchInt
+import bluejelly.asm.MatchInt
+import bluejelly.asm.MatchDbl
+import bluejelly.asm.MatchDbl
+import bluejelly.asm.MatchChr
+import bluejelly.asm.MatchChr
+import bluejelly.asm.MatchStr
+import bluejelly.asm.MatchCon
+import bluejelly.asm.Enter
+import bluejelly.asm.Raise
+import bluejelly.asm.Catch
+import bluejelly.asm.PushInt
+import bluejelly.asm.PushDbl
+import bluejelly.asm.PushChr
+import bluejelly.asm.PushStr
+import bluejelly.asm.PushCode
+import bluejelly.asm.MkApp
+import bluejelly.asm.MkNapp
+import bluejelly.asm.AllocApp
+import bluejelly.asm.AllocNapp
+import bluejelly.asm.MkTyCon
+import bluejelly.asm.AllocTyCon
 
 /**
  * Resolve symbolic instructions to stack offsets.
@@ -21,6 +44,10 @@ import bluejelly.asm.PackTyCon
 class Resolver {
   import bluejelly.utils.State
   import bluejelly.utils.St._
+
+  // Avoid verbose types in definitions
+  type M = bluejelly.asm.Module
+  type A[T] = bluejelly.asm.Alt[T]
   
   // State:
   //  1. Map from variables to offset from bottom of the stack
@@ -55,19 +82,19 @@ class Resolver {
   def push(n:Int):State[S,Unit] = upd {case (m,d) => (m,d+n)}
   def pop(n:Int) = push(-n)
   def depth():State[S,Int] = for {s <- get} yield s._2
-  def bind[A](v:Var,f:State[S,A]):State[S,A] = state{case (m,d) => f(m + (v->d),d)}
+  def bind[A](v:Var,f:State[S,A]):State[S,A] = state {case (m,d) => f(m + (v->d),d)}
   def offset(v:Var):State[S,Int] = for {s <- get} yield s._2 - s._1(v)
   
   def alt[A](d:Int,f:State[S,A]):State[S,A] = state {
     case s@(m,_) =>
-      val (x,(_,d1)) = f(s)
-      assert(d1 == d+1, "resolver[match alt]: invalid stack")
+      val (x,(_,d1)) = f((m,d))
+      assert(d1 == d+1, "resolver[match alt]: invalid stack, height = %s, expected = %s" format (d1,d+1))
       (x,(m,d1))
   }
   
   def run[A](f:State[S,A]):A = {
     val (x,(_,d)) = f((Map(),0))
-    assert(d == 0, "resolver[run]: invalid stack")
+    assert(d == 0, "resolver[run]: invalid stack, height = %d (expected 0)" format d)
     x
   }
   
@@ -75,6 +102,8 @@ class Resolver {
   // Solve instructions
   // ---------------------------------------------------------------------
 
+  def resolve(m:M):M = new M(m.name, m.funcs map resolve)
+  
   def resolve(f:Function):Function = {
     val instrs = run(resolve(f.b.is))
     new Function(f.name, f.arity, f.matcher, Block(instrs))
@@ -87,7 +116,6 @@ class Resolver {
     case i::is => for {r <- resolve(i); rs <- resolve(is)} yield r:::rs
   }
   
-  // TODO: Implement me!
   def resolve(i:Instr):State[S,List[Instr]] = i match {
     case PushSym(v) => for {
       x <- offset(v)
@@ -113,6 +141,110 @@ class Resolver {
       is <- resolve(b.is)
       _  <- push(1) 
     } yield List(Reduce(n,m,Block(is)))
+    
+    case Atom(block) => resolveSlide(1,block.is)
+    case Init(block) => resolveSlide(0,block.is)
+    
+    case MatchInt(alts,deflt) => for {
+      as <- resolveAlts(alts)
+      mb <- resolveDef(deflt)
+    } yield List(MatchInt(as,mb))
+
+    case MatchDbl(alts,deflt) => for {
+      as <- resolveAlts(alts)
+      mb <- resolveDef(deflt)
+    } yield List(MatchDbl(as,mb))
+
+    case MatchChr(alts,deflt) => for {
+      as <- resolveAlts(alts)
+      mb <- resolveDef(deflt)
+    } yield List(MatchChr(as,mb))
+
+    case MatchStr(alts,deflt) => for {
+      as <- resolveAlts(alts)
+      mb <- resolveDef(deflt)
+    } yield List(MatchStr(as,mb))
+
+    case MatchCon(alts,deflt) => for {
+      as <- resolveAlts(alts)
+      mb <- resolveDef(deflt)
+    } yield List(MatchCon(as,mb))
+    
+    case i => for {_ <- effect(i)} yield List(i)
   }
 
+  def resolveSlide(n:Int, instrs:List[Instr]):State[S,List[Instr]] = for {
+    d0 <- depth()
+    is <- resolve(instrs)
+    d1 <- depth()
+    val m = d1 - d0 - n
+    _ <- pop(m)
+  } yield is ::: List(Slide(n,m))
+  
+  // ---------------------------------------------------------------------
+  // Solve match instructions
+  // ---------------------------------------------------------------------
+  private def seq[S,A](xs:List[State[S,A]]):State[S,List[A]] = xs match {
+    case Nil => ret(Nil)
+    case x::xs => for {
+      a <- x
+      as <- seq(xs)
+    } yield a::as
+  }
+  
+  def resolveAlts[T](alts:List[A[T]]):State[S,List[A[T]]] = for {
+    _ <- pop(1)
+    d <- depth()
+    as <- seq(alts map resolveAlt(d))
+  } yield as
+
+  
+  def resolveAlt[T](d:Int)(a:A[T]):State[S,A[T]] = for {
+    is <- alt(d,resolve(a.b.is))
+  } yield new A(a.v, Block(is))
+ 
+  def resolveDef(mb:Option[Block]):State[S,Option[Block]] = mb match {
+    case None => ret(None)
+    case Some(b) => for {
+      _ <- pop(1)
+      d <- depth()
+      is <- alt(d,resolve(b.is))
+    } yield Some(Block(is))
+  }
+
+  // ---------------------------------------------------------------------
+  // List of stack effect for simple instructions
+  // ---------------------------------------------------------------------
+  
+  /*
+   * Just include the instructions generated by the compiler that
+   * weren't handled before by resolve(i:Instr). If anything else
+   * appears, we know something is wrong.
+   */
+  def effect(i:Instr):State[S,Unit] = i match {
+    case Enter => pop(1)
+    case Raise => pop(1)  // Really?
+    case Catch => pop(1)
+    
+    case PushInt(_) => push(1)
+    case PushDbl(_) => push(1)
+    case PushChr(_) => push(1)
+    case PushStr(_) => push(1)
+    case PushCode(_) => push(1)
+    
+    case MkApp(n) => for {_ <- pop(n); _ <- push(1)} yield ()
+    case MkNapp(n) => for {_ <- pop(n); _ <- push(1)} yield ()
+    case AllocApp => push(1)
+    case AllocNapp => push(1)
+    
+    case MkTyCon(_,n) => for {_ <- pop(n); _ <- push(1)} yield ()
+    case AllocTyCon(_) => push(1)
+    
+    case _ => assert(false, "Unexpected instruction: " + i); ret()
+  }
+  
+}
+
+object Resolver {
+  def resolve(m:bluejelly.asm.Module) = new Resolver resolve m
 }
