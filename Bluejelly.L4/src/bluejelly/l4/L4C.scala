@@ -7,7 +7,6 @@
 package bluejelly.l4
 
 import bluejelly.utils.UnicodeFilter
-import bluejelly.asm.Module
 
 import scala.util.parsing.input.StreamReader
 

@@ -110,6 +110,12 @@ private class L4Errors extends Errors(false) {
         text("is not a recursive expression"))
   }
   
+  def invalidCon(f:FunDecl, parent:Expr, expr:Expr) {
+    wrongExpr(f, parent, 
+        gnest("zero-ary constructor" :/: PrettyPrinter.ppr(expr) :/: 
+          text("is not a recursive expression")))
+  }
+  
   def undefVar(f:FunDecl, expr:Expr, v:Var) {
     wrongExpr(f, expr, gnest("undefined variable" :/: text(quote(v))))
   }
@@ -183,11 +189,20 @@ class StaticAnalysis(m:Module) {
     case _ => false
   }
   
-  // Check that all the expressions in es are not literals
-  private def allNonLit(f:FunDecl, parent:Expr, es:List[Expr]):Boolean = es match {
+  // Id the given expression a zero-ary constructor?
+  private def isZCon(expr:Expr):Boolean = expr match {
+    case ECon(c,args) if args.length == 0 => true
+    case Note(_,e) => isZCon(e)
+    case _ => false
+  }
+  
+  // Check that all the expressions in es are valid "recursive" expressions
+  // E.g., literals and zero-ary constructors can be recursive
+  private def allRec(f:FunDecl, parent:Expr, es:List[Expr]):Boolean = es match {
     case Nil => true
-    case expr::es if isLit(expr) => err invalidLit (f, parent, expr); false
-    case _::es => allNonLit(f, parent, es)
+    case expr::es if isLit(expr) => err invalidLit(f, parent, expr); false
+    case expr::ex if isZCon(expr) => err invalidCon(f, parent, expr); false
+    case _::es => allRec(f, parent, es)
   }
   
   // Is the given expression atomic?
@@ -333,7 +348,7 @@ class StaticAnalysis(m:Module) {
     case LetRec(decls,b) => {
       val (vs,es) = (decls unzip)
       if (!allAtoms(f,expr,es)) return
-      if (!allNonLit(f,expr,es)) return
+      if (!allRec(f,expr,es)) return
       val extEnv = env addLocals vs
       es foreach analyzeExpr(extEnv,f)
       analyzeExpr(extEnv,f)(b)

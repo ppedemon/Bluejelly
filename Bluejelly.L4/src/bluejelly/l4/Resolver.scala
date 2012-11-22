@@ -9,6 +9,10 @@ package bluejelly.l4
 import bluejelly.asm.Function
 import bluejelly.asm.Instr
 import bluejelly.asm.Block
+import bluejelly.asm.PushVar
+import bluejelly.asm.PackApp
+import bluejelly.asm.PackNapp
+import bluejelly.asm.PackTyCon
 
 /**
  * Resolve symbolic instructions to stack offsets.
@@ -84,6 +88,31 @@ class Resolver {
   }
   
   // TODO: Implement me!
-  def resolve(i:Instr):State[S,List[Instr]] = null
+  def resolve(i:Instr):State[S,List[Instr]] = i match {
+    case PushSym(v) => for {
+      x <- offset(v)
+      _ <- push(1)
+    } yield List(PushVar(x))
+    
+    case PackAppSym(v,n) => for {
+      x <- offset(v)
+      _ <- pop(n)
+    } yield List(PackApp(x,n))
+    
+    case PackNappSym(v,n) => for {
+      x <- offset(v)
+      _ <- pop(n)
+    } yield List(PackNapp(x,n))
+    
+    case PackTyConSym(v,n) => for {
+      x <- offset(v)
+      _ <- pop(n)
+    } yield List(PackTyCon(x,n))
+    
+    case Reduce(n,m,b) => for {
+      is <- resolve(b.is)
+      _  <- push(1) 
+    } yield List(Reduce(n,m,Block(is)))
+  }
 
 }

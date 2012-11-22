@@ -418,7 +418,7 @@ public class ExecutionContext implements Runnable {
          * we assume that the constructor to allocate is not zero-ary.
          * This assumption turns out to be correct, because tycon allocs
          * are triggered from letrecs. Since zero-ary tycons don't depend
-         * on other values, they can never be in a letrec.
+         * on other values, they shouldn't be in a letrec.
          */
         this.s[++this.sp] = new TyCon(tag);
     }
@@ -429,8 +429,10 @@ public class ExecutionContext implements Runnable {
      * @param n      number of nodes to pack
      */
     public void packTyCon(int off, int n) {
-        Node[] nodes = this.collect(n);
-        ((TyCon)this.s[--this.sp - off]).pack(nodes);
+        if (n > 0) {
+            Node[] nodes = this.collect(n);
+            ((TyCon)this.s[--this.sp - off]).pack(nodes);
+        }
     }
     
     /**
@@ -830,6 +832,7 @@ public class ExecutionContext implements Runnable {
      * @return     collected nodes, in stack order
      */
     protected Node[] collect(int n) {
+        assert (n > 0) : "attempt to collect 0 nodes";
         Node[] nodes = new Node[n];
         System.arraycopy(this.s, this.sp - n + 1, nodes, 0, n);
         Arrays.fill(this.s, this.sp - n + 1, this.sp + 1, null);
