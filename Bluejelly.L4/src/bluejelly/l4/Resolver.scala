@@ -52,8 +52,9 @@ class Resolver {
   // State:
   //  1. Map from variables to offset from bottom of the stack
   //  2. Current stack depth, measured from the bottom
+  //  3. Watermark for maximum stack depth
   
-  type S = (Map[Var,Int],Int)
+  type S = (Map[Var,Int],Int,Int)
   
   /* A little ASCII art explaining:
    * 
@@ -79,21 +80,22 @@ class Resolver {
   // Utility functions
   // ---------------------------------------------------------------------
   
-  def push(n:Int):State[S,Unit] = upd {case (m,d) => (m,d+n)}
+  def push(n:Int):State[S,Unit] = upd {case (m,d,md) => (m,d+n, math.max(md,d+n))}
   def pop(n:Int) = push(-n)
   def depth():State[S,Int] = for {s <- get} yield s._2
-  def bind[A](v:Var,f:State[S,A]):State[S,A] = state {case (m,d) => f(m + (v->d),d)}
+  def maxDepth():State[S,Int] = for {s <- get} yield s._3
+  def bind[A](v:Var,f:State[S,A]):State[S,A] = state {case (m,d,md) => f(m + (v->d),d,md)}
   def offset(v:Var):State[S,Int] = for {s <- get} yield s._2 - s._1(v)
   
-  def alt[A](d:Int,f:State[S,A]):State[S,A] = state {
-    case s@(m,_) =>
-      val (x,(_,d1)) = f((m,d))
+  def alt[A](d:Int,md:Int,f:State[S,A]):State[S,A] = state {
+    case s@(m,_,_) =>
+      val (x,(_,d1,md1)) = f((m,d,md))
       assert(d1 == d+1, "resolver[match alt]: invalid stack, height = %s, expected = %s" format (d1,d+1))
-      (x,(m,d1))
+      (x,(m,d1,md1))
   }
   
   def run[A](f:State[S,A]):A = {
-    val (x,(_,d)) = f((Map(),0))
+    val (x,(_,d,md)) = f((Map(),0,0))
     assert(d == 0, "resolver[run]: invalid stack, height = %d (expected 0)" format d)
     x
   }
@@ -146,33 +148,54 @@ class Resolver {
     case Init(block) => resolveSlide(0,block.is)
     
     case MatchInt(alts,deflt) => for {
-      as <- resolveAlts(alts)
-      mb <- resolveDef(deflt)
+      ds <- altPrelude()
+      val (d,md) = ds
+      as <- resolveAlts(d,md,alts)
+      mb <- resolveDef(d,md,deflt)
     } yield List(MatchInt(as,mb))
 
     case MatchDbl(alts,deflt) => for {
-      as <- resolveAlts(alts)
-      mb <- resolveDef(deflt)
+      ds <- altPrelude()
+      val (d,md) = ds
+      as <- resolveAlts(d,md,alts)
+      mb <- resolveDef(d,md,deflt)
     } yield List(MatchDbl(as,mb))
 
     case MatchChr(alts,deflt) => for {
-      as <- resolveAlts(alts)
-      mb <- resolveDef(deflt)
+      ds <- altPrelude()
+      val (d,md) = ds
+      as <- resolveAlts(d,md,alts)
+      mb <- resolveDef(d,md,deflt)
     } yield List(MatchChr(as,mb))
 
     case MatchStr(alts,deflt) => for {
-      as <- resolveAlts(alts)
-      mb <- resolveDef(deflt)
+      ds <- altPrelude()
+      val (d,md) = ds
+      as <- resolveAlts(d,md,alts)
+      mb <- resolveDef(d,md,deflt)
     } yield List(MatchStr(as,mb))
 
     case MatchCon(alts,deflt) => for {
-      as <- resolveAlts(alts)
-      mb <- resolveDef(deflt)
+      ds <- altPrelude()
+      val (d,md) = ds
+      as <- resolveAlts(d,md,alts)
+      mb <- resolveDef(d,md,deflt)
     } yield List(MatchCon(as,mb))
     
     case i => for {_ <- effect(i)} yield List(i)
   }
 
+  /*
+   * Emulate the effect of a match instruction (i.e., remove the element
+   * to be matched from the top of the stack) and get retrieve the monad 
+   * state the current and max stack depth.
+   */
+  def altPrelude():State[S,(Int,Int)] = for {
+    _ <- pop(1)
+    d <- depth()
+    md <- maxDepth()
+  } yield (d,md)
+  
   def resolveSlide(n:Int, instrs:List[Instr]):State[S,List[Instr]] = for {
     d0 <- depth()
     is <- resolve(instrs)
@@ -192,23 +215,19 @@ class Resolver {
     } yield a::as
   }
   
-  def resolveAlts[T](alts:List[A[T]]):State[S,List[A[T]]] = for {
-    _ <- pop(1)
-    d <- depth()
-    as <- seq(alts map resolveAlt(d))
+  def resolveAlts[T](d:Int,md:Int,alts:List[A[T]]):State[S,List[A[T]]] = for {
+    as <- seq(alts map resolveAlt(d,md))
   } yield as
 
   
-  def resolveAlt[T](d:Int)(a:A[T]):State[S,A[T]] = for {
-    is <- alt(d,resolve(a.b.is))
+  def resolveAlt[T](d:Int,md:Int)(a:A[T]):State[S,A[T]] = for {
+    is <- alt(d,md,resolve(a.b.is))
   } yield new A(a.v, Block(is))
  
-  def resolveDef(mb:Option[Block]):State[S,Option[Block]] = mb match {
+  def resolveDef(d:Int,md:Int,mb:Option[Block]):State[S,Option[Block]] = mb match {
     case None => ret(None)
     case Some(b) => for {
-      _ <- pop(1)
-      d <- depth()
-      is <- alt(d,resolve(b.is))
+      is <- alt(d,md,resolve(b.is))
     } yield Some(Block(is))
   }
 

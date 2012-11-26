@@ -4,4 +4,15 @@ fun id x = x
 
 fun x = let x = x in x
 
-fun g x = let! x$ = x in match x$ with 1 -> 2 | 2 -> 3 | z -> x$
+fun g x = let! x$ = x in match x$ with 1 -> 2 | 2 -> 3 | z -> z
+
+fun f n = 
+  let rec x = g y
+      and y = f z
+      and z = id x
+  in g z
+
+fun add x y = 
+  let! x$ = x in
+  let! y$ = y in
+  bluejelly.Int.add x$ y$

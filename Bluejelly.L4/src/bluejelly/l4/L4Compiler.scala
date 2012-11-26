@@ -288,10 +288,8 @@ private class FunCompiler {
     
     def fresh(env:Env):String = {
       val s = Name(currName + "$" + currId)
-      if (env hasFun (new Var(s))) {
-        currId += 1
-        fresh(env) 
-      } else s toString
+      currId += 1
+      if (env hasFun (new Var(s))) fresh(env) else s toString
     }
     
     def l4Panic(s:String) = {
