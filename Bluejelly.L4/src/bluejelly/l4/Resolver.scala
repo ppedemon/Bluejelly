@@ -36,6 +36,7 @@ import bluejelly.asm.AllocApp
 import bluejelly.asm.AllocNapp
 import bluejelly.asm.MkTyCon
 import bluejelly.asm.AllocTyCon
+import bluejelly.asm.StackCheck
 
 /**
  * Resolve symbolic instructions to stack offsets.
@@ -52,9 +53,8 @@ class Resolver {
   // State:
   //  1. Map from variables to offset from bottom of the stack
   //  2. Current stack depth, measured from the bottom
-  //  3. Watermark for maximum stack depth
   
-  type S = (Map[Var,Int],Int,Int)
+  type S = (Map[Var,Int],Int)
   
   /* A little ASCII art explaining:
    * 
@@ -80,22 +80,21 @@ class Resolver {
   // Utility functions
   // ---------------------------------------------------------------------
   
-  def push(n:Int):State[S,Unit] = upd {case (m,d,md) => (m,d+n, math.max(md,d+n))}
+  def push(n:Int):State[S,Unit] = upd {case (m,d) => (m,d+n)}
   def pop(n:Int) = push(-n)
   def depth():State[S,Int] = for {s <- get} yield s._2
-  def maxDepth():State[S,Int] = for {s <- get} yield s._3
-  def bind[A](v:Var,f:State[S,A]):State[S,A] = state {case (m,d,md) => f(m + (v->d),d,md)}
+  def bind[A](v:Var,f:State[S,A]):State[S,A] = state {case (m,d) => f(m + (v->d),d)}
   def offset(v:Var):State[S,Int] = for {s <- get} yield s._2 - s._1(v)
   
-  def alt[A](d:Int,md:Int,f:State[S,A]):State[S,A] = state {
-    case s@(m,_,_) =>
-      val (x,(_,d1,md1)) = f((m,d,md))
+  def alt[A](d:Int,f:State[S,A]):State[S,A] = state {
+    case s@(m,_) =>
+      val (x,(_,d1)) = f((m,d))
       assert(d1 == d+1, "resolver[match alt]: invalid stack, height = %s, expected = %s" format (d1,d+1))
-      (x,(m,d1,md1))
+      (x,(m,d1))
   }
   
   def run[A](f:State[S,A]):A = {
-    val (x,(_,d,md)) = f((Map(),0,0))
+    val (x,(_,d)) = f((Map(),0))
     assert(d == 0, "resolver[run]: invalid stack, height = %d (expected 0)" format d)
     x
   }
@@ -127,17 +126,17 @@ class Resolver {
     case PackAppSym(v,n) => for {
       x <- offset(v)
       _ <- pop(n)
-    } yield List(PackApp(x,n))
+    } yield List(PackApp(x-n,n))
     
     case PackNappSym(v,n) => for {
       x <- offset(v)
       _ <- pop(n)
-    } yield List(PackNapp(x,n))
+    } yield List(PackNapp(x-n,n))
     
     case PackTyConSym(v,n) => for {
       x <- offset(v)
       _ <- pop(n)
-    } yield List(PackTyCon(x,n))
+    } yield List(PackTyCon(x-n,n))
     
     case Reduce(n,m,b) => for {
       is <- resolve(b.is)
@@ -147,55 +146,32 @@ class Resolver {
     case Atom(block) => resolveSlide(1,block.is)
     case Init(block) => resolveSlide(0,block.is)
     
-    case MatchInt(alts,deflt) => for {
-      ds <- altPrelude()
-      val (d,md) = ds
-      as <- resolveAlts(d,md,alts)
-      mb <- resolveDef(d,md,deflt)
-    } yield List(MatchInt(as,mb))
+    case MatchInt(alts,deflt) => 
+      resolveMatch(alts,deflt,(a:List[A[Int]],d) => MatchInt(a,d))
+    case MatchDbl(alts,deflt) => 
+      resolveMatch(alts,deflt,(a:List[A[Double]],d) => MatchDbl(a,d))
+    case MatchChr(alts,deflt) => 
+      resolveMatch(alts,deflt,(a:List[A[Char]],d) => MatchChr(a,d))
+    case MatchStr(alts,deflt) => 
+      resolveMatch(alts,deflt,(a:List[A[String]],d) => MatchStr(a,d))
 
-    case MatchDbl(alts,deflt) => for {
-      ds <- altPrelude()
-      val (d,md) = ds
-      as <- resolveAlts(d,md,alts)
-      mb <- resolveDef(d,md,deflt)
-    } yield List(MatchDbl(as,mb))
-
-    case MatchChr(alts,deflt) => for {
-      ds <- altPrelude()
-      val (d,md) = ds
-      as <- resolveAlts(d,md,alts)
-      mb <- resolveDef(d,md,deflt)
-    } yield List(MatchChr(as,mb))
-
-    case MatchStr(alts,deflt) => for {
-      ds <- altPrelude()
-      val (d,md) = ds
-      as <- resolveAlts(d,md,alts)
-      mb <- resolveDef(d,md,deflt)
-    } yield List(MatchStr(as,mb))
-
-    case MatchCon(alts,deflt) => for {
-      ds <- altPrelude()
-      val (d,md) = ds
-      as <- resolveAlts(d,md,alts)
-      mb <- resolveDef(d,md,deflt)
-    } yield List(MatchCon(as,mb))
-    
     case i => for {_ <- effect(i)} yield List(i)
   }
 
   /*
-   * Emulate the effect of a match instruction (i.e., remove the element
-   * to be matched from the top of the stack) and get retrieve the monad 
-   * state the current and max stack depth.
+   * Solve a generic match instruction, function f builds the intended
+   * match instructions given the alternatives and the default block. 
    */
-  def altPrelude():State[S,(Int,Int)] = for {
-    _ <- pop(1)
-    d <- depth()
-    md <- maxDepth()
-  } yield (d,md)
-  
+  def resolveMatch[T](
+      alts:List[A[T]],
+      deflt:Option[Block],
+      f:(List[A[T]],Option[Block])=>Instr):State[S,List[Instr]] = for { 
+    _  <- pop(1)
+    d  <- depth()
+    as <- resolveAlts(d,alts)
+    mb <- resolveDef(d, deflt)
+  } yield List(f(as,mb))
+    
   def resolveSlide(n:Int, instrs:List[Instr]):State[S,List[Instr]] = for {
     d0 <- depth()
     is <- resolve(instrs)
@@ -206,33 +182,25 @@ class Resolver {
   
   // ---------------------------------------------------------------------
   // Solve match instructions
-  // ---------------------------------------------------------------------
-  private def seq[S,A](xs:List[State[S,A]]):State[S,List[A]] = xs match {
-    case Nil => ret(Nil)
-    case x::xs => for {
-      a <- x
-      as <- seq(xs)
-    } yield a::as
-  }
-  
-  def resolveAlts[T](d:Int,md:Int,alts:List[A[T]]):State[S,List[A[T]]] = for {
-    as <- seq(alts map resolveAlt(d,md))
+  // ---------------------------------------------------------------------  
+  def resolveAlts[T](d:Int, alts:List[A[T]]):State[S,List[A[T]]] = for {
+    as <- seq(alts map resolveAlt(d))
   } yield as
 
   
-  def resolveAlt[T](d:Int,md:Int)(a:A[T]):State[S,A[T]] = for {
-    is <- alt(d,md,resolve(a.b.is))
+  def resolveAlt[T](d:Int)(a:A[T]):State[S,A[T]] = for {
+    is <- alt(d,resolve(a.b.is))
   } yield new A(a.v, Block(is))
  
-  def resolveDef(d:Int,md:Int,mb:Option[Block]):State[S,Option[Block]] = mb match {
+  def resolveDef(d:Int, mb:Option[Block]):State[S,Option[Block]] = mb match {
     case None => ret(None)
     case Some(b) => for {
-      is <- alt(d,md,resolve(b.is))
+      is <- alt(d,resolve(b.is))
     } yield Some(Block(is))
   }
 
   // ---------------------------------------------------------------------
-  // List of stack effect for simple instructions
+  // List of stack effects for simple instructions
   // ---------------------------------------------------------------------
   
   /*
@@ -261,7 +229,6 @@ class Resolver {
     
     case _ => assert(false, "Unexpected instruction: " + i); ret()
   }
-  
 }
 
 object Resolver {

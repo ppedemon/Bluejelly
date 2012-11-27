@@ -44,4 +44,12 @@ object St {
   def ret[S,A](a:A):State[S,A] = state(s => (a,s))
   def get[S]:State[S,S] = state(s => (s,s))
   def upd[S](f:S => S):State[S,Unit] = get flatMap (s => state(_ => ((),f(s))))
+  
+  def seq[S,A](xs:List[State[S,A]]):State[S,List[A]] = xs match {
+    case Nil => ret(Nil)
+    case x::xs => for {
+      a <- x
+      as <- seq(xs)
+    } yield a::as
+  }
 }
