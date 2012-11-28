@@ -31,23 +31,20 @@ object L4C {
           
           // Optimize
           val m1 = Inliner.inline(OccAnalysis.analyze(m))
-          /**/
-          val d = PrettyPrinter.ppr(m1)
-          val w = new StringWriter
-          d.format(75, w)
-          print(w)
-          /**/
+//          val d = PrettyPrinter.ppr(m1)
+//          val w = new StringWriter
+//          d.format(75, w)
+//          print(w)
 
           // Compile
           val m2 = new L4Compiler(m1, result.right.get).compile
           
           // Resolve
           val m3 = Resolver.resolve(m2)
-          print(m3)
           
-//          val w = new StringWriter
-//          m2.ppr(w)(2)
-//          print(w)
+          // Peephole optimization
+          val m4 = PeepholeOptimizer.optimize(result.right.get, m3)
+          print(m4)          
       }
     }
   }

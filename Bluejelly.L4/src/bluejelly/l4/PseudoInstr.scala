@@ -89,8 +89,8 @@ case class Reduce(val name:String, val matcher:Boolean, val b:Block) extends Ins
 object Reduce{
   def apply(name:String, matcher:Boolean, is:List[Instr]) = 
     new Reduce(name,matcher,new Block(is))
-  def apply(name:String, macher:Boolean, is:Instr*) = 
-    new Init(new Block(is.toList))
+  def apply(name:String, matcher:Boolean, is:Instr*) = 
+    new Reduce(name,matcher,new Block(is.toList))
 }
 
 /**

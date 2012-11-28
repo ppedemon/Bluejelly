@@ -37,6 +37,7 @@ import bluejelly.asm.AllocNapp
 import bluejelly.asm.MkTyCon
 import bluejelly.asm.AllocTyCon
 import bluejelly.asm.StackCheck
+import bluejelly.asm.MatchCon
 
 /**
  * Resolve symbolic instructions to stack offsets.
@@ -146,15 +147,17 @@ class Resolver {
     case Atom(block) => resolveSlide(1,block.is)
     case Init(block) => resolveSlide(0,block.is)
     
+    case MatchCon(alts,deflt) => 
+      resolveMatch(alts,deflt,MatchCon(_:List[A[Int]],_))
     case MatchInt(alts,deflt) => 
-      resolveMatch(alts,deflt,(a:List[A[Int]],d) => MatchInt(a,d))
+      resolveMatch(alts,deflt,MatchInt(_:List[A[Int]],_))
     case MatchDbl(alts,deflt) => 
-      resolveMatch(alts,deflt,(a:List[A[Double]],d) => MatchDbl(a,d))
+      resolveMatch(alts,deflt,MatchDbl(_:List[A[Double]],_))
     case MatchChr(alts,deflt) => 
-      resolveMatch(alts,deflt,(a:List[A[Char]],d) => MatchChr(a,d))
+      resolveMatch(alts,deflt,MatchChr(_:List[A[Char]],_))
     case MatchStr(alts,deflt) => 
-      resolveMatch(alts,deflt,(a:List[A[String]],d) => MatchStr(a,d))
-
+      resolveMatch(alts,deflt,MatchStr(_:List[A[String]],_))
+      
     case i => for {_ <- effect(i)} yield List(i)
   }
 
@@ -187,7 +190,6 @@ class Resolver {
     as <- seq(alts map resolveAlt(d))
   } yield as
 
-  
   def resolveAlt[T](d:Int)(a:A[T]):State[S,A[T]] = for {
     is <- alt(d,resolve(a.b.is))
   } yield new A(a.v, Block(is))
