@@ -44,7 +44,10 @@ object L4C {
           
           // Peephole optimization
           val m4 = PeepholeOptimizer.optimize(result.right.get, m3)
-          print(m4)          
+          
+          // Flatten
+          val m5 = Flatten.addStackCheck(m4)
+          print(m5)
       }
     }
   }
