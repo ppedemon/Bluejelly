@@ -6,44 +6,45 @@
  */
 package bluejelly.l4
 
-import bluejelly.asm.Instr
-import bluejelly.asm.Enter
-import bluejelly.asm.Return
-import bluejelly.asm.Raise
-import bluejelly.asm.Catch
-import bluejelly.asm.EvalVar
-import bluejelly.asm.RetCon
-import bluejelly.asm.RetInt
-import bluejelly.asm.RetDbl
-import bluejelly.asm.RetChr
-import bluejelly.asm.RetStr
-import bluejelly.asm.PushVar
-import bluejelly.asm.PushInt
-import bluejelly.asm.PushCode
-import bluejelly.asm.PushInt
-import bluejelly.asm.PushDbl
-import bluejelly.asm.PushChr
-import bluejelly.asm.PushStr
-import bluejelly.asm.MkApp
-import bluejelly.asm.MkNapp
 import bluejelly.asm.AllocApp
 import bluejelly.asm.AllocNapp
+import bluejelly.asm.AllocTyCon
+import bluejelly.asm.Block
+import bluejelly.asm.Catch
+import bluejelly.asm.Enter
+import bluejelly.asm.EvalVar
+import bluejelly.asm.Function
+import bluejelly.asm.Instr
+import bluejelly.asm.MatchChr
+import bluejelly.asm.MatchCon
+import bluejelly.asm.MatchDbl
+import bluejelly.asm.MatchInt
+import bluejelly.asm.MatchStr
+import bluejelly.asm.MkApp
+import bluejelly.asm.MkNapp
+import bluejelly.asm.MkTyCon
 import bluejelly.asm.PackApp
 import bluejelly.asm.PackNapp
-import bluejelly.asm.MkTyCon
-import bluejelly.asm.AllocTyCon
 import bluejelly.asm.PackTyCon
+import bluejelly.asm.PushChr
+import bluejelly.asm.PushCode
+import bluejelly.asm.PushCont
+import bluejelly.asm.PushDbl
+import bluejelly.asm.PushInt
+import bluejelly.asm.PushStr
+import bluejelly.asm.PushVar
+import bluejelly.asm.Raise
+import bluejelly.asm.RetChr
+import bluejelly.asm.RetCon
+import bluejelly.asm.RetDbl
+import bluejelly.asm.RetInt
+import bluejelly.asm.RetStr
+import bluejelly.asm.Return
 import bluejelly.asm.Slide
-import bluejelly.asm.AllocTyCon
 import bluejelly.asm.StackCheck
-import bluejelly.asm.MatchCon
-import bluejelly.asm.MatchInt
-import bluejelly.asm.MatchDbl
-import bluejelly.asm.StackCheck
-import bluejelly.asm.Block
-import bluejelly.asm.MatchChr
-import bluejelly.asm.MatchStr
-import bluejelly.asm.Function
+import bluejelly.utils.St.ret
+import bluejelly.utils.St.upd
+import bluejelly.utils.State
 
 /**
  * Final pass of the L4 compiler. We do two things here:
@@ -77,11 +78,11 @@ class Flatten {
   type A[T] = bluejelly.asm.Alt[T]
   type M = bluejelly.asm.Module
   
-  def push(n:Int):State[S,Unit] = upd {case (d,m) => (d+n, math.max(d+n,m))}
-  def pop(n:Int):State[S,Unit] = upd {case (d,m) => (d-n, m)}
+  private def push(n:Int):State[S,Unit] = upd {case (d,m) => (d+n, math.max(d+n,m))}
+  private def pop(n:Int):State[S,Unit] = upd {case (d,m) => (d-n, m)}
   
   // Stack effect for single instructions
-  def effect(i:Instr):State[S,Unit] = i match {
+  private def effect(i:Instr):State[S,Unit] = i match {
     case Enter     | Return    | Raise     | Catch     => pop(1)
     case RetInt(_) | RetDbl(_) | RetChr(_) | RetStr(_) => push(1)
     case EvalVar(_,_) => push(1)
@@ -105,7 +106,7 @@ class Flatten {
   }
 
   // Process a single instruction
-  def process(i:Instr):State[S,Instr] = i match {
+  private def process(i:Instr):State[S,Instr] = i match {
     case MatchCon(as,mb) => 
       ret(processMatch(MatchCon(_:List[A[Int]],_), as, mb))
     case MatchInt(as,mb) => 
@@ -123,7 +124,7 @@ class Flatten {
   }
   
   // Process a sequence of instructions
-  def process(is:List[Instr]):State[S,List[Instr]] = is match {
+  private def process(is:List[Instr]):State[S,List[Instr]] = is match {
     case Nil => ret(Nil)
     case i::is => for {
       i0 <- process(i)
@@ -132,37 +133,66 @@ class Flatten {
   }
   
   // Process match instructions
-  def processAlt[T](alt:A[T]):A[T] = 
+  private def processAlt[T](alt:A[T]):A[T] = 
     new A(alt.v, Block(addStackCheck(alt.b.is)))
-  def processDef(mb:Option[Block]):Option[Block] = 
+  private def processDef(mb:Option[Block]):Option[Block] = 
     mb map (b => Block(addStackCheck(b.is)))
-  def processMatch[T](
+  private def processMatch[T](
       f:(List[A[T]],Option[Block]) => Instr, 
       as:List[A[T]], 
       mb:Option[Block]) = f(as map processAlt, processDef(mb))
   
   // Add stack check to the given instruction sequence
-  def addStackCheck(is:List[Instr]):List[Instr] = {
+  private def addStackCheck(is:List[Instr]):List[Instr] = {
     val (is0,(_,m)) = process(is)(0,0)
     if (m > 0) StackCheck(m) :: is0 else is0
   }
   
   // Add stack check to a function
-  def addStackCheck(f:Function):Function = 
+  private def addStackCheck(f:Function):Function = 
     new Function(f.name, f.arity, f.matcher, Block(addStackCheck(f.b.is)))
 
   // Add stack checks for all the functions in the given module
-  def addStackCheck(m:M):M = 
+  private def addStackCheck(m:M):M = 
     new M(m.name, m.funcs map addStackCheck)
   
   // ---------------------------------------------------------------------
   // Real flattening starts here: get rid of Reduce blocks
   // ---------------------------------------------------------------------
   
-  // TODO Implement me!
+  def flatten(m:M):M = new M(m.name, m.funcs flatMap flatten)
+  
+  private def flatten(f:Function):List[Function] = accum(f, f.b.is, Nil)
+  
+  private def accum(
+      f:Function,
+      in:List[Instr],
+      out:List[Instr]):List[Function] = in match {
+    case Nil => 
+      List(new Function(f.name, f.arity, f.matcher, Block(out reverse)))
+    case Reduce(n,m,b)::is => 
+      val k = new Function(n,0,m,null)
+      accum(f, b.is, cont(n,b.is,out)) ::: accum(k, is, Nil)
+    case i::is =>
+      accum(f, is, i::out)
+  }
+  
+  // Compute output instructions for a function with a reduce block
+  // whole instructions are is. If is is just an EvalVar, we don't
+  // need to push a continuation after the block evaluation, since
+  // the EvalVar instruction does it for us.
+  private def cont(
+      n:String, 
+      is:List[Instr], 
+      out:List[Instr]):List[Instr] = is match {
+    case List(EvalVar(_,_)) => out
+    case _ => PushCont(n) :: out
+  }
 }
 
 object Flatten {
-  // TODO addStackCheck must not be visible, invoke from flatten
-  def addStackCheck(m:bluejelly.asm.Module) = new Flatten addStackCheck m
+  def flatten(m:bluejelly.asm.Module) = {
+    val obj = new Flatten
+    obj flatten (obj addStackCheck m)
+  }
 }

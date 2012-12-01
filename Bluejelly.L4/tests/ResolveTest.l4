@@ -16,3 +16,17 @@ fun add x y =
   let! x$ = x in
   let! y$ = y in
   bluejelly.Int.add x$ y$
+
+data Nil{0,0}
+data Cons{1,2}
+
+fun nested x = 
+  let! y =
+    let! z = bluejelly.Int.add 3 x in
+    match z with
+      | Nil -> Nil
+      | Cons x y -> let s = bluejelly.Int.add x 1 in Cons s y
+  in match y with
+    | Nil -> 0
+    | Cons z y -> 1
+ 

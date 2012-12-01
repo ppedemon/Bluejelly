@@ -27,6 +27,8 @@ import bluejelly.asm.PushDbl
 import bluejelly.asm.PushInt
 import bluejelly.asm.PushStr
 import bluejelly.utils.Name
+import scala.text.Document
+import java.io.StringWriter
 
 /**
  * Compile a L4 module to an Assembler module.
@@ -67,7 +69,7 @@ private class FunCompiler {
       val block = Block(Atom(params ::: instrs),Enter)
       new Function(fun.n.n.toString, fun.args.length, false, block)
     }
-
+    
     // -------------------------------------------------------------------
     // Compile expressions
     // -------------------------------------------------------------------
@@ -75,6 +77,7 @@ private class FunCompiler {
 
       // Optimized eval cases
       case Eval(x, Note(Once,e), Match(y,alts)) if x == y && isWhnf(e) =>
+        printExpr(e)
         Atom(compileExpr(env)(e)) :: compileAlts(env,alts)
         
       case Eval(x, Note(Once,e), Match(y,alts)) if x == y =>
@@ -280,7 +283,7 @@ private class FunCompiler {
       case ELit(_)  | ECon(_,_) => true
       case App(_,_) | NApp(_,_) => false
       case Let(_,_,e)    => isWhnf(e)
-      case Eval(_,_,e)   => isWhnf(e)
+      case Eval(_,e,b)   => isWhnf(e) && isWhnf(b)
       case LetRec(_,e)   => isWhnf(e)
       case Match(_,alts) => alts forall (a => isWhnf(a.e))
       case Note(_,e)     => isWhnf(e)
@@ -295,5 +298,17 @@ private class FunCompiler {
     def l4Panic(s:String) = {
       assert(false,"l4c panic: " + s)
       null
+    }
+    
+    private def ppr(d:Document):String = {
+      val s = new StringWriter
+      d.format(75, s)
+      s flush ()
+      s toString
+    }
+
+    private def printExpr(e:Expr) = {
+      val d = PrettyPrinter.ppr(e)
+      println(ppr(d))
     }
 }

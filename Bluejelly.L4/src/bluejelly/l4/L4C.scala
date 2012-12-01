@@ -28,14 +28,10 @@ object L4C {
           // Static analysis
           val result = StaticAnalysis.analyze(m)
           if (!result.isRight) return
-          
+
           // Optimize
           val m1 = Inliner.inline(OccAnalysis.analyze(m))
-//          val d = PrettyPrinter.ppr(m1)
-//          val w = new StringWriter
-//          d.format(75, w)
-//          print(w)
-
+          
           // Compile
           val m2 = new L4Compiler(m1, result.right.get).compile
           
@@ -46,9 +42,16 @@ object L4C {
           val m4 = PeepholeOptimizer.optimize(result.right.get, m3)
           
           // Flatten
-          val m5 = Flatten.addStackCheck(m4)
-          print(m5)
+          val m5 = Flatten.flatten(m4)
+          println(m5)
       }
     }
+  }
+  
+  def ppr(m:Module) {
+    val d = PrettyPrinter.ppr(m)
+    val w = new StringWriter
+    d.format(75, w)
+    print(w)    
   }
 }
