@@ -41,4 +41,6 @@ fun nested x =
        let! y = p x in
        match y with
          | False -> filter p xs
-         | True -> Cons x (filter p xs)
+         | True -> Cons x (@filter p xs)
+
+fun nil = Nil

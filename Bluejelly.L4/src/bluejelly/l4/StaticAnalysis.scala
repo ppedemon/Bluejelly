@@ -329,7 +329,7 @@ class StaticAnalysis(m:Module) {
     case Note(_,e) => analyzeExpr(env,f)(e)
     
     case con@ECon(c,args) => {
-      if (!(env hasDataCon c)) err undefDataCon (f,expr,c)
+      if (!(env hasDataCon c)) { err undefDataCon (f,expr,c); return }
       val a = arity(env,c)
       if (args.length != a) err unsaturatedDataCon(f, expr, c, args.length > a)
       val argsOk = allAtoms(f, expr, args)

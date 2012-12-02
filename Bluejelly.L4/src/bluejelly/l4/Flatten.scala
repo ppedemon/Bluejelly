@@ -78,8 +78,9 @@ class Flatten {
   type A[T] = bluejelly.asm.Alt[T]
   type M = bluejelly.asm.Module
   
+  // [n] can be negative, so check for max in pop as well
   private def push(n:Int):State[S,Unit] = upd {case (d,m) => (d+n, math.max(d+n,m))}
-  private def pop(n:Int):State[S,Unit] = upd {case (d,m) => (d-n, m)}
+  private def pop(n:Int):State[S,Unit] = upd {case (d,m) => (d-n, math.max(d-n,m))}
   
   // Stack effect for single instructions
   private def effect(i:Instr):State[S,Unit] = i match {

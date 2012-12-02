@@ -45,22 +45,57 @@ import bluejelly.utils.Name
 class PeepholeOptimizer(env:Env) {
 
   type M = bluejelly.asm.Module
+  type A[T] = bluejelly.asm.Alt[T]
+  
   def optimize(m:M) = new M(m.name, m.funcs map optimizeFun)
   
   def optimizeFun(f:Function):Function = {
-    val is = optimize (optimize (optimize(f.b.is)))
+    val is = optimize (simplify (optimize (optimize(f.b.is))))
     new Function(f.name, f.arity, f.matcher, Block(is))
   }
   
+  /**
+   * Remove unnecessary instruction sequences.
+   */
+  def simplify(is:List[Instr]):List[Instr] = is match {
+    case Nil => Nil
+  
+    case MkApp(1)   :: is => simplify(is)
+    case MkNapp(1)  :: is => simplify(is)
+    case Slide(_,0) :: is => simplify(is)
+    
+    case Reduce(n,m,b) :: is =>
+      Reduce(n,m,Block(simplify(b.is))) :: simplify(is)
+    
+    case MatchCon(as,mb) :: is => 
+      simplifyMatch(MatchCon(_:List[A[Int]],_),as,mb) :: simplify(is)
+    case MatchInt(as,mb) :: is => 
+      simplifyMatch(MatchInt(_:List[A[Int]],_),as,mb) :: simplify(is)
+    case MatchDbl(as,mb) :: is => 
+      simplifyMatch(MatchDbl(_:List[A[Double]],_),as,mb) :: simplify(is)
+    case MatchChr(as,mb) :: is => 
+      simplifyMatch(MatchChr(_:List[A[Char]],_),as,mb) :: simplify(is)
+    case MatchStr(as,mb) :: is => 
+      simplifyMatch(MatchStr(_:List[A[String]],_),as,mb) :: simplify(is)
+      
+    case i :: is => i :: simplify(is)  
+  }
+  
+  def simplifyAlt[T](alt:A[T]) = new A(alt.v, Block(simplify(alt.b.is)))
+  def simplifyDef(mdef:Option[Block]) = mdef map (b => Block(simplify(b.is)))
+  def simplifyMatch[T](
+      f:(List[A[T]],Option[Block]) => Instr,
+      as:List[A[T]],
+      mb:Option[Block]) = f(as map simplifyAlt, simplifyDef(mb))
+  
+  /**
+   * Replace instruction sequences with more efficient 
+   * (less stack, less operations) equivalent operations.
+   */
   def optimize(is:List[Instr]):List[Instr] = is match {
     
     case Nil => Nil
-    
-    // These can be removed
-    case MkApp(1)   :: is => optimize(is)
-    case MkNapp(1)  :: is => optimize(is)
-    case Slide(_,0) :: is => optimize(is)
-    
+        
     // Remove superfluous PushVars
     case PushVar(0) :: Slide(1,m) :: is if m >= 1 => 
       optimize (Slide(1,m-1) :: is)
@@ -154,8 +189,6 @@ class PeepholeOptimizer(env:Env) {
     else 
       new Var(Name(s.substring(0,ix),s.substring(ix+1)))
   }
-  
-  type A[T] = bluejelly.asm.Alt[T]
   
   private def optimizeAlt[T](is:List[Instr])(alt:A[T]) = 
     new A(alt.v, Block(optimize(alt.b.is ::: is)))
