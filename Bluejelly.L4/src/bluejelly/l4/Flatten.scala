@@ -160,21 +160,65 @@ class Flatten {
   // Real flattening starts here: get rid of Reduce blocks
   // ---------------------------------------------------------------------
   
-  def flatten(m:M):M = new M(m.name, m.funcs flatMap flatten)
+  def flatten(m:M):M = new M(m.name, m.funcs flatMap accumFun)
   
-  private def flatten(f:Function):List[Function] = accum(f, f.b.is, Nil)
+  private def accumFun(f:Function):List[Function] = {
+    val (is,fs) = accum(f.b.is,Nil)
+    new Function(f.name, f.arity, f.matcher, Block(is)) :: fs
+  }
+  
+  private def accumAlt[T](alt:A[T]):(A[T],List[Function]) = {
+    val (is,fs) = accum(alt.b.is, Nil)
+    (new A(alt.v, Block(is)),fs)
+  }
+  
+  private def accumDef(mb:Option[Block]):(Option[Block],List[Function]) = mb match {
+    case None => (None,Nil)
+    case Some(b) => 
+      val (is,fs) = accum(b.is, Nil)
+      (Some(Block(is)),fs)
+  }
+  
+  private def accumMatch[T](
+      f:(List[A[T]],Option[Block]) => Instr,
+      alts:List[A[T]],
+      mdef:Option[Block]):(Instr,List[Function]) = {
+    val (as,fss) = alts map accumAlt unzip
+    val (mb,fs) = accumDef(mdef)
+    (f(as,mb), fs ::: (fss.flatten))
+  }
   
   private def accum(
-      f:Function,
       in:List[Instr],
-      out:List[Instr]):List[Function] = in match {
+      out:List[Instr]):(List[Instr],List[Function]) = in match {
     case Nil => 
-      List(new Function(f.name, f.arity, f.matcher, Block(out reverse)))
+      (out reverse, Nil)
     case Reduce(n,m,b)::is => 
-      val k = new Function(n,0,m,null)
-      accum(f, b.is, cont(n,b.is,out)) ::: accum(k, is, Nil)
+      val (ins,fs0) = accum(b.is, cont(n, b.is, out))
+      val fs1 = accumFun(new Function(n, 0, m, Block(is)))
+      (ins, fs0 ::: fs1)
+    case MatchCon(as,mb)::is => 
+      val (i,fs) = accumMatch(MatchCon(_:List[A[Int]],_),as,mb)
+      val(ins,fs0) = accum(is,i::out)
+      (ins, fs ::: fs0)
+    case MatchInt(as,mb)::is => 
+      val (i,fs) = accumMatch(MatchInt(_:List[A[Int]],_),as,mb)
+      val(ins,fs0) = accum(is,i::out)
+      (ins, fs ::: fs0)
+    case MatchDbl(as,mb)::is => 
+      val (i,fs) = accumMatch(MatchDbl(_:List[A[Double]],_),as,mb)
+      val(ins,fs0) = accum(is,i::out)
+      (ins, fs ::: fs0)
+    case MatchChr(as,mb)::is => 
+      val (i,fs) = accumMatch(MatchChr(_:List[A[Char]],_),as,mb)
+      val(ins,fs0) = accum(is,i::out)
+      (ins, fs ::: fs0)
+    case MatchStr(as,mb)::is => 
+      val (i,fs) = accumMatch(MatchStr(_:List[A[String]],_),as,mb)
+      val(ins,fs0) = accum(is,i::out)
+      (ins, fs ::: fs0)
     case i::is =>
-      accum(f, is, i::out)
+      accum(is, i::out)
   }
   
   // Compute output instructions for a function with a reduce block
