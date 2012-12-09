@@ -45,8 +45,8 @@ class L4Compiler(val m:Module, val env:Env) {
   
   def compileFuns(ds:List[Decl], fc:FunCompiler):List[Function] = ds match {
     case Nil => Nil
-    case DataDecl(_,_)::ds => compileFuns(ds,fc)
     case (f@FunDecl(_,_,_))::ds => (fc compile (env,f)) :: compileFuns(ds,fc)
+    case _::ds => compileFuns(ds,fc)
   }
 }
 

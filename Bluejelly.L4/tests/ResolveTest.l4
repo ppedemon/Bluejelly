@@ -1,5 +1,7 @@
 module ResolveTest
 
+extern bluejelly.Int.add{2}
+
 fun id x = x
 
 fun x = let x = x in x

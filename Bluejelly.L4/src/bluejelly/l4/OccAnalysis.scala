@@ -76,10 +76,10 @@ object OccAnalysis {
     val (e,_) = occExpr(f.body)
     FunDecl(f.n, f.args, e)
   }
-  
+
   def analyze(m:Module) = new Module(m.n, m.decls map {
-    case d@DataDecl(_,_) => d
     case f@FunDecl(_,_,_) => occFun(f)
+    case d => d
   })
   
 }

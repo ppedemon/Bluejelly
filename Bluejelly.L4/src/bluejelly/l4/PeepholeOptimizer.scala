@@ -158,8 +158,8 @@ class PeepholeOptimizer(env:Env) {
   
   private def optimizeCall(f:String, is:List[Instr]) = {
     val v = toVar(f)
-    if (env hasFun(v)) {
-      val arity = env(v).args.length
+    if (env hasArity v) {
+      val arity = env arity v
       is match {
         case MkApp(n) :: is if arity >= n => 
           PushCode(f) :: MkNapp(n) :: is

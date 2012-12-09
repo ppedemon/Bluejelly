@@ -96,6 +96,7 @@ object Pat {
 
 sealed trait Decl extends Positionable
 case class DataDecl(val ref:ConRef, val con:ConDef) extends Decl
+case class ExtDecl(val n:Var, val arity:Int) extends Decl
 case class FunDecl(val n:Var, val args:List[Var], val body:Expr) extends Decl
 
 class Module(val n:Name, val decls:List[Decl])
@@ -192,6 +193,8 @@ object PrettyPrinter {
   def ppr(d:Decl):Document = d match {
     case DataDecl(cref,cdef) => 
       group("data" :/: ppr(cref) :: ppr(cdef))
+    case ExtDecl(n,arity) =>
+      group("extern" :/: ppr(n) :: text("{%d}" format arity))
     case FunDecl(n,args,e) =>
       group(nest(2,group("fun" :/: ppr(n) :/: cat(pprVars(args),text("="))) :/: ppr(e)))
   }

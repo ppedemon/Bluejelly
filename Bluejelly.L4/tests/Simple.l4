@@ -1,5 +1,7 @@
 module Simple
 
+extern bluejelly.Int.add{2}, bluejelly.Int.remove{2}
+
 fun one = 1
 
 fun inc = bluejelly.Int.add 1

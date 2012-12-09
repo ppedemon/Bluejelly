@@ -37,6 +37,19 @@ private class L4Errors extends Errors(false) {
     error(ppr(doc))
   }
   
+  def dupExtern(e:ExtDecl, prev:ExtDecl) {
+    val doc = gnest(
+      gnest("duplicated extern declaration" :/: quote(e.n) :/: "at:" :/: text(e.pos.toString)) :/: 
+      gnest("(previous declaration was at:" :/: prev.pos.toString :: text(")")))
+    error(ppr(doc))
+  }
+  
+  def localExtern(e:ExtDecl) {
+    val doc = gnest("extern declaration for local function" :/: quote(e.n) 
+      :/: "at:" :/: text(e.pos.toString))
+    error(ppr(doc))    
+  }
+  
   def dupFun(f:FunDecl, prev:FunDecl) {
     val doc = gnest(
       gnest("duplicated function declaration" :/: quote(f.n) :/: "at:" :/: text(f.pos.toString)) :/: 
@@ -146,6 +159,12 @@ private class L4Errors extends Errors(false) {
     val d = gnest("unreachable alternatives after:" :/: PrettyPrinter.pprAlt(alt))
     fishyExpr(f, expr, d)
   }
+  
+  def undefExt(f:FunDecl, expr:Expr, v:Var) {
+    val d = gnest("undeclared extern" :/: text(quote(v))) :/: 
+      text("(the compiler will generate suboptimal code for this call)")
+    fishyExpr(f, expr, d)  
+  }
 }
 
 /**
@@ -221,17 +240,20 @@ class StaticAnalysis(m:Module) {
     case expr::es if isAtom(expr) => allAtoms (f, parent, es)
     case expr::_ => err nonAtomicExpr (f, parent, expr); false
   }
-    
+  
   // Collect top-level declarations, checking for duplicates
   private def collectDecls(m:Module):Env = {
     (Env(m.n) /: m.decls) ((env,d) => d match {
       case d@DataDecl(c,_) if env hasDataCon c => err dupDataCon (d,env(c)); env
       case d@DataDecl(_,_) => env addDataCon d
+      case e@ExtDecl(v,_) if env hasExtern(v) => err dupExtern(e,env ext v); env
+      case e@ExtDecl(v,_) if env isLocalId(v) => err localExtern(e); env
+      case e@ExtDecl(_,_) => env addExtern(e)
       case f@FunDecl(v,_,_) if env hasFun v => err dupFun(f, env(v)); env
       case f@FunDecl(_,_,_) => env addFun f   
     })
   }
-  
+
   // Check if the given path is valid
   private def analyzePat(env:Env, f:FunDecl)(p:Pat):(Env,Boolean) = p match {
     case PLit(_) => (env,true)
@@ -249,9 +271,9 @@ class StaticAnalysis(m:Module) {
   }
   
   // Analyze an application
-  // NB: lacking an import mechanism, we blatantly ignore external variables
   private def analyzeApp(env:Env, f:FunDecl, parent:Expr, fun:Var, args:List[Expr]) {
-    if (env.isLocal(fun) && !(env inScope fun)) err undefVar (f, parent, fun)
+    if (env.isLocalId(fun) && !env.inScope(fun)) err undefVar (f, parent, fun)
+    if (!env.isLocalId(fun) && !env.hasExtern(fun)) err undefExt(f, parent, fun)
     val argsOk = allAtoms(f, parent, args)
     // Treat arg variables specially, so we get better error messages
     if (argsOk) args foreach {

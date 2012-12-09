@@ -54,7 +54,7 @@ object Parser extends JavaTokenParsers {
   def qualifier = "(" + idRe + "\\.)*" + conRe
   
   def keywords = 
-    Set("and", "data", "fun", "in", "let", "match", "module", "rec", "with")
+    Set("and", "data", "extern", "fun", "in", "let", "match", "module", "rec", "with")
   
   def id   = idRe.r ^? { case s if !(keywords contains s) => s }
   def con  = conRe.r
@@ -156,14 +156,18 @@ object Parser extends JavaTokenParsers {
     $(("data" ~> conRef) ~! ("{" ~> pint <~ ",")  ~! (pint <~ "}") ^^ 
       {case cref ~ tag ~ arity => DataDecl(cref, new ConDef(tag, arity))})
   
+  def extDecl:Parser[List[ExtDecl]] = 
+    "extern" ~> rep1sep($(qid ~ ("{" ~> pint <~ "}") ^^ 
+        {case v~a => ExtDecl(new Var(qname(v)),a)}), ",")
+      
   def funDecl:Parser[FunDecl] =
     $(("fun" ~> localVar) ~ (localVar*) ~ ("=" ~> expr) ^^ 
       {case n ~ args ~ b => FunDecl(n,args,b)})
   
-  def topDecl = dataDecl | funDecl
+  def topDecl = dataDecl ^^ {List(_)} | funDecl ^^ {List(_)} | extDecl
   
   def module:Parser[Module] =
     ("module" ~> qualifier.r) ~ (topDecl*) ^^ 
-      {case name ~ decls => new Module(Name(name), decls)}
+      {case name ~ decls => new Module(Name(name), decls flatten)}
 
 }
