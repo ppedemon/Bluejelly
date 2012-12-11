@@ -7,12 +7,12 @@
 package bluejelly.l4
 
 import bluejelly.utils.UnicodeFilter
-
 import scala.util.parsing.input.StreamReader
-
 import java.io.FileReader
 import java.io.StringWriter
 import java.io.StringReader
+import bluejelly.asm.AsmConfig
+import bluejelly.asm.Assembler
 
 /**
  * The L4 compiler.
@@ -40,10 +40,16 @@ object L4C {
           
           // Peephole optimization
           val m4 = PeepholeOptimizer.optimize(result.right.get, m3)
+          //println(m4)
+          //return
           
           // Flatten
           val m5 = Flatten.flatten(m4)
-          println(m5)
+          
+          val cfg = new AsmConfig
+          cfg.outDir = "tests"
+          val asm = new Assembler(cfg, m5)
+          asm assemble
       }
     }
   }
