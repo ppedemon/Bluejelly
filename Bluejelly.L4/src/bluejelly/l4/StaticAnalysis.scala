@@ -129,6 +129,12 @@ private class L4Errors extends Errors(false) {
           text("is not a recursive expression")))
   }
   
+  def dupRecDecls(f:FunDecl, parent:Expr, vs:List[Var]) {
+    val decl = "declaration" + (if (vs.length > 1) "s:" else ":") 
+    val d = gnest(("duplicated " + decl) :/: text(vs.mkString("[",",","]")))
+    wrongExpr(f, parent, d)
+  }
+  
   def undefVar(f:FunDecl, expr:Expr, v:Var) {
     wrongExpr(f, expr, gnest("undefined variable" :/: text(quote(v))))
   }
@@ -222,6 +228,17 @@ class StaticAnalysis(m:Module) {
     case expr::es if isLit(expr) => err invalidLit(f, parent, expr); false
     case expr::ex if isZCon(expr) => err invalidCon(f, parent, expr); false
     case _::es => allRec(f, parent, es)
+  }
+  
+  // Check that let rec declarations are unique
+  private def uniqueRecDecls(f:FunDecl, parent:Expr, vs:List[Var]):Boolean = {
+    val m = vs groupBy identity
+    val rs = (m foldLeft (Nil:List[Var])) {case (rs,(v,vs)) => 
+      if (vs.length > 1) v::rs else rs
+    }
+    val unique = rs.isEmpty
+    if (!unique) err dupRecDecls(f, parent, rs)
+    unique
   }
   
   // Is the given expression atomic?
@@ -369,6 +386,7 @@ class StaticAnalysis(m:Module) {
     }
     case LetRec(decls,b) => {
       val (vs,es) = (decls unzip)
+      if (!uniqueRecDecls(f,expr,vs)) return
       if (!allAtoms(f,expr,es)) return
       if (!allRec(f,expr,es)) return
       val extEnv = env addLocals vs

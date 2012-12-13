@@ -89,6 +89,9 @@ object Parser extends JavaTokenParsers {
     qcon ^^ {s => new ConRef(qname(s))} |
     con  ^^ {s => new ConRef(Name(s))}
 
+  // Shorthand for positioned combinator
+  def $[T <: Positional](p:Parser[T]) = positioned(p)
+
   // Literals
   def lit:Parser[Lit] = 
     pdbl          ^^ {DblLit(_)} |
@@ -104,10 +107,7 @@ object Parser extends JavaTokenParsers {
          PCon(c, ps map {s => new Var(Name(s))})
        }
      )
-  
-  // Shorthand for positioned combinator
-  def $[T <: Positional](p:Parser[T]) = positioned(p)
-    
+      
   def alt:Parser[Alt] = (pat <~ "->") ~ expr ^^ {case p ~ e => new Alt(p,e)} 
   
   def alts:Parser[List[Alt]] = ("|"?) ~> rep1sep(alt, "|")

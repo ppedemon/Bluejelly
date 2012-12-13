@@ -34,9 +34,9 @@ import java.io.StringWriter
  * Compile a L4 module to an Assembler module.
  * @author ppedemon
  */
-class L4Compiler(val m:Module, val env:Env) {
+class L4Compiler(val env:Env) {
 
-  def compile:bluejelly.asm.Module = {
+  def compile(m:Module):bluejelly.asm.Module = {
     val fc = new FunCompiler()
     val n = m.n.toString
     val funs = compileFuns(m.decls, fc)
@@ -311,4 +311,9 @@ private class FunCompiler {
       val d = PrettyPrinter.ppr(e)
       println(ppr(d))
     }
+}
+
+object L4Compiler {
+  def compile(env:Env,m:Module):bluejelly.asm.Module = 
+    new L4Compiler(env).compile(m)
 }

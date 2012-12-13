@@ -1,0 +1,27 @@
+module Shallow
+
+extern bluejelly.Int.add{2}
+
+data Nil{0,0}
+data Cons{1,2}
+
+fun h x = bluejelly.Int.add x 1
+
+fun f x = 
+  let y = h x in
+  let x = bluejelly.Int.add 1 1 in
+  bluejelly.Int.add y (bluejelly.Int.add x x)
+
+fun map f xs = 
+  let! xs$ = xs in
+  match xs$ with
+    | Nil -> Nil
+    | Cons x xs -> Cons (f x) (map f xs)
+
+fun id x = x
+
+fun recursive x = 
+  let rec xs = map id zs
+      and ys = map id xs
+      and zs = Cons 1 ys
+  in Cons 1 xs

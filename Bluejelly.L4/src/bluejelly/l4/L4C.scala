@@ -14,14 +14,6 @@ import java.io.StringWriter
 
 import scala.collection.mutable.MutableList
 
-import Phase.COMP
-import Phase.FLATTEN
-import Phase.INLINE
-import Phase.OCC
-import Phase.OPT
-import Phase.PARSER
-import Phase.Phase
-import Phase.RESOLVE
 import bluejelly.asm.AsmConfig
 import bluejelly.asm.Assembler
 import bluejelly.utils.Args
@@ -32,7 +24,7 @@ import bluejelly.utils.UnitOpt
 // Phases of the L4C compiler
 private object Phase extends Enumeration {
   type Phase = Value
-  val PARSER, OCC, INLINE, COMP, RESOLVE, OPT, FLATTEN = Value
+  val RENAME, OCC, INLINE, COMP, RESOLVE, OPT, FLATTEN = Value
 }
 
 // Configuration for an execution of the L4C compiler
@@ -71,9 +63,9 @@ object L4C {
   private val cfg = new Config
   private val opts = List(
       ("-v", new UnitOpt(_ => cfg.version = true, "-v Show version information")),
-      ("--debug-parser", new UnitOpt(
-          _ => cfg.stopAt = PARSER, 
-          "--debug-parser Send parse results to stdout and stop")),
+      ("--debug-renamer", new UnitOpt(
+          _ => cfg.stopAt = RENAME, 
+          "--debug-parser Send renamer results to stdout and stop")),
       ("--debug-occ", new UnitOpt(
           _ => cfg.stopAt = OCC, 
           "--debug-occ Send occurrence analysis output and stop")),
@@ -110,36 +102,37 @@ object L4C {
         // Static analysis
         val result = StaticAnalysis.analyze(m)
         if (!result.isRight) return
-        if (cfg shouldStopAt PARSER) { ppr(m); return }          
+        val m0 = Renamer.rename(m)
+        if (cfg shouldStopAt RENAME) { ppr(m0); return }          
 
         // Occurrence analysis
-        val m0 = OccAnalysis.analyze(m)
-        if (cfg shouldStopAt OCC) { ppr(m0); return }
+        val m1 = OccAnalysis.analyze(m0)
+        if (cfg shouldStopAt OCC) { ppr(m1); return }
 
         // Inline
-        val m1 = Inliner.inline(m0)
-        if (cfg shouldStopAt INLINE) { ppr(m1); return }
+        val m2 = Inliner.inline(m1)
+        if (cfg shouldStopAt INLINE) { ppr(m2); return }
       
         // Compile
-        val m2 = new L4Compiler(m1, result.right.get).compile
-        if (cfg shouldStopAt COMP) { println(m2); return }
+        val m3 = L4Compiler.compile(result.right.get, m2)
+        if (cfg shouldStopAt COMP) { println(m3); return }
       
         // Resolve
-        val m3 = Resolver.resolve(m2)
-        if (cfg shouldStopAt RESOLVE) { println(m3); return }
+        val m4 = Resolver.resolve(m3)
+        if (cfg shouldStopAt RESOLVE) { println(m4); return }
       
         // Peephole optimization
-        val m4 = PeepholeOptimizer.optimize(result.right.get, m3)
-        if (cfg shouldStopAt OPT) { println(m4); return }          
+        val m5 = PeepholeOptimizer.optimize(result.right.get, m4)
+        if (cfg shouldStopAt OPT) { println(m5); return }
 
         // Flatten
-        val m5 = Flatten.flatten(m4)
-        if (cfg shouldStopAt FLATTEN) { saveAsm(m5); return }
+        val m6 = Flatten.flatten(m5)
+        if (cfg shouldStopAt FLATTEN) { saveAsm(m6); return }
         
         // If we reached this point, emit the class file!
         val asmCfg = new AsmConfig
         asmCfg.outDir = cfg.outDir
-        val asm = new Assembler(asmCfg, m5)
+        val asm = new Assembler(asmCfg, m6)
         asm assemble
     }
   }
