@@ -117,8 +117,10 @@ class ListOpt(xs:List[Opt],doc:String) extends Opt(doc) {
 class Args(
     optInfo:List[(String,Opt)], 
     anon:String => Unit, 
-    usage:String,
-    helpHook:Unit => Unit = identity) {
+    usage:String) {
+  
+  // Flag signaling if help was invoked
+  var helpInvoked = false
   
   // Option map, augmented with help options if necessary
   private val opts:Map[String,Opt] = withHelp(SortedMap(optInfo:_*))
@@ -127,7 +129,7 @@ class Args(
   private def withHelp(opts:Map[String,Opt]):Map[String,Opt] = {
     (opts /: List("-h","--help")) {(m,h) =>
       if (m contains h) m else m + (h -> 
-        new UnitOpt(_ => {println(helpMsg);helpHook()}, 
+        new UnitOpt(_ => {println(helpMsg);helpInvoked = true}, 
           h + " Print a synopsys of available options"))
     }  
   }

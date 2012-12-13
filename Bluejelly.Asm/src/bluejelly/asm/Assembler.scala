@@ -30,7 +30,6 @@ import scala.collection.mutable.MutableList
  * Assembler configuration
  */
 class AsmConfig {
-  var help = false
   var version = false
   var prettyPrint = false
   var debugInfo = false
@@ -416,7 +415,6 @@ class Assembler(cfg:AsmConfig, m:Module) {
     val fullName = cfg.outDir + '/' + name + ".class"
     val ix = fullName lastIndexOf '/'
     val path = fullName.take(ix)
-    val className = fullName.drop(ix + 1)
     new File(path).mkdirs()
     val out = new FileOutputStream(fullName)
     out write bytes
@@ -436,16 +434,15 @@ object Assembler {
   private val version = "The Bluejelly Assembler, v" + sys.props("app.version")
   
   private val cfg = new AsmConfig  
-  private var opts = List(
+  private val opts = List(
       ("-p", new UnitOpt(_ => cfg.prettyPrint = true, "-p Show parser results and leave")),
       ("-v", new UnitOpt(_ => cfg.version = true, "-v Show version information")),
       ("-g", new UnitOpt(_ => cfg.debugInfo = true, "-g Add debug info to compiled code")),
       ("-d", new StrOpt(cfg.outDir = _,"-d [dir]~Output directory for compiled code")))      
-  private def arg = new Args(
+  private val arg = new Args(
       opts, 
       cfg.files += _, 
-      "Usage: " + appName + " [options] files...",
-      _ => cfg.help = true)
+      "Usage: " + appName + " [options] files...")
   
   // Process a single file
   def assemble(cfg:AsmConfig, sourceName:String) {
@@ -478,7 +475,7 @@ object Assembler {
   def main(argv:Array[String]) {
     if (!arg.parse(argv)) return
     
-    if (cfg.help) return
+    if (arg.helpInvoked) return
     if (cfg.version) {println(version); return}
     if (cfg.files.isEmpty) {
       println(appName + ": no input files")
