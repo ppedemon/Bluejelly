@@ -16,7 +16,6 @@ extern
   bluejelly.BigInt.one{0},
   bluejelly.BigInt.add{2}
 
-
 # ------------------------------------------------------------------------
 # Trivial stuff
 # ------------------------------------------------------------------------
@@ -56,12 +55,12 @@ fun filter p xs =
 
 fun take n xs = 
   let! n$ = n in
-  match n with
+  match n$ with
     | 0 -> Nil
     | n -> let! xs$ = xs in
          match xs$ with
            | Nil -> Nil
-           | Cons x xs -> Cons x (take (bluejelly.Int.sub n$ 1) xs)
+           | Cons x xs -> Cons x (take (bluejelly.Int.sub n 1) xs)
 
 fun foldr f a xs = 
   let! xs$ = xs in
@@ -89,6 +88,7 @@ fun testReverse = reverse (take 20 (enum 1))
 fun testMap = map inc (take 100 (enum 1))
 fun testFilter = filter even testMap
 
+fun testTake = take 10 (enum 1)
 
 # ------------------------------------------------------------------------
 # Compute infinite list of primes

@@ -101,7 +101,7 @@ class Renamer {
       val extEnv = env + (x->freshv)
       Eval(freshv, rename(env)(e), rename(extEnv)(b))
     case Eval(x,e,b) => 
-      Let(x, rename(env)(e), rename(env + (x->x))(b))
+      Eval(x, rename(env)(e), rename(env + (x->x))(b))
     
     // Each declaration in a let rec might have to be renamed
     case LetRec(decls,e) =>

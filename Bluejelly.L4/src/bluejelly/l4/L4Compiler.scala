@@ -77,7 +77,6 @@ private class FunCompiler {
 
       // Optimized eval cases
       case Eval(x, Note(Once,e), Match(y,alts)) if x == y && isWhnf(e) =>
-        printExpr(e)
         Atom(compileExpr(env)(e)) :: compileAlts(env,alts)
         
       case Eval(x, Note(Once,e), Match(y,alts)) if x == y =>
@@ -87,7 +86,8 @@ private class FunCompiler {
       case Eval(x,e,b) if isWhnf(e) => 
         Atom(compileExpr(env)(e)) :: Local(x) :: compileExpr(env addLocal x)(b)
       
-      case Eval(x,e,App(y,Nil)) if x == y => compileExpr(env)(e)
+      case Eval(x,e,App(y,Nil)) if x == y => 
+        compileExpr(env)(e)
       
       // The rest
       case Let(x,e,b) => 
