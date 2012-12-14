@@ -176,7 +176,7 @@ private class FunCompiler {
     
     def compileConAlts(env:Env)(alts:List[Alt]) = alts map (a => a.p match {
       case PCon(c,args) => compileAlt(env)(env(c).con.tag, a.e, args)
-      case _ => l4Panic("expect datacon alternative")
+      case _ => l4Panic("expected datacon alternative")
     })
     
     // -------------------------------------------------------------------

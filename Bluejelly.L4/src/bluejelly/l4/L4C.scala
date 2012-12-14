@@ -65,7 +65,7 @@ object L4C {
       ("-v", new UnitOpt(_ => cfg.version = true, "-v Show version information")),
       ("--debug-renamer", new UnitOpt(
           _ => cfg.stopAt = RENAME, 
-          "--debug-parser Send renamer results to stdout and stop")),
+          "--debug-renamer Send renamer results to stdout and stop")),
       ("--debug-occ", new UnitOpt(
           _ => cfg.stopAt = OCC, 
           "--debug-occ Send occurrence analysis output and stop")),
