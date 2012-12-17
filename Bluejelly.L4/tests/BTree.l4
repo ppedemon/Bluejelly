@@ -1,0 +1,53 @@
+module BTree
+
+data False{0,0}
+data True{1,0}
+
+data Nil{0,0}
+data Cons{1,2}
+
+data Empty{0,0}
+data Node{1,3}
+
+extern bluejelly.Int.lt{2}, bluejelly.Int.eq{2}
+extern List.append{2}, List.foldr{3}, List.foldl{3}
+extern Test.flip{3}
+
+fun empty = Empty
+
+fun insert t x = 
+  let! t$ = t in
+  match t$ with
+    | Empty -> Node x Empty Empty
+    | Node n t1 t2 -> 
+      let! lt = bluejelly.Int.lt x n in
+      match lt with
+        | True -> Node n (insert t1 x) t2
+        | False ->
+          let! eq = bluejelly.Int.eq x n in
+          match eq with
+            | True -> t$
+            | False -> Node n t1 (insert t2 x)
+
+fun inOrder t =
+  let t$ = t in
+  match t$ with
+    | Empty -> Nil
+    | Node n t1 t2 -> List.append (inOrder t1) (Cons n (inOrder t2))
+
+
+fun xs 
+ = Cons 4 
+ ( Cons 0 
+ ( Cons 1 
+ ( Cons 7 
+ ( Cons 6 
+ ( Cons 3 
+ ( Cons 5 
+ ( Cons 2 
+ ( Cons 9 
+ ( Cons 8 Nil)))))))))
+
+fun testInsertr = List.foldr (Test.flip insert) empty xs
+fun testInsertl = List.foldl insert empty xs
+fun testInOrder = inOrder testInsertl
