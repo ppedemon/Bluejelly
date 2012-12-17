@@ -3,27 +3,22 @@
     <property name="srcdir" location="${basedir}/src"/>
     <property name="bindir" location="${basedir}/bin"/>
     <property name="distdir" location="${basedir}/dist"/>
-    <property name="version" value="1.0"/>
+	<property file="bld.properties"/>
 
     <!-- Dependencies -->
     <property name="bluejelly.libs" location="${basedir}/../Bluejelly.Libs"/>
-    
+
     <!-- Generate the bluejelly runtime distribution -->
-    <target name="dist" depends="dist.clean,dist.jar">
-        <property name="prefix" value="brt-${version}"/>
-        <replaceregexp file="${basedir}/brt.sh" 
-            match="\$\{version\}"
-            replace="${version}"
-            flags="g"/>
-        <mkdir dir="${distdir}"/>
+    <target name="dist" depends="dist.clean,dist.prepare,dist.script,dist.jar">
+        <property name="prefix" value="brt-${build.version}"/>
         <tar destfile="${distdir}/brt.tar">
             <tarfileset dir="${distdir}" 
-                includes="brt-${version}.jar" prefix="${prefix}/lib"/>
+                includes="brt-${build.version}.jar" prefix="${prefix}/lib"/>
             <tarfileset dir="${bluejelly.libs}/lib" prefix="${prefix}/lib">
                 <include name="asm-all-3.2.jar"/>
                 <include name="3rd-party-licenses.txt"/>
             </tarfileset>
-            <tarfileset dir="${basedir}" 
+            <tarfileset dir="${distdir}" 
                 includes="brt.sh" filemode="744" prefix="${prefix}"/>
             <tarfileset dir="${basedir}/.." prefix="${prefix}">
                <include name="LICENSE"/>
@@ -34,18 +29,33 @@
         <delete>
             <fileset dir="${distdir}" includes="**/*.jar"/>
             <fileset dir="${distdir}" includes="**/*.tar"/>
+        	<fileset dir="${distdir}" includes="brt.sh"/>
         </delete>
     </target>
-    
+
+    <!-- Prepare for generating distriution -->
+    <target name="dist.prepare">
+        <mkdir dir="${distdir}"/>
+    </target>
+
+    <!-- Create startup script -->
+    <target name="dist.script">
+        <copy file="${basedir}/brt.sh.template" tofile="${distdir}/brt.sh"/>
+        <replaceregexp file="${distdir}/brt.sh" 
+            match="\$\{build\.version\}"
+            replace="${build.version}"
+            flags="g"/>
+    </target>
+	
     <!-- Generate the runtime jar -->
     <target name="dist.jar" depends="prims.gen">
-        <jar destfile="${distdir}/brt-${version}.jar" 
+        <jar destfile="${distdir}/brt-${build.version}.jar" 
             basedir="${bindir}" 
             excludes="**/test/**">
         </jar>
     </target>
 
-     <path id="prims.path">
+    <path id="prims.path">
         <pathelement path="${bindir}"/>
         <pathelement location="${libdir}/asm-3.2.jar"/>
         <pathelement location="${bluejelly.libs}/lib/asm-all-3.2.jar"/>
@@ -83,6 +93,7 @@
         <delete quiet="true">
             <fileset dir="${distdir}" includes="**/*.jar"/>
             <fileset dir="${distdir}" includes="**/*.tar.gz"/>
+        	<fileset dir="${distdir}" includes="brt.sh"/>
         </delete>
     </target>
 

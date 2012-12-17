@@ -1,0 +1,11 @@
+#! /bin/bash
+
+CP=
+for jar in `ls lib/*.jar`; do
+  CP+=":"$jar
+done
+CP=${CP:1}
+
+java -Dapp.version=${build.version} -Dapp.name=${build.appname} -cp ${CP} bluejelly.asm.Assembler $@
+exit $?
+

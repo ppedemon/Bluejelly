@@ -58,7 +58,7 @@ object L4C {
   }
 
   private def versionStr = 
-    "The l4 (low level lazy language) compiler, v %s" format appVersion
+    "The l4 (low level lazy language) compiler, v%s" format appVersion
   
   private val cfg = new Config
   private val opts = List(

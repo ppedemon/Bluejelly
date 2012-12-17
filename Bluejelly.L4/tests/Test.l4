@@ -6,6 +6,8 @@ data True{1,0}
 data Nil{0,0}
 data Cons{1,2}
 
+extern bluejelly.test.Basic.id{1}, bluejelly.test.Basic.const{2}
+
 extern 
   bluejelly.Int.add{2}, bluejelly.Int.sub{2}, 
   bluejelly.Int.rem{2}, bluejelly.Int.neq{2},
@@ -20,22 +22,20 @@ extern
 # Trivial stuff
 # ------------------------------------------------------------------------
 
-fun id x = x
-
 fun inc x = bluejelly.Int.add 1 x
 
 fun even x = bluejelly.Int.eq (bluejelly.Int.rem x 2) 0
 
 fun flip f x y = f y x
 
-fun xs = Cons 1 (Cons 2 (Cons 3 (Cons 4 Nil)))
+fun xs = Cons 1 (Cons 2 (Cons 3 (Cons (bluejelly.test.Basic.id 4) Nil)))
 
 
 # ------------------------------------------------------------------------
 # Some list functions
 # ------------------------------------------------------------------------
 
-fun enum x = Cons x (enum (bluejelly.Int.add x 1))
+fun enum x = Cons x (@enum (bluejelly.Int.add x 1))
 
 fun map f xs = 
   let! xs$ = xs in
@@ -48,9 +48,9 @@ fun filter p xs =
   match xs$ with
     | Nil -> Nil
     | Cons x xs -> 
-      let! b = p x in
+      let! b = @p x in
       match b with
-        | False -> filter p xs
+        | False -> @filter p xs
         | True -> Cons x (@filter p xs)
 
 fun take n xs = 
@@ -60,7 +60,7 @@ fun take n xs =
     | n -> let! xs$ = xs in
          match xs$ with
            | Nil -> Nil
-           | Cons x xs -> Cons x (take (bluejelly.Int.sub n 1) xs)
+           | Cons x xs -> Cons x (@take (@bluejelly.Int.sub n 1) xs)
 
 fun foldr f a xs = 
   let! xs$ = xs in
@@ -99,11 +99,11 @@ fun prims = sieve (enum 2)
 fun sieve xs = 
   let! xs$ = xs in
   match xs$ with
-    | Cons x xs -> Cons x (sieve (filter (notMultipleOf x) xs))
+    | Cons x xs -> Cons x (@sieve (@filter (@notMultipleOf x) xs))
     
 fun notMultipleOf x y = bluejelly.Int.neq (bluejelly.Int.rem y x) 0
 
-fun testPrims = take 1000 prims
+fun testPrims = take 10000 prims
 
 # ------------------------------------------------------------------------
 # Infinite Fibonacci list

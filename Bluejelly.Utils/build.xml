@@ -1,4 +1,4 @@
-<project name="Bluejelly.Runtime" default="lib.jar" basedir=".">
+<project name="Bluejelly.Utils" default="lib.jar" basedir=".">
 
     <property name="bindir" location="${basedir}/bin"/>
     <property name="libdir" location="${basedir}/lib"/>

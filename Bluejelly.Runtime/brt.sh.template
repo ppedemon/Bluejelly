@@ -34,6 +34,6 @@ CP=${CP:1}${MP}
 #echo "Args are" $ARGS
 #echo CP is ${CP}
 
-java -Dapp.version=1.0 -cp ${CP} bluejelly.runtime.Runtime ${ARGS}
+java -Dapp.version=${build.version} -cp ${CP} bluejelly.runtime.Runtime ${ARGS}
 exit $?
 
