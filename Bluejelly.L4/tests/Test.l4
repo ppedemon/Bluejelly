@@ -103,7 +103,7 @@ fun sieve xs =
     
 fun notMultipleOf x y = bluejelly.Int.neq (bluejelly.Int.rem y x) 0
 
-fun testPrims = take 10000 prims
+fun testPrims = take 10000 Test.prims
 
 # ------------------------------------------------------------------------
 # Infinite Fibonacci list
