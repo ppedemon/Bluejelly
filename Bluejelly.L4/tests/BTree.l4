@@ -15,7 +15,7 @@ extern
   bluejelly.Int.eq{2},
   bluejelly.Int.add{2}
 
-extern List.append{2}, List.foldr{3}, List.foldl{3}
+extern List.append{2}, List.foldr{3}, List.foldl{3}, List.map{2}
 extern Test.flip{3}
 
 fun empty = Empty
@@ -69,3 +69,15 @@ fun testInsertr = List.foldr (Test.flip BTree.insert) BTree.empty BTree.xs
 fun testInsertl = List.foldl insert empty xs
 fun testInOrder = inOrder BTree.testInsertr
 fun testDepth = depth testInsertl
+
+fun inc x = bluejelly.Int.add x 1
+
+fun torture =
+  let! x = 
+    let! y = testInsertr in 
+    let! xs = inOrder y in
+    match xs with
+      | List.Nil -> xs
+      | List.Cons x xs -> let! ys = List.map inc xs in List.Cons x ys 
+  in
+    List.append x xs

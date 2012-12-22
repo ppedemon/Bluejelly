@@ -8,7 +8,6 @@ package bluejelly.l4.test
 
 import bluejelly.l4.Renamer
 
-
 /**
  * Test renamer stage. We want to check that, for every AST a,
  * renamer(a) is isomorphic to a.
