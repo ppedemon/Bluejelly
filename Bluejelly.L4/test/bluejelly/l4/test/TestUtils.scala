@@ -26,6 +26,7 @@ import bluejelly.l4.FunDecl
 import bluejelly.l4.Module
 import bluejelly.l4.ELit
 import bluejelly.l4.ECon
+import bluejelly.l4.Note
 
 /**
  * General utilities for testing.
@@ -116,7 +117,10 @@ class TestUtils {
     case (Match(u,as0),Match(v,as1)) =>
       val (extEnv,ok) = isoVar(e)(u,v)
       (as0,as1).zipped.forall(isoAlt(extEnv))
-      
+    
+    // Ignore occurrence info
+    case (Note(_,x),y) => iso(e)(x,y)
+    case (x,Note(_,y)) => iso(e)(x,y)
     case _ => false
   }
 
