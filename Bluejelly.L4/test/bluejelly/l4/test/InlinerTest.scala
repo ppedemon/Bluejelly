@@ -20,7 +20,6 @@ class InlinerTest extends AstTest {
     val mi = parseMod(in)
     val me = parseMod(expected)
     val mo = Inliner.inline(OccAnalysis.analyze(Renamer.rename(mi)))
-    ppr(mo);
     assert(utils.isoMod(me,mo))        
   }
 
@@ -82,5 +81,11 @@ class InlinerTest extends AstTest {
     val p = "module M data C{0,0} fun f = let! c = C in M.f c c (M.g c)"
     val q = "module M data C{0,0} fun f = M.f C C (M.g C)"
     doTest(p,q)
+  }
+  
+  def testEvalFirstUse() {
+    val p = "module M data C{0,0} fun f = let! x = let z = 1 in M.g z in M.f x"
+    val q = "module M data C{0,0} fun f = M.f (let! x = M.g 1 in x)"
+    doTest(p,q)    
   }
 }
