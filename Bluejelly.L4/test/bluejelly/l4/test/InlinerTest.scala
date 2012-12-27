@@ -20,7 +20,6 @@ class InlinerTest extends AstTest {
     val mi = parseMod(in)
     val me = parseMod(expected)
     val mo = Inliner.inline(OccAnalysis.analyze(Renamer.rename(mi)))
-    ppr(mo)
     assert(utils.isoMod(me,mo))
   }
 
