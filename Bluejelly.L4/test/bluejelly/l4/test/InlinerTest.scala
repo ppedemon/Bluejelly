@@ -20,7 +20,8 @@ class InlinerTest extends AstTest {
     val mi = parseMod(in)
     val me = parseMod(expected)
     val mo = Inliner.inline(OccAnalysis.analyze(Renamer.rename(mi)))
-    assert(utils.isoMod(me,mo))        
+    ppr(mo)
+    assert(utils.isoMod(me,mo))
   }
 
   def testCon() {
@@ -84,8 +85,56 @@ class InlinerTest extends AstTest {
   }
   
   def testEvalFirstUse() {
-    val p = "module M data C{0,0} fun f = let! x = let z = 1 in M.g z in M.f x"
-    val q = "module M data C{0,0} fun f = M.f (let! x = M.g 1 in x)"
-    doTest(p,q)    
+    val p = "module M fun f = let! x = let z = 1 in M.g z in M.f x"
+    val q = "module M fun f = M.f (let! x = M.g 1 in x)"
+    doTest(p,q)
+  }
+  
+  def testRec() {
+    val p = "module M fun f x = let x = M.f x in let rec g = M.g f x and h = g 1 in f h"
+    val q = "module M fun f x = let rec g = M.g f (M.f x) and h = g 1 in f h"
+    doTest(p,q)
+  }
+
+  def testMatch1() {
+    val p = "module M fun f y = let! x = 1 in match x with x -> y"
+    val q = "module M fun f y = let! x = 1 in match z with z -> y"
+    doTest(p,q)
+  }
+
+  def testMatch2() {
+    val p = "module M fun f = let x = 1 in let u = 0 in match x with x -> M.f u u x"
+    val q = "module M fun f = let! x = 1 in match x with z -> M.f 0 0 z"
+    doTest(p,q)
+  }
+  
+  def testMatch3() {
+    val p = "module M fun f = let x = 1 in let u = M.f 3 in match x with x -> M.f u u x"
+    val q = "module M fun f = let u = M.f 3 in let! x = 1 in match x with z -> M.f u u z"
+    doTest(p,q)
+  }
+  
+  def testExpandApp() {
+    val p = "module M fun f x = let g = M.f x in match x with x -> g x"
+    val q = "module M fun f x = match x with y -> M.f x y"
+    doTest(p,q)
+  }
+  
+  def testExpandNApp() {
+    val p = "module M fun f x = let g = @M.f x in match x with x -> g x"
+    val q = "module M fun f x = match x with y -> M.f x y"
+    doTest(p,q)
+  }
+  
+  def testAppEval() {
+    val p = "module M fun f x y u v w = let x = let! x = M.f x y in x in x u v w"
+    val q = "module M fun f x y u v w = let! z = M.f x y in z u v w"
+    doTest(p,q)
+  }
+
+  def testAppLet() {
+    val p = "module M fun f = let g = let x = M.f 1 2 in M.h x x 3 in g 4 5"
+    val q = "module M fun f = let g = let x = M.f 1 2 in M.h x x 3 in g 4 5"
+    doTest(p,q)
   }
 }
