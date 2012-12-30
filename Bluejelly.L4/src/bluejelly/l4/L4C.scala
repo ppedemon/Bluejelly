@@ -42,6 +42,78 @@ private class Config {
  * The L4 compiler.
  * @author ppedemon
  */
+class L4C(cfg:Config) {
+  import Phase._
+  
+  def compile(name:String) {
+    val r = new UnicodeFilter(new FileReader(name))
+    val p = Parser.parseAll(Parser.module, r)
+    p match {
+      case f@Parser.Failure(_,_) => println(f)
+      case Parser.Success(m,_) =>
+        // Static analysis
+        val result = StaticAnalysis.analyze(m)
+        if (!result.isRight) return
+        val m0 = Renamer.rename(m)
+        if (cfg shouldStopAt RENAME) { ppr(m0); return }          
+
+        // Occurrence analysis
+        val m1 = OccAnalysis.analyze(m0)
+        if (cfg shouldStopAt OCC) { ppr(m1); return }
+
+        // Inline
+        val m2 = Inliner.inline(m1)
+        if (cfg shouldStopAt INLINE) { ppr(m2); return }
+      
+        // Compile
+        val m3 = L4Compiler.compile(result.right.get, m2)
+        if (cfg shouldStopAt COMP) { println(m3); return }
+      
+        // Resolve
+        val m4 = Resolver.resolve(m3)
+        if (cfg shouldStopAt RESOLVE) { println(m4); return }
+      
+        // Peephole optimization
+        val m5 = PeepholeOptimizer.optimize(result.right.get, m4)
+        if (cfg shouldStopAt OPT) { println(m5); return }
+
+        // Flatten
+        val m6 = Flatten.flatten(m5)
+        if (cfg shouldStopAt FLATTEN) { saveAsm(m6); return }
+        
+        // If we reached this point, emit the class file!
+        val asmCfg = new AsmConfig
+        asmCfg.outDir = cfg.outDir
+        val asm = new Assembler(asmCfg, m6)
+        asm assemble    
+    }
+  }
+    
+  // Save assembler source, used if we are compiling with -S
+  private def saveAsm(m:bluejelly.asm.Module) {
+    val full = new File(cfg.outDir, m.name.replaceAll("""\.""","/") + ".jas") toString
+    val ix = full lastIndexOf '/'
+    val path = full take ix
+    new File(path).mkdirs()
+    val out = new PrintWriter(new FileOutputStream(full))
+    m.ppr(out)(0)
+    out flush()
+    out close()
+  }
+
+  // Pretty print a l4 module
+  private def ppr(m:Module) {
+    val d = PrettyPrinter.ppr(m)
+    val w = new StringWriter
+    d.format(75, w)
+    print(w)    
+  }
+}
+
+/**
+ * The L4 compiler.
+ * @author ppedemon
+ */
 object L4C {
   
   import bluejelly.utils._
@@ -92,72 +164,6 @@ object L4C {
       cfg.files += _, 
       "Usage: " + appName + " [options] files...")
 
-  // Compile a l4 file with the given name
-  private def compile(name:String) {
-    val r = new UnicodeFilter(new FileReader(name))
-    val p = Parser.parseAll(Parser.module, r)
-    p match {
-      case f@Parser.Failure(_,_) => println(f)
-      case Parser.Success(m,_) =>
-        // Static analysis
-        val result = StaticAnalysis.analyze(m)
-        if (!result.isRight) return
-        val m0 = Renamer.rename(m)
-        if (cfg shouldStopAt RENAME) { ppr(m0); return }          
-
-        // Occurrence analysis
-        val m1 = OccAnalysis.analyze(m0)
-        if (cfg shouldStopAt OCC) { ppr(m1); return }
-
-        // Inline
-        val m2 = Inliner.inline(m1)
-        if (cfg shouldStopAt INLINE) { ppr(m2); return }
-      
-        // Compile
-        val m3 = L4Compiler.compile(result.right.get, m2)
-        if (cfg shouldStopAt COMP) { println(m3); return }
-      
-        // Resolve
-        val m4 = Resolver.resolve(m3)
-        if (cfg shouldStopAt RESOLVE) { println(m4); return }
-      
-        // Peephole optimization
-        val m5 = PeepholeOptimizer.optimize(result.right.get, m4)
-        if (cfg shouldStopAt OPT) { println(m5); return }
-
-        // Flatten
-        val m6 = Flatten.flatten(m5)
-        if (cfg shouldStopAt FLATTEN) { saveAsm(m6); return }
-        
-        // If we reached this point, emit the class file!
-        val asmCfg = new AsmConfig
-        asmCfg.outDir = cfg.outDir
-        val asm = new Assembler(asmCfg, m6)
-        asm assemble
-    }
-  }
-  
-  // Save assembler source, used if we are compiling with -S
-  private def saveAsm(m:bluejelly.asm.Module) {
-    val full = new File(cfg.outDir, m.name.replaceAll("""\.""","/") + ".jas") toString
-    val ix = full lastIndexOf '/'
-    val path = full take ix
-    new File(path).mkdirs()
-    val out = new PrintWriter(new FileOutputStream(full))
-    m.ppr(out)(0)
-    out flush()
-    out close()
-  }
-
-  // Pretty print a l4 module
-  private def ppr(m:Module) {
-    val d = PrettyPrinter.ppr(m)
-    val w = new StringWriter
-    d.format(75, w)
-    print(w)    
-  }
-
-  // Magic starts here
   def main(argv:Array[String]) {
     if (!arg.parse(argv)) return
     if (arg.helpInvoked) return
@@ -167,6 +173,7 @@ object L4C {
       println("Use -h or --help for a list of possible options")
       return;
     }
-    cfg.files foreach {compile _}
+    val l4c = new L4C(cfg)
+    cfg.files foreach {l4c compile}
   }  
 }
