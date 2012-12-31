@@ -7,6 +7,7 @@
 package bluejelly.l4.test
 
 import bluejelly.l4.Renamer
+import org.junit.Test
 
 /**
  * Test renamer stage. We want to check that, for every AST a,
@@ -23,54 +24,54 @@ class RenamerTest extends AstTest {
     assert(utils.isoMod(me,mo))        
   }
   
-  def testIdempotent() {
+  @Test def testIdempotent() {
     val s = "module M fun f x = let y = x in y"
     doTest(s,s)
   }
   
-  def testSimple() {
+  @Test def testSimple() {
     val p = "module M fun f x = let x = x in x"
     val q = "module M fun f x = let y = x in y"
     doTest(p,q)
   }
   
-  def testNested() {
+  @Test def testNested() {
     val p = "module M fun f x = let x = let x = e in x in x"
     val q = "module M fun f x = let y = let z = e in z in y"
     doTest(p,q)
   }
   
-  def testRec() {
+  @Test def testRec() {
     val p = "module M fun f x y = let rec x = y x and y = x y in X.f x y"
     val q = "module M fun f x y = let rec u = v u and v = u v in X.f u v"
     doTest(p,q)
   }
   
-  def testMatch() {
+  @Test def testMatch() {
     val p = "module M data C{0,2} fun f x y = match x with C x y -> 1"
     val q = "module M data C{0,2} fun f x y = match x with C u v -> 1"
     doTest(p,q)
   }
   
-  def testMatchLet() {
+  @Test def testMatchLet() {
     val p = "module M data C{0,2} fun f x y = match x with C x z -> let z = x in z"
     val q = "module M data C{0,2} fun f x y = match x with C u z -> let v = u in v"
     doTest(p,q)
   }
 
-  def testMatchEval() {
+  @Test def testMatchEval() {
     val p = "module M data C{0,2} fun f x y = match x with C x y -> let! y = x in y"
     val q = "module M data C{0,2} fun f x y = match x with C u v -> let! w = u in w"
     doTest(p,q)
   }
 
-  def testMatchDef() {
+  @Test def testMatchDef() {
     val p = "module M data C{0,2} fun f x y = match x with C x y -> let! y = x in y | y -> y"
     val q = "module M data C{0,2} fun f x y = match x with C u v -> let! w = u in w | h -> h"
     doTest(p,q)
   }
   
-  def testCon() {
+  @Test def testCon() {
     val p = "module M data C{0,2} fun f x = let x = C x x in C x (f x)"
     val q = "module M data C{0,2} fun f x = let y = C x x in C y (f y)"
   }

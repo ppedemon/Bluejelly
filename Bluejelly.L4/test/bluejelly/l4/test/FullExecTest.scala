@@ -30,7 +30,7 @@ class FullExecTest extends TestCase {
     assert(output == expected)
   }  
   
-  def testBasic() {
+  @Test def testBasic() {
     doTest("Basic.l4", Seq("Basic.testId","Basic.testConst"), "1#1")
   }
 }

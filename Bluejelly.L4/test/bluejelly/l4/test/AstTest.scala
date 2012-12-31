@@ -35,7 +35,7 @@ abstract class AstTest extends TestCase {
   @throws(classOf[IllegalArgumentException])
   protected  def parseMod(s:String):Module = parseMod(new StringReader(s))
 
-    @throws(classOf[IllegalArgumentException])
+  @throws(classOf[IllegalArgumentException])
   protected  def parseFun(r:Reader):FunDecl = {
     val result = Parser.parseAll(Parser.funDecl, r)
     result match {
