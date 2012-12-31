@@ -8,11 +8,10 @@ package bluejelly.l4.test
 
 import java.io.File
 import java.io.FilenameFilter
-
 import scala.sys.process.stringSeqToProcess
-
 import bluejelly.l4.Config
 import bluejelly.l4.L4C
+import scala.collection.mutable.StringBuilder
 
 /**
  * Execute the compiler and the runtime as an external process.
@@ -56,12 +55,20 @@ class TestRunner {
     prepare()
     runL4c(in, bin)
     val brt = runBrt(bin, what)
-    brt !!
+    fmt(brt !!)
+  }
+  
+  def run(in:File, funs:Seq[String], sep:String = "#") = {
+    prepare()
+    runL4c(in, bin)
+    funs map {case s => fmt(runBrt(bin,s) !!)} mkString sep
   }
   
   private def prepare() {
     if (!bin.exists()) bin.mkdirs()
   }
+  
+  private def fmt(s:String) = s.trim()
 }
 
 /*
@@ -72,15 +79,9 @@ object TestRunner {
   val src = new File(usrDir, "test.src")
 
   def main(args:Array[String]) {
-    {
-      val runner = new TestRunner
-      val output = runner run (new File(src,"Basic.l4"),"bluejelly.test.Basic.id")
-      print(output)      
-    }
-    {
-      val runner = new TestRunner
-      val output = runner run (new File(src,"Basic.l4"),"bluejelly.test.Basic.const")
-      print(output)
-    }
+    val runner = new TestRunner
+    println(runner run (new File(src,"Basic.l4"),"Basic.id"))
+    println(runner run (new File(src,"Basic.l4"),"Basic.const"))
+    println(runner run (new File(src,"Basic.l4"),Seq("Basic.id","Basic.const")))
   }
 }
