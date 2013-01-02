@@ -144,4 +144,38 @@ public class PrinterModule implements Module {
         ctx.jump("bluejelly.runtime.Printer.printListln");
     }
     
+    @JellyCode
+    public void trueCaf(ExecutionContext ctx) {
+        ctx.stackCheck(1);
+        ctx.retTyCon(1, 0);
+    }
+
+    @JellyCode
+    public void falseCaf(ExecutionContext ctx) {
+        ctx.stackCheck(1);
+        ctx.retTyCon(0, 0);
+    }
+
+    @JellyCode
+    public void printTrue(ExecutionContext ctx) {
+        ctx.stackCheck(1);
+        ctx.s[++ctx.sp] = ctx.getFun("bluejelly.runtime.test.PrinterModule.trueCaf");
+        ctx.jump("bluejelly.runtime.Printer.printBooleanln");
+    }
+    
+    @JellyCode
+    public void printFalse(ExecutionContext ctx) {
+        ctx.stackCheck(1);
+        ctx.s[++ctx.sp] = ctx.getFun("bluejelly.runtime.test.PrinterModule.falseCaf");
+        ctx.jump("bluejelly.runtime.Printer.printBooleanln");
+    }
+    
+    @JellyCode 
+    public void printEnum(ExecutionContext ctx) {
+        ctx.stackCheck(2);
+        ctx.s[++ctx.sp] = Int.mkInt(2);
+        ctx.s[++ctx.sp] = ctx.getFun("bluejelly.runtime.test.BazModule.enumInt");
+        ctx.mkApp(2);
+        ctx.jump("bluejelly.runtime.Printer.printListln");
+    }
 }

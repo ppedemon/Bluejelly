@@ -55,7 +55,7 @@ public abstract class Updatable implements Node {
         } else {
             this.blackholed = true;
             UpdMarker u = new UpdMarker(ctx, this);
-            ctx.mPush(u);
+            ctx.pushUpd(u);
             this.reduce(ctx);
         }
     }

@@ -76,7 +76,6 @@ public class ExnModule implements Module {
         ctx.sp = sp;
         ctx.slide(2, 1);
         // EnterCode primAddInt
-        ctx.sp = sp;
         ctx.jump("bluejelly.runtime.test.BazModule.primAddInt");
     }
     

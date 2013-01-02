@@ -287,14 +287,16 @@ public class RuntimeTest extends TestCase {
     public void testPrintSimpleTyCon() throws JellyException {
         String funId = IdUtils.qualify(this.prn, "printSimpleTyCon");
         Future<ExecutionContext> f = this.runtime.eval(funId);
-        f.get();
+        ExecutionContext ctx = f.get();
+        assertEquals(TyCon.mkzTyCon(0), ctx.getWhnf());
     }
     
     @Test
     public void testPrintComplexTyCon() throws JellyException {
         String funId = IdUtils.qualify(this.prn, "printComplexTyCon");
         Future<ExecutionContext> f = this.runtime.eval(funId);
-        f.get();
+        ExecutionContext ctx = f.get();
+        assertEquals(TyCon.mkzTyCon(0), ctx.getWhnf());
     }
 
     @Test
@@ -308,7 +310,24 @@ public class RuntimeTest extends TestCase {
     public void testPrintNonEmptyList() throws JellyException {
         String funId = IdUtils.qualify(this.prn, "printNonEmptyList");
         Future<ExecutionContext> f = this.runtime.eval(funId);
-        f.get();
+        ExecutionContext ctx = f.get();
+        assertEquals(TyCon.mkzTyCon(0), ctx.getWhnf());
+    }
+
+    @Test
+    public void testPrintTrue() throws JellyException {
+        String funId = IdUtils.qualify(this.prn, "printTrue");
+        Future<ExecutionContext> f = this.runtime.eval(funId);
+        ExecutionContext ctx = f.get();
+        assertEquals(TyCon.mkzTyCon(0), ctx.getWhnf());
+    }
+
+    @Test
+    public void testPrintFalse() throws JellyException {
+        String funId = IdUtils.qualify(this.prn, "printFalse");
+        Future<ExecutionContext> f = this.runtime.eval(funId);
+        ExecutionContext ctx = f.get();
+        assertEquals(TyCon.mkzTyCon(0), ctx.getWhnf());
     }
 
     /*
@@ -316,7 +335,8 @@ public class RuntimeTest extends TestCase {
     public void testPrintOnes() throws JellyException {
         String funId = IdUtils.qualify(this.prn, "printOnes");
         Future<ExecutionContext> f = this.runtime.eval(funId);
-        f.get();
+        ExecutionContext ctx = f.get();
+        assertEquals(TyCon.mkzTyCon(0), ctx.getWhnf());
     }
     */
 
@@ -325,10 +345,21 @@ public class RuntimeTest extends TestCase {
     public void testPrintCyclic() throws JellyException {
         String funId = IdUtils.qualify(this.prn, "printCyclic");
         Future<ExecutionContext> f = this.runtime.eval(funId);
-        f.get();
+        ExecutionContext ctx = f.get();
+        assertEquals(TyCon.mkzTyCon(0), ctx.getWhnf());
     }
     */
 
+    /*
+    @Test
+    public void testPrintEnum() throws JellyException {
+        String funId = IdUtils.qualify(this.prn, "printEnum");
+        Future<ExecutionContext> f = this.runtime.eval(funId);
+        ExecutionContext ctx = f.get();
+        assertEquals(TyCon.mkzTyCon(0), ctx.getWhnf());
+    }
+    */
+    
     @Test
     public void testBigIntArith() throws JellyException {
         String funId = IdUtils.qualify(this.foo, "bigIntArith");
@@ -337,4 +368,17 @@ public class RuntimeTest extends TestCase {
                 .equals(new BigInteger("335385764583214543694543533")));
     }
 
+    @Test
+    public void testTorture() throws JellyException {
+        String funId = IdUtils.qualify(this.foo, "torture");
+        Future<ExecutionContext> f = this.runtime.eval(funId);
+        assertTrue(((Int)f.get().getWhnf(0)).i == 1);
+    }
+
+    @Test
+    public void testTorture1() throws JellyException {
+        String funId = IdUtils.qualify(this.foo, "startTorture1");
+        Future<ExecutionContext> f = this.runtime.eval(funId);
+        assertTrue(((Int)f.get().getWhnf(0)).i == 1);
+    }    
 }

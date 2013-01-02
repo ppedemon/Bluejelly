@@ -159,4 +159,38 @@ public class FooModule implements Module {
         ctx.s[++ctx.sp] = ctx.getFun("bluejelly.BigInt.add");
     }
 
+    @JellyCode
+    public void torture(ExecutionContext ctx) {
+        ctx.stackCheck(1);
+        ctx.pushCont("bluejelly.runtime.test.FooModule.torture$1");
+        ctx.s[++ctx.sp] = ctx.getFun("bluejelly.runtime.test.FooModule.id");
+    }
+    
+    @JellyCode
+    public void torture$1(ExecutionContext ctx) {
+        ctx.slide(0,1);
+        ctx.retInt(1);
+        return;
+    }
+    
+    @JellyCode(arity=1)
+    public void torture1(ExecutionContext ctx) {
+        ctx.stackCheck(1);
+        ctx.pushCont("bluejelly.runtime.test.FooModule.torture1$1");
+        ctx.s[++ctx.sp] = ctx.getFun("bluejelly.runtime.test.FooModule.id");
+    }
+
+    @JellyCode
+    public void torture1$1(ExecutionContext ctx) {
+        ctx.slide(0,2);
+        ctx.retInt(1);
+        return;
+    }
+    
+    @JellyCode
+    public void startTorture1(ExecutionContext ctx) {
+        ctx.stackCheck(1);
+        ctx.s[++ctx.sp] = Int.mkInt(3);
+        ctx.jump("bluejelly.runtime.test.FooModule.torture1");
+    }
 }

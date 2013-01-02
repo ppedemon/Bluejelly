@@ -118,22 +118,45 @@ public class ExecutionContext implements Runnable {
     }
 
     /**
-     * Push the given {@link Marker} on top of the marker stack.
-     * @param m    mark to push.
+     * Push the given {@link Marker} on top of the marker stack. 
+     * 
+     * <p>Important: update marks are pushed after entering some
+     * updatable node on top of the stack. In that case, we want
+     * the bp register to point one slot <em>before</em> the top
+     * of the stack, since the node to reduce is already pushed.
+     * 
+     * @param m        mark to push
+     * @param isUpd    whether this is an update push
      */
-    public void mPush(Marker m) {
+    protected void mPush(Marker m, boolean isUpd) {
         this.markerCheck(1);
         m.bp = this.bp;
-        this.bp = this.sp - 1;
+        this.bp = isUpd? sp - 1 : sp;
         this.m[++this.mp] = m;        
     }
     
     /**
      * Pop the topmost {@link Marker} from top of the marker stack.
      */
-    public void mPop() {
+    private void mPop() {
         this.bp = this.m[this.mp].bp;
         this.m[this.mp--] = null;        
+    }
+ 
+    /**
+     * Push a continuation marker on top of the marker stack.
+     * @param funId    id of function to jump to
+     */
+    public void pushCont(String funId) {
+        this.mPush(new ContMarker(this, getFun(funId)), false);
+    }    
+
+    /**
+     * Push the given {@link UpdMarker} on top of the marker stack.
+     * @param u    {@link UpdMarker} to push
+     */
+    public void pushUpd(UpdMarker u) {
+        this.mPush(u, true);
     }
     
     /**
@@ -192,8 +215,6 @@ public class ExecutionContext implements Runnable {
     public void dumpStack(String msg) {
         Node[] frame = new Node[sp - bp];
         System.arraycopy(s, bp + 1, frame, 0, frame.length);
-        //Node[] frame = new Node[sp + 1];
-        //System.arraycopy(s, 0, frame, 0, frame.length);
         System.out.printf("{stack frame: %s:\n  %s}\n", 
             msg, Arrays.toString(frame));
     }
@@ -308,15 +329,16 @@ public class ExecutionContext implements Runnable {
      * @param funId    continuation
      */
     public void evalVar(int off, String funId) {
+        Node n = this.s[this.sp - off];
+        boolean shouldReduce = 
+            n instanceof Raise || 
+            n instanceof NApp  || 
+           (n instanceof Updatable && !((Updatable)n).isUpdated());
+
+        if (shouldReduce) this.pushCont(funId);
         this.s[this.sp + 1] = this.s[this.sp - off];
         ++this.sp;
-        Node n = this.s[this.sp];
-        if (n instanceof Raise || n instanceof NApp || 
-                (n instanceof Updatable && !((Updatable)n).isUpdated())) {
-            pushCont(funId);
-        } else {
-            this.jump(funId);
-        }
+        if (!shouldReduce) this.jump(funId);        
     }
     
     /**
@@ -434,15 +456,7 @@ public class ExecutionContext implements Runnable {
             ((TyCon)this.s[--this.sp - off]).pack(nodes);
         }
     }
-    
-    /**
-     * Push a continuation marker on top of the marker stack.
-     * @param funId    id of function to jump to
-     */
-    public void pushCont(String funId) {
-        this.mPush(new ContMarker(this, getFun(funId)));
-    }
-    
+        
     /**
      * Return a type constructor without allocating it on the heap if possible.
      * This is our implementation of GHC's &quot;return in registers&quot; 
@@ -462,7 +476,6 @@ public class ExecutionContext implements Runnable {
         else {
             this.mkTyCon(tag, n);
         }
-            
     }
     
     /**
@@ -719,7 +732,7 @@ public class ExecutionContext implements Runnable {
     public void registerCatch() {
         Node n = this.s[this.sp];
         this.s[this.sp--] = null;
-        this.mPush(new CatchMarker(this, n));
+        this.mPush(new CatchMarker(this, n), false);
     }
 
     /**
