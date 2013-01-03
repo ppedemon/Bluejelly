@@ -1,4 +1,4 @@
-.module asm.Poly:
+.module Poly:
 
 #
 # Auxliary booleans: not and (&&)

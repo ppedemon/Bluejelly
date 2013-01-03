@@ -1,4 +1,4 @@
-.module asm.MatchDbl:
+.module MatchDbl:
 
 .fun m[matcher]:
   matchdbl
@@ -12,6 +12,12 @@
   stack 1
   pushcont m
   retdbl 3.14158
+.end
+
+.fun matchPi:
+  stack 1
+  pushcont m
+  retdbl 3.14159
 .end
 
 .end

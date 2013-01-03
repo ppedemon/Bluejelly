@@ -1,4 +1,4 @@
-.module asm.MatchLookup:
+.module MatchLookup:
 
 .fun m[matcher]:
   matchcon

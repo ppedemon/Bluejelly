@@ -2,7 +2,7 @@
 # Test match instructions
 #
 
-.module asm.MatchInt:
+.module MatchInt:
 
 .fun match[matcher]:
   matchint
@@ -21,7 +21,7 @@
     stack 1
     retint 3
   .default:
-    stack 1
+    slide 0,1
     retint -1
   .end
 .end
@@ -89,6 +89,26 @@
   stack 1
   pushcont matchDef
   retint 2
+.end
+
+.fun m[arity=1]:
+  stack 1
+  pushvar 0
+  matchint
+    .default: slide 0,2 retint 1
+  .end
+.end
+
+.fun matchInt11:
+  stack 1
+  pushint 20
+  jmp m
+.end
+
+.fun matchInt12:
+  stack 1
+  pushcont m
+  retint 20
 .end
 
 .end

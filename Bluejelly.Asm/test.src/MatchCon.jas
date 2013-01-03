@@ -1,4 +1,4 @@
-.module asm.MatchCon:
+.module MatchCon:
 
 .fun matchSimple[matcher]:
   matchcon
@@ -18,7 +18,7 @@
   ret
 .end
 
-.fun msimpleRegs:
+.fun msimpleReg:
   stack 1
   pushcont matchSimple
   retcon 1,0

@@ -3,7 +3,7 @@
 # Test module
 #
 
-.module asm.Test:
+.module Test:
 
 .fun id[arity=1]:
   stack 1
@@ -60,6 +60,7 @@
 .fun i: retint 42 .end
 .fun s: retstr "Hey!" .end
 .fun d: retdbl 3.14159 .end
+.fun c: retchr 'c' .end
 .fun t: retcon 0,0 .end
 
 .fun trycatch:

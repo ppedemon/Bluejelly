@@ -2,5 +2,5 @@
 bin/
 dist/
 lib/
-mods/asm/
+test.bin/
 
