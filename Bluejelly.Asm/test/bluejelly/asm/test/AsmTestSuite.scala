@@ -18,5 +18,7 @@ import org.junit.runners.Suite.SuiteClasses
   classOf[BasicTest],
   classOf[MatchTest],
   classOf[PolyTest],
-  classOf[ExtrasTest]))
+  classOf[ExtrasTest],
+  classOf[FixesTest]
+))
 class AsmTestSuite {}
