@@ -34,8 +34,13 @@ class L4Runner {
     new L4C(cfg)    
   }
   
+  private def prepare(modName:String) {
+    if (!bin.exists) bin.mkdirs
+    new File(bin,modName replaceFirst ("l4$","class")).delete
+  }
+
   def compile(modName:String) {
-    bin.mkdirs
+    prepare(modName)
     l4c.compile(new File(src,modName) toString)
   }
   

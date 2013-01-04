@@ -24,7 +24,7 @@ class BasicTest extends L4CompilerTest {
         ("Basic.testConst","1")
     ))
   }
-  @Test def testTorture() {
-    check("Torture.l4", "Torture.testNoInline", "7")
+  @Test def testContrived() {
+    check("Contrived.l4", "Contrived.testNoInline", "7")
   }
 }
