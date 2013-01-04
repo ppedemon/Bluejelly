@@ -463,9 +463,10 @@ object Assembler {
             a assemble
           } else {
             v dumpErrs (errs, new PrintWriter(System.err))
+            val e = if (errs.length == 1) "error" else "errors"
             System.err.println(
-              "Found %d errors, compilation of `%s' aborted!\n" format (
-                  errs.length,sourceName))
+              "Found %d %s, compilation of `%s' aborted!\n" format (
+                  errs.length,e,sourceName))
           }
         } 
       }

@@ -25,8 +25,13 @@ class AsmRunner {
   
   private val brt = new BrtRunner(bin)
   
+  private def prepare(modName:String) {
+    if (!bin.exists) bin.mkdirs
+    new File(bin,modName replaceFirst ("jas$","class")).delete
+  }
+  
   private def assemble(modName:String) {
-    bin.mkdirs
+    prepare(modName)
     val cfg = new AsmConfig
     cfg.outDir = bin.toString
     Assembler.assemble(cfg, new File(src,modName) toString)
