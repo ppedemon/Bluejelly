@@ -4,7 +4,7 @@
  * This source code is distributed under the terms of 
  * the BSD license, see the LICENSE file for details.
  */
-package bluejelly.l4.test
+package bluejelly.l4.test.ast
 
 import bluejelly.l4.Inliner
 import bluejelly.l4.OccAnalysis
@@ -21,6 +21,7 @@ class InlinerTest extends AstTest {
     val mi = parseMod(in)
     val me = parseMod(expected)
     val mo = Inliner.inline(OccAnalysis.analyze(Renamer.rename(mi)))
+    ppr(mo)
     assert(utils.isoMod(me,mo))
   }
 
@@ -139,7 +140,9 @@ class InlinerTest extends AstTest {
   }
   
   // -------------------------------------------------------------------------
-  // These used to be in InlineTest.l4
+  // These used to be in InlineTest.l4. We are using functions badly
+  // (like invoking bluejelly.Int.add with 3 arguments), but for the 
+  // sake of evaluating the inliner that doesn't matter.
   // -------------------------------------------------------------------------
   
   @Test def testInlineCons() {
@@ -177,6 +180,28 @@ class InlinerTest extends AstTest {
     val q = "module M " +
             "fun h x y = bluejelly.Int.add (let! g = e x y in g) 1 " +
             "(bluejelly.Int.add x y) (Cons 1 Nil)"
+    doTest(p,q)
+  }
+
+  @Test def testNoFirstUse() {
+    val p = "module M " +
+            "fun h x y = let f = let! g = e x y in let! z = X.f 1 in bluejelly.Int.add z z g 1 in " +
+            "let w = bluejelly.Int.add x y in " +
+            "let z = Cons 1 Nil in f w z"
+    val q = "module M " +
+            "fun h x y = let f = let! g = e x y in let! z = X.f 1 in bluejelly.Int.add z z g 1 in " +
+            "f (bluejelly.Int.add x y) (Cons 1 Nil)"
+    doTest(p,q)
+  }
+  
+  @Test def testInlinedAnyway() {
+    val p = "module M " +
+            "fun h x y = let f = let! g = e x y in let! z = X.f 1 in bluejelly.Int.add z g 1 in " +
+            "let w = bluejelly.Int.add x y in " +
+            "let z = Cons 1 Nil in f w z"
+    val q = "module M " +
+            "fun h x y = bluejelly.Int.add (let! z = X.f 1 in z) " +
+            "(let! g = e x y in g) 1 (bluejelly.Int.add x y) (Cons 1 Nil)"
     doTest(p,q)
   }
 }

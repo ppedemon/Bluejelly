@@ -4,7 +4,8 @@
  * This source code is distributed under the terms of 
  * the BSD license, see the LICENSE file for details.
  */
-package bluejelly.l4.test
+package bluejelly.l4.test.ast
+
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
 import org.junit.runners.Suite._
