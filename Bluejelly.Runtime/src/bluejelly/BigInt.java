@@ -61,4 +61,12 @@ public class BigInt implements Module {
         ctx.slide(1,4);
     }
 
+    @JellyCode @JellyPrim(name="mul", arity=2)
+    public void mul$2(ExecutionContext ctx) {
+        BigInteger x = ((bluejelly.runtime.nodes.BigInt)ctx.getWhnf(1)).i;
+        BigInteger y = ((bluejelly.runtime.nodes.BigInt)ctx.getWhnf(0)).i;
+        ctx.s[++ctx.sp] = new bluejelly.runtime.nodes.BigInt(x.multiply(y));
+        ctx.slide(1,4);
+    }
+
 }
