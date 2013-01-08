@@ -140,8 +140,8 @@ class InlinerTest extends AstTest {
   }
   
   // -------------------------------------------------------------------------
-  // These used to be in InlineTest.l4. We are using functions badly
-  // (like invoking bluejelly.Int.add with 3 arguments), but for the 
+  // More challenging stuff. Some of these programs are actually invalid
+  // (like invoking bluejelly.Int.add with 3 arguments) but for the sake 
   // sake of evaluating the inliner that doesn't matter.
   // -------------------------------------------------------------------------
   
@@ -194,14 +194,73 @@ class InlinerTest extends AstTest {
     doTest(p,q)
   }
   
-  @Test def testInlinedAnyway() {
-    val p = "module M " +
-            "fun h x y = let f = let! g = e x y in let! z = X.f 1 in bluejelly.Int.add z g 1 in " +
-            "let w = bluejelly.Int.add x y in " +
-            "let z = Cons 1 Nil in f w z"
-    val q = "module M " +
-            "fun h x y = bluejelly.Int.add (let! z = X.f 1 in z) " +
-            "(let! g = e x y in g) 1 (bluejelly.Int.add x y) (Cons 1 Nil)"
+  @Test def testNoStrictInline() {
+    val p = "module M fun noInline x y = " +
+    		"  let! f = " +
+    		"    let! k = id const in " +
+    		"    let! n = neg 1 in " +
+    		"     third n n k 1 " +
+    		"  in " +
+    		"  let v = bluejelly.Int.add x y in" +
+    		"  let w = Cons 1 Nil in " +
+    		"  f v w"
+    val q = "module M fun noInline x y = " +
+            "  let! f = " +
+            "    let! k = id const in " +
+            "    let! n = neg 1 in " +
+            "    third n n k 1 " +
+            "  in " +
+            "  f (bluejelly.Int.add x y) (Cons 1 Nil)"
+    doTest(p,q)
+  }
+  
+  @Test def testTrasitiveNoInline() {
+    val p = "module M fun f x = " +
+    		"let y = bluejelly.Int.add 1 2 in let z = y in Cons (M.f z) z"
+    val q = "module M fun f x = let z = bluejelly.Int.add 1 2 in Cons (M.f z) z"
+    doTest(p,q)
+  }
+  
+  @Test def testNoInline() {
+    val p = "module M fun f x = " +
+            "let y = bluejelly.Int.add 1 2 in bluejelly.Int.sub y y"
+    val q = "module M fun f x = let z = bluejelly.Int.add 1 2 in Cons (M.f z) z"
+    doTest(p,p)
+  }
+  
+  @Test def testInlineStrictTrivial() {
+    val p = "module M fun f = " +
+            "let add = bluejelly.Int.add in let! x = 1 in add (add x x) x"
+    val q = "module M fun f = let add = bluejelly.Int.add in add (add 1 1) 1"
+    doTest(p,q)
+  }
+  
+  @Test def testInlineStrictNonTrivial() {
+    val p = "module M fun f x = " +
+            "let! z = bluejelly.Int.add x 1 in " +
+            "let w = bluejelly.Int.add 1 z in const w 20"
+    val q = "module M fun f x = const (bluejelly.Int.add 1 " +
+    		"  (let! z = bluejelly.Int.add x 1 in z)) 20"
+    doTest(p,q)
+  }
+  
+  @Test def testStrictNoInline() {
+    val p = "module M fun f x = " +
+    		"  let! u = let z = x in bluejelly.Int.add 1 z in " +
+    		"  bluejelly.Int.add u u"
+    val q = "module M fun f x = let! u = bluejelly.Int.add 1 x in " +
+    		" bluejelly.Int.add u u"
+    doTest(p,q)
+  }
+  
+  @Test def testRenameAndInline() {
+    val p = "module M fun f x = " +
+    		"  let x = Cons 1 (Cons 1 Nil) in " +
+    		"  let! z = X.h (bluejelly.Int.add 1 2) in " +
+    		"  match z with | Nil -> x | x -> Cons x Nil"
+    val q = "module M fun f x = " +
+            "  let! z = X.h (bluejelly.Int.add 1 2) in " +
+            "  match z with | Nil -> Cons 1 (Cons 1 Nil) | y -> Cons y Nil"
     doTest(p,q)
   }
 }
