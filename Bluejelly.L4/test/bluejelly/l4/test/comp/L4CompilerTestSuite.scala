@@ -15,5 +15,5 @@ import org.junit.runners.Suite.SuiteClasses
  * @author ppedemon
  */
 @RunWith(classOf[Suite])
-@SuiteClasses(Array(classOf[BasicTest]))
+@SuiteClasses(Array(classOf[BasicTest],classOf[ListTest],classOf[BTreeTest]))
 class L4CompilerTestSuite {}

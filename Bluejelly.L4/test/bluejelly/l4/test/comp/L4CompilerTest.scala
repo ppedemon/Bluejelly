@@ -17,6 +17,10 @@ class L4CompilerTest extends TestCase {
   
   private val l4Runner = new L4Runner
   
+  protected def compile(fileName:String) {
+    l4Runner compile fileName
+  }
+  
   protected def check(mod:String, cmd:String, expected:String) {
     val out = l4Runner.run(mod, cmd)
     println(out)

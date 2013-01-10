@@ -41,13 +41,40 @@ class BasicTest extends L4CompilerTest {
     ))
   }
   
-  @Test def testMatches() {
+  @Test def testIntMatches() {
     check("Test.l4", Seq(
       ("Test.testIntMatch","2"),
       ("Test.testIntMatchDef","0")
     ))    
   }
   
+  @Test def testDblMatches() {
+    check("Test.l4", Seq(
+      ("Test.testDblMatch0","first\u5f62"),
+      ("Test.testDblMatch1","ok"),
+      ("Test.testDblMatch2","whatever")
+    ))
+  }
+
+  @Test def testChrMatches() {
+    check("Test.l4", Seq(
+      ("Test.testChrMatch0","0"),
+      ("Test.testChrMatch1","1"),
+      ("Test.testChrMatch2","2"),
+      ("Test.testChrMatch3","-1")
+    ))
+  }
+
+  @Test def testStrMatches() {
+    check("Test.l4", Seq(
+      ("Test.testStrMatch0","red"),
+      ("Test.testStrMatch1","blue"),
+      ("Test.testStrMatch2","yellow"),
+      ("Test.testStrMatch3","white"),
+      ("Test.testStrMatch4","black")
+    ))
+  }
+
   def fact(x:Int):BigInt = x match {
     case 0 => 1
     case x => x*fact(x-1)

@@ -146,26 +146,73 @@ fun or$ x y =
     | True -> True
     | False -> y
  
- # isEven & isOdd, mutually recursive and unnecessarily complex
- fun isEven x = or$ (bluejelly.Int.eq x 0) (let f = comp isOdd dec in f x)
- fun isOdd x = and$ (bluejelly.Int.neq x 0) (let f = comp isEven dec in f x)
+# isEven & isOdd, mutually recursive and unnecessarily complex
+fun isEven x = or$ (bluejelly.Int.eq x 0) (let f = comp isOdd dec in f x)
+fun isOdd x = and$ (bluejelly.Int.neq x 0) (let f = comp isEven dec in f x)
  
- fun testEven = isEven 100
- fun testOdd = isOdd 251
- fun testEvenFalse = isEven 251
- fun testOddFalse = isOdd 100
+fun testEven = isEven 100
+fun testOdd = isOdd 251
+fun testEvenFalse = isEven 251
+fun testOddFalse = isOdd 100
  
- extern 
-   bluejelly.BigInt.one{1}, 
-   bluejelly.BigInt.fromInt{1},
-   bluejelly.BigInt.mul{2}
- 
- # Factorial function, of course (not tail recursive)
- fun fact n = 
-   let! n = n in
-   match n with
-     | 0 -> bluejelly.BigInt.one
-     | n -> let b = @bluejelly.BigInt.fromInt n in
-            bluejelly.BigInt.mul b (@fact (@bluejelly.Int.sub n 1))
+extern 
+  bluejelly.BigInt.one{1}, 
+  bluejelly.BigInt.fromInt{1},
+  bluejelly.BigInt.mul{2}
+
+# Factorial function, of course (not tail recursive)
+fun fact n = 
+  let! n = n in
+  match n with
+    | 0 -> bluejelly.BigInt.one
+    | n -> let b = @bluejelly.BigInt.fromInt n in
+           bluejelly.BigInt.mul b (@fact (@bluejelly.Int.sub n 1))
 
 fun testFact = fact 100
+
+# ------------------------------------------------------------------------
+# Test matches on doubles, chars and strings
+# ------------------------------------------------------------------------
+
+extern bluejelly.Double.add{2}
+
+fun dblMatch x y = 
+  let add = bluejelly.Double.add in
+  let! v = add x y in
+  match v with
+    | 2.34 -> "first\u5f62"
+    | 7.13 -> "ok"
+    | otherwise -> "whatever"
+    
+fun testDblMatch0 = dblMatch 2.34 0.0
+fun testDblMatch1 = dblMatch 4.68 2.45
+fun testDblMatch2 = dblMatch 1.0 2.0
+
+# No primitive functions over characters yet, so we have to match on constants
+fun chrMatch c = 
+  let! c = c in
+  match c with
+    | '\b' -> 0
+    | '"'  -> 1
+    | '\'' -> 2
+    | otherwise -> -1 
+
+fun testChrMatch0 = chrMatch '\10'
+fun testChrMatch1 = chrMatch '"'
+fun testChrMatch2 = chrMatch '\''
+fun testChrMatch3 = chrMatch 'a'
+
+fun strMatch s = 
+  let! s = s in
+  match s with
+    | "rose" -> "red"
+    | "violet" -> "blue"
+    | "tulip" -> "yellow"
+    | "daisy" -> "white"
+    | otherwise -> "black"
+
+fun testStrMatch0 = strMatch "rose"
+fun testStrMatch1 = strMatch "violet"
+fun testStrMatch2 = strMatch "tulip"
+fun testStrMatch3 = strMatch "daisy"
+fun testStrMatch4 = strMatch "duffodil"
