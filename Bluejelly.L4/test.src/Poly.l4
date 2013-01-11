@@ -31,8 +31,7 @@ fun ne$Def d x y = not (eq d x y)
 
 extern bluejelly.Int.eq{2}, bluejelly.Int.neq{2}
 
-data Eq$Int{0,2}
-fun dict$Eq$Int = Eq$Int bluejelly.Int.eq bluejelly.Int.neq 
+fun dict$Eq$Int = Eq bluejelly.Int.eq bluejelly.Int.neq 
 
 #
 # Let's complicate things. The following instance:
@@ -48,8 +47,7 @@ fun dict$Eq$Int = Eq$Int bluejelly.Int.eq bluejelly.Int.neq
 data Nil{0,0}
 data Cons{1,2}
 
-data Eq$List$Int{0,2}
-fun dict$Eq$List$Int d = Eq$List$Int (eqList d) (ne$Def dict$Eq$List$Int)
+fun dict$Eq$List$Int d = Eq (eqList d) (ne$Def dict$Eq$List$Int)
 
 fun eqList d xs ys = 
   let! xs$ = xs in
