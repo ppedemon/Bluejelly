@@ -1,5 +1,7 @@
 #! /bin/bash
 
+BASE=`dirname ${0}`
+
 SEEN_MP=0
 MP=
 ARGS=
@@ -20,20 +22,10 @@ for a in $*; do
 done
 
 CP=
-for jar in `ls lib/*.jar`; do
+for jar in `ls ${BASE}/lib/*.jar`; do
   CP+=":"$jar
 done
 CP=${CP:1}${MP}
 
-#CP=lib/brt.jar
-#CP=${CP}:lib/asm-3.2.jar
-#CP=${CP}:lib/asm-commons-3.2.jar
-#CP=${CP}:lib/asm-util-3.2.jar
-#CP=${CP}${MP}
-
-#echo "Args are" $ARGS
-#echo CP is ${CP}
-
 java -Dapp.version=${build.version} -cp ${CP} bluejelly.runtime.Runtime ${ARGS}
 exit $?
-
