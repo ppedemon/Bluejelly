@@ -108,12 +108,6 @@ class Assembler(cfg:AsmConfig, m:Module) {
     v.visitEnd
   }
   
-  // Add @JellyDict annotation for fields representing dictionaries
-  private def annotate(f:FieldVisitor) {
-    val a = f.visitAnnotation("Lbluejelly/runtime/ann/JellyDict;", true)
-    a.visitEnd
-  }
-  
   // Add @JellyCode annotation for some function
   private def annotate(v:MethodVisitor, f:Function) {
     val a = v.visitAnnotation("Lbluejelly/runtime/ann/JellyCode;", true)

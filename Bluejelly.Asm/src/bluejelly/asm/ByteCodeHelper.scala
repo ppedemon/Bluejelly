@@ -195,15 +195,5 @@ object ByteCodeHelper {
       v.visitLdcInsn(fun)
       v.visitMethodInsn(INVOKEVIRTUAL, ctx, "getFun", desc)
     })
-  }
-  
-  def pushDict(v:MethodVisitor, dictId:String) {
-    val desc = "(Ljava/lang/String;)Lbluejelly/runtime/nodes/Dict;"
-    pushBasic(v, { v => 
-      v.visitVarInsn(ALOAD, 1)
-      v.visitLdcInsn(dictId)
-      v.visitMethodInsn(INVOKEVIRTUAL, ctx, "getDict", desc)
-    })
-  }
-  
+  }  
 }
