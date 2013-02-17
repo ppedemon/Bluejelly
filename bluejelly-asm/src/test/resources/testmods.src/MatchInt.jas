@@ -1,0 +1,114 @@
+#
+# Test match instructions
+#
+
+.module MatchInt:
+
+.fun match[matcher]:
+  matchint
+  .case 1:
+    stack 1
+    retint 42
+  .end
+.end
+
+.fun matchDef[matcher]:
+  matchint
+  .case 1:
+    stack 1
+    retint 42
+  .case 3:
+    stack 1
+    retint 3
+  .default:
+    slide 0,1
+    retint -1
+  .end
+.end
+
+.fun matchInt1:
+  stack 1
+  pushcont match
+  pushint 1
+  ret
+.end
+
+.fun matchInt2:
+  stack 1
+  pushcont match
+  retint 1
+.end
+
+.fun matchInt3:
+  stack 1
+  pushcont matchDef
+  pushint 1
+  ret
+.end
+
+.fun matchInt4:
+  stack 1
+  pushcont matchDef
+  retint 1
+.end
+
+.fun matchInt5:
+  stack 1
+  pushcont matchDef
+  pushint 0
+  ret
+.end
+
+.fun matchInt6:
+  stack 1
+  pushcont matchDef
+  retint 0
+.end
+
+.fun matchInt7:
+  stack 1
+  pushcont matchDef
+  pushint 3
+  ret
+.end
+
+.fun matchInt8:
+  stack 1
+  pushcont matchDef
+  retint 3
+.end
+
+.fun matchInt9:
+  stack 1
+  pushcont matchDef
+  pushint 2
+  ret
+.end
+
+.fun matchInt10:
+  stack 1
+  pushcont matchDef
+  retint 2
+.end
+
+.fun m[arity=1]:
+  stack 1
+  pushvar 0
+  matchint
+    .default: slide 0,2 retint 1
+  .end
+.end
+
+.fun matchInt11:
+  stack 1
+  pushint 20
+  jmp m
+.end
+
+.fun matchInt12:
+  stack 1
+  pushcont m
+  retint 20
+.end
+
+.end

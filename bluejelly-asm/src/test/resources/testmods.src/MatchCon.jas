@@ -1,0 +1,132 @@
+.module MatchCon:
+
+.fun matchSimple[matcher]:
+  matchcon
+  .case 0:
+    stack 1
+    retint 0
+  .case 1:
+    stack 1
+    retint 1
+  .end
+.end
+
+.fun msimple:
+  stack 1
+  pushcont matchSimple
+  mkcon 0,0
+  ret
+.end
+
+.fun msimpleReg:
+  stack 1
+  pushcont matchSimple
+  retcon 1,0
+.end
+ 
+.fun matchComplex[matcher]:
+   matchcon
+   .case 0:
+     stack 1
+     pushcode bluejelly.Int.add
+     enter
+   .default:
+     stack 1
+     slide 1,0
+     retint -1
+   .end
+.end
+
+.fun mcomplex:
+  stack 2
+  pushint 2
+  pushint 1
+  mkcon 0,2
+  pushcont matchComplex
+  enter
+.end
+
+.fun mcomplexReg:
+  stack 2
+  pushcont matchComplex
+  pushint 2
+  pushint 1
+  retcon 0,2
+.end
+
+.fun mcomplexDef:
+  stack 2
+  pushint 2
+  pushint 1
+  mkcon 4,2
+  pushcont matchComplex
+  enter
+.end
+
+.fun mcomplexDefReg:
+  stack 2
+  pushcont matchComplex
+  pushint 2
+  pushint 1
+  retcon 4,2
+.end
+
+.fun matchNested[matcher]:
+  matchcon
+  .case 0:
+    stack 1
+    pushvar 1
+    matchint
+    .case 0:
+      stack 1
+      pushvar 0
+      slide 1,2
+      ret
+    .default:
+      stack 1
+      pushvar 0
+      slide 1,3
+      ret
+    .end
+  .default:
+    stack 1
+    slide 1,0
+    retint -1    
+  .end
+.end
+
+.fun mnested:
+  stack 2
+  pushcont matchNested
+  pushint 0
+  pushint 30
+  mkcon 0,2
+  ret
+.end
+
+.fun mnested1:
+  stack 2
+  pushcont matchNested
+  pushint 1
+  pushint 30
+  mkcon 0,2
+  ret
+.end
+
+.fun mnestedReg:
+  stack 2
+  pushcont matchNested
+  pushint 0
+  pushint 30
+  retcon 0,2
+.end
+
+.fun mnested1Reg:
+  stack 2
+  pushcont matchNested
+  pushint 1
+  pushint 30
+  retcon 0,2
+.end
+
+.end

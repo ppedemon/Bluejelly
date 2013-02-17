@@ -1,0 +1,32 @@
+#! /bin/bash
+
+BASE=`dirname ${0}`
+
+SEEN_MP=0
+MP=
+ARGS=
+
+for a in $*; do
+  case $a in
+  "-mp") 
+     SEEN_MP=1
+     ;;
+  *)
+     if [ $SEEN_MP -eq 1 ]; then
+       SEEN_MP=0
+       MP=${MP}:$a
+     else
+       ARGS=$ARGS" "$a
+     fi
+  esac           
+done
+
+CP=
+for jar in `ls ${BASE}/*.jar`; do
+  CP+=":"$jar
+done
+CP=${CP:1}${MP}
+
+java -cp ${CP} bluejelly.runtime.Runtime ${ARGS}
+exit $?
+

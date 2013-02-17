@@ -1,0 +1,17 @@
+.module MatchLookup:
+
+.fun m[matcher]:
+  matchcon
+  .case 99: stack 1 retint 3
+  .case 50 : stack 1 retint 1
+  .case  0: stack 1 retint 2
+  .default: stack 1 slide 0,1 retint -1
+  .end
+.end
+
+.fun match0  : stack 1 pushcont m retcon   0,0 .end
+.fun match50 : stack 1 pushcont m retcon  50,0 .end
+.fun match99 : stack 1 pushcont m retcon  99,0 .end
+.fun matchDef: stack 1 pushcont m retcon   1,0 .end
+
+.end

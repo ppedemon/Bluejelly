@@ -1,0 +1,100 @@
+module Poly
+
+#
+# How to compile ad-hoc polymorphism to L4?
+#
+# Take, for example, the well known Haskell Eq class:
+#
+# class Eq a where
+#   (==) :: a -> a -> Bool
+#   (/=) :: a -> a -> Bool
+#   x /= y = not (x == y)
+#
+# A class generates the following:
+
+data Eq{0,2}
+
+fun eq d x y = let! d$ = d in match d$ with Eq e n -> e x y
+fun ne d x y = let! d$ = d in match d$ with Eq e n -> n x y
+
+fun ne$Def d x y = not (eq d x y)
+
+#
+# A simple instance, like:
+#
+# instance Eq Int where
+#   (==) = bluejelly.Int.eq
+#   (/=) = bluejelly.Int.neq 
+#
+# compiles to:
+#
+
+extern bluejelly.Int.eq{2}, bluejelly.Int.neq{2}
+
+fun dict$Eq$Int = Eq bluejelly.Int.eq bluejelly.Int.neq 
+
+#
+# Let's complicate things. The following instance:
+#
+# instance Eq a => Eq [a] where
+#   (==) [] [] = True
+#   (==) (x:xs) (y:ys) = x == y && xs == ys
+#   (==) _ _ = False
+#
+# compiles to:
+#
+
+data Nil{0,0}
+data Cons{1,2}
+
+fun dict$Eq$List$Int d = Eq (eqList d) (ne$Def dict$Eq$List$Int)
+
+fun eqList d xs ys = 
+  let! xs$ = xs in
+  let! ys$ = ys in
+  match xs$ with
+    | Nil -> 
+      (match ys$ with 
+        | Nil -> True
+        | xs -> False)
+    | Cons x xs ->
+      match ys$ with
+        | Nil -> False
+        | Cons y ys -> and$ (eq d x y) (eqList d xs ys) 
+
+#-------------------------------------------------------------------------
+# Now let's try the damn thing
+# ------------------------------------------------------------------------
+
+fun dummyEq d x y = eq d x y   
+fun intDummyEq x y = dummyEq dict$Eq$Int x y
+fun intListDummyEq xs ys = dummyEq (dict$Eq$List$Int dict$Eq$Int) xs ys
+
+fun testIntEq = intDummyEq 1 1
+fun testIntNeq = intDummyEq 2 1
+
+fun xs = Cons 1 (Cons 2 (Cons 3 Nil))
+fun ys = Cons 1 (Cons 3 (Cons 2 Nil))
+
+fun testEqList0 = intListDummyEq Nil Nil
+fun testEqList1 = intListDummyEq xs xs
+
+fun testNeqList0 = intListDummyEq Nil xs
+fun testNeqList1 = intListDummyEq xs Nil
+fun testNeqList2 = intListDummyEq xs ys
+fun testNeqList3 = intListDummyEq ys xs
+
+# ------------------------------------------------------------------------
+# Auxiliary boolean definitions
+# ------------------------------------------------------------------------
+
+data True{1,0}
+data False{0,0}
+
+fun not x = let! x$ = x in match x$ with True -> False | False -> True
+
+fun and$ x y = 
+  let! x$ = x in
+  match x$ with
+    | False -> False
+    | x -> y

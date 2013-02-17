@@ -1,0 +1,8 @@
+#! /bin/bash
+
+BASE=`dirname ${0}`
+JAR=`ls ${BASE}/bluejelly-l4-*.jar`
+
+java -jar ${JAR} $@
+exit $?
+

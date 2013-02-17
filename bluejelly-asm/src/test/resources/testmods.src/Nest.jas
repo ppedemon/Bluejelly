@@ -1,0 +1,47 @@
+.module Nest:
+
+# Let's try nested evaluations:
+# x + y + 2, in a really contrived way
+# fun f x y = 
+#   let! u =
+#     let! v = x + y in v + 1
+#   in u + 1
+# 
+
+# Compute x + y
+.fun f[arity=2]:
+  stack 2
+  pushcont f$2
+  pushcont f$1
+  pushvar 1
+  pushvar 1
+  jmp bluejelly.Int.add
+.end
+
+# Compute v + 1
+.fun f$1:
+  stack 2
+  pushint 1
+  pushvar 1
+  jmp bluejelly.Int.add
+.end
+
+# Compute u + 1
+.fun f$2:
+  stack 2
+  pushint 1
+  pushvar 1
+  slide 2,4
+  jmp bluejelly.Int.add
+.end
+
+# This should return 7
+.fun main:
+  stack 2
+  pushint 3
+  pushint 2
+  jmp f
+.end
+
+.end
+

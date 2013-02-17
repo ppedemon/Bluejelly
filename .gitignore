@@ -1,0 +1,10 @@
+# sbt
+target/
+.history
+
+# eclipse
+.cache
+.classpath
+.project
+.settings/
+
