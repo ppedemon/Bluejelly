@@ -31,20 +31,24 @@ Yet, for all projects there is a `dist` task that builds a zip file holding the 
 (built with [sbt-assembly][sbtasm]) and a (Linux) launcher script. Use the `dist` task to build an
 executable runtime (or assembler, or l4 compiler).
 
-It is possible to use [sbteclipse][] to develop from an Eclipse with a Scala IDE plugin installed.
-The `.gitignore` file already includes the Eclipse stuff to ignore. You must set project flavor
-equals Java for the runtime. Executing the tests for all projects requires some generated files
-that sbt takes care of generating them when executing the `test` command. Hence, it is not a 
-good idea to try to run the runtime, assembler or l4 compiler (or their tests) from Eclipse.
-Please stick to the sbt console.
+It is possible to use [sbteclipse][] to develop from an Eclipse with a [Scala IDE][scalaide] plugin 
+installed. The `.gitignore` file already includes the Eclipse stuff to ignore. Remember that the
+runtime is a Java project, so set porject flavor properly for the runtime before running `eclipse`:
+
+  set EclipseKeys.projectFlavor := EclipseProjectFlavor.Java
+
+In addition, do not attempt to execute the runtime, assembler or l4 compiler (or their tests) from
+Eclipse, since the code requires some generated files that sbt takes care of creating as needed.
+Please stick to the sbt console for executing Bluejelly code.
 
 ## Examples
 
 Check `src/test/resources/testmods.src` in the assembler and l4 projects for example assembler
 and l4 modules, respectively.
 
-[lvm]:          http://www.cs.uu.nl/research/techreps/repo/CS-2004/2004-052.pdf
-[sbt]:          http://www.scala-sbt.org/
-[sbt-assembly]: https://github.com/sbt/sbt-assembly
-[sbteclipse]:   https://github.com/typesafehub/sbteclipse
+[lvm]:        http://www.cs.uu.nl/research/techreps/repo/CS-2004/2004-052.pdf
+[sbt]:        http://www.scala-sbt.org/
+[sbtasm]:     https://github.com/sbt/sbt-assembly
+[sbteclipse]: https://github.com/typesafehub/sbteclipse
+[scalaide]:   http://scala-ide.org/
 
