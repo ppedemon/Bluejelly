@@ -5,6 +5,7 @@
  * the BSD license, see the LICENSE file for details.
  */
 package bluejelly.l4
+
 import scala.util.control.Exception._
 
 /**
