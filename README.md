@@ -30,7 +30,7 @@ Yet, for all projects there is a `dist` task that builds a zip file holding the 
 (built with [sbt-assembly][sbtasm]) and a (Linux) launcher script. Use the `dist` task to build an
 executable runtime (or assembler, or L4 compiler).
 
-It is possible to use [sbteclipse][] to develop from an Eclipse with a [Scala IDE][scalaide] plugin 
+It is possible to use [sbteclipse][] to develop from Eclipse with a [Scala IDE][scalaide] plugin 
 installed. The `.gitignore` file already includes the Eclipse stuff to ignore. Remember that the
 runtime is a Java project, so set project flavor properly for the runtime before running `eclipse`:
 
