@@ -75,6 +75,7 @@ object BluejellyBuild extends Build {
         Resources.genBrtProps(out, cd, cp.files)
         Seq(out)
       },
+      test <<= test dependsOn(compile in (runtime,Compile)),
       test in assembly := {},
       jarName in assembly <<= (name,version) { (n,v) => "%s-%s.jar" format (n,v) },
       distTask
@@ -99,6 +100,7 @@ object BluejellyBuild extends Build {
         Resources.genBrtProps(out, cd, cp.files)
         Seq(out)
       },
+      test <<= test dependsOn(compile in (runtime,Compile)),
       test in assembly := {},
       jarName in assembly <<= (name,version) { (n,v) => "%s-%s.jar" format (n,v) },
       distTask
