@@ -1,63 +1,49 @@
 ## The Bluejelly Project
 
 Bluejelly is my attempt to execute real-world pure lazy functional programs on the 
-Java virtual machine. So far, we provide two modules:
+Java virtual machine. If features the following toolchain:
 
-* **The Bluejelly Runtime:** a runtime system providing support for graph-reduction.
-  It is based on the technical report [The Lazy Virtual Machine Specification]
-  (www.cs.uu.nl/research/techreps/repo/CS-2004/2004-052.pd), by Daan Leijen 
-  (Utretch University, 2001). The runtime is a Java rendition of the spec, with
-  a couple of additions to handle ad-hoc polymorphism and to construct non-updatable
-  thunks, thus enabling front ends to take advantage of update analysis. Experiments
-  show that the performance improvements resulting from removing spurious updates 
-  can be dramatic.
-* **The Bluejelly Assembler:** An implementation of a pure lazy assembly language,
-    which can be assembled to a Java class that, linked with the Bluejelly Runtime,
-    can be executed on a JVM. This is implemented in Scala.
+* **The Bluejelly Runtime:** a runtime system providing support for graph-reduction on the JVM.
+    It is based on the technical report [The Lazy Virtual Machine Specification][lvm], by Daan 
+    Leijen (Utretch University, 2001). The runtime is essentialy a Java rendition of the spec.
+* **The Bluejelly Assembler:** An pure lazy assembly language, and its assembler. Assembly 
+    programs can be assembled to Java classes that the Bluejelly Runtime can execute on a JVM.
+    The assembler is implemented in Scala.
+* **The Low Level Lazy Language (aka L4):** a low level pure functional language, powerful 
+    enough to write real-world programs with it without *too much* pain. The L4 compiler
+    compiles L4 modules to assembler, that in turn are compiled to Java classes by the 
+    Bluejelly Assembler.
 
 ## Future Work
 
-As time permits, I plan to stack more "usable" languages on top of the Assembler
-(e.g., a Core lambda calculus implementation and something Haskell or Clean like
-on top of that).
+The main missing piece is a full fledged Haskell-like pure functional language built on
+top of L4. Bluejelly progresses at the pace of my spare time, so this might take a while.
 
 ## Development
 
-The project is distributed as a set of Eclipse projects under a common root. You can 
-pull the repository, create an Eclipse workspace, and import the projects to that
-workspace using the "Import External Project" option. You need:
+Bluejelly uses [sbt][]. Pull the code and enter sbt from the main project root folder. You can
+then pick the runtime, assembler or l4, and run the `test`s. The assembler and l4 can be executed 
+from sbt console using the `run` target, but not the runtime (it does some class loading trickery 
+that `run` does not like).
 
-* JDK +1.6
-* Scala +2.9.x
-* An Eclipse IDE new enough (Indigo onwards)
-* The ScalaIDE plugin
+Yet, for all projects there is a `dist` task that builds a zip file holding the application jar 
+(built with [sbt-assembly][sbtasm]) and a (Linux) launcher script. Use the `dist` task to build an
+executable runtime (or assembler, or l4 compiler).
 
-I tried using sbt and Maven, but I was not satisfied with the results:
-
-* Due to unknown (for me!) class loader issues, sbt failed to execute the Bluejelly
- runtime test suite. Namely, calls to `ClassLoader.getSystemClassLoader().loadClass()` 
-  made by ObjectWeb `ClassReader` class were failing. In addition, I found sbt rather slow.
-* Maven was my next option. Unlike sbt it worked, but the scala compiler plugin is
- _horribly_ slow (taking +30 secs to compile the whole Assembler). Conversely, Eclipse
- compiles Scala code in a background process (mostly) in a breeze.
-* I tried to use my Maven project structure in Eclipse using m2e and m2eclipse-scala, but
-  without success (m2eclipse-scala just did not work). IntelliJ-IDEA worked fine on the
-  Maven project structure, but I did not like it --guess I am too used to Eclipse :(
-
-The downside of using Eclipse is that I loose the notion of repository. Hence, the 
-Bluejelly.Libs project providing the libraries used by the Runtime and the Assembler.
-
-## Deployment
-
-I am using plain old Ant. Each project holding code includes a `build.xml` file either
-building a library or creating a distribution tarball. For deploying the Runtime or the
-Assembler, just run the default targets of the build scripts.
+It is possible to use [sbteclipse][] to develop from an Eclipse with a Scala IDE plugin installed.
+The `.gitignore` file already includes the Eclipse stuff to ignore. You must set project flavor
+equals Java for the runtime. Executing the tests for all projects requires some generated files
+that sbt takes care of generating them when executing the `test` command. Hence, it is not a 
+good idea to try to run the runtime, assembler or l4 compiler (or their tests) from Eclipse.
+Please stick to the sbt console.
 
 ## Examples
 
-The `samples` folder include three assembler files:
+Check `src/test/resources/testmods.src` in the assembler and l4 projects for example assembler
+and l4 modules, respectively.
 
-1. `List.jas`: implementation of some classic functions on lists, such as `take` and `filter`
-2. `Fib.jas`: compute the Fibonacci sequence as an infinite list, take the first 100 elements.
-3. `Primes.jas`: compute the first 10000 primes using trail-division.
+[lvm]:          http://www.cs.uu.nl/research/techreps/repo/CS-2004/2004-052.pd
+[sbt]:          http://www.scala-sbt.org/
+[sbt-assembly]: https://github.com/sbt/sbt-assembly
+[sbteclipse]:   https://github.com/typesafehub/sbteclipse
 
