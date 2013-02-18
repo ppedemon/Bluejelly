@@ -23,7 +23,7 @@ top of L4. As Bluejelly progress is dictated by my spare time, this might take a
 
 Bluejelly uses [sbt][]. Pull the code and enter sbt from the main project root folder. You can
 then pick the runtime, assembler or L4, and run the tests with the `test` command. The assembler 
-and L4 can be executed from sbt console using the `run` command, but not the runtime (it does 
+and L4 can be executed from the sbt console using the `run` command, but not the runtime (it does 
 some class loading trickery that `run` does not like).
 
 Yet, for all projects there is a `dist` task that builds a zip file holding the application jar 
