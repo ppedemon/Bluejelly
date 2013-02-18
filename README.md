@@ -6,9 +6,11 @@ Java virtual machine. If features the following toolchain:
 * **The Bluejelly Runtime:** a runtime system providing support for graph-reduction on the JVM.
     It is based on the technical report [The Lazy Virtual Machine Specification][lvm], by Daan 
     Leijen (Utretch University, 2001). The runtime is essentialy a Java rendition of the spec.
+
 * **The Bluejelly Assembler:** An pure lazy assembly language, and its assembler. Assembly 
     programs can be assembled to Java classes that the Bluejelly Runtime can execute on a JVM.
     The assembler is implemented in Scala.
+
 * **The Low Level Lazy Language (aka L4):** a low level pure functional language, powerful 
     enough to write real-world programs with it without *too much* pain. The L4 compiler
     compiles L4 modules to assembler, that in turn are compiled to Java classes by the 
@@ -22,7 +24,7 @@ top of L4. Bluejelly progresses at the pace of my spare time, so this might take
 ## Development
 
 Bluejelly uses [sbt][]. Pull the code and enter sbt from the main project root folder. You can
-then pick the runtime, assembler or l4, and run the `test`s. The assembler and l4 can be executed 
+then pick the runtime, assembler or l4, and run the tests. The assembler and l4 can be executed 
 from sbt console using the `run` target, but not the runtime (it does some class loading trickery 
 that `run` does not like).
 
