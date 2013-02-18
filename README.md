@@ -42,7 +42,7 @@ Please stick to the sbt console.
 Check `src/test/resources/testmods.src` in the assembler and l4 projects for example assembler
 and l4 modules, respectively.
 
-[lvm]:          http://www.cs.uu.nl/research/techreps/repo/CS-2004/2004-052.pd
+[lvm]:          http://www.cs.uu.nl/research/techreps/repo/CS-2004/2004-052.pdf
 [sbt]:          http://www.scala-sbt.org/
 [sbt-assembly]: https://github.com/sbt/sbt-assembly
 [sbteclipse]:   https://github.com/typesafehub/sbteclipse
