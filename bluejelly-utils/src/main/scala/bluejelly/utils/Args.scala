@@ -109,15 +109,8 @@ class ListOpt(xs:List[Opt],doc:String) extends Opt(doc) {
  *   are assumed to be non-option, even if they start with a dash.
  * @param usage
  *   string explaining application usage
- * @param helpHook
- *   function to invoke when user asks for help, only if help options
- *   are auto generated. This way, you have a chance to notice that the
- *   user asked for the help option.
  */
-class Args(
-    optInfo:List[(String,Opt)], 
-    anon:String => Unit, 
-    usage:String) {
+class Args(optInfo:List[(String,Opt)], anon:String => Unit, usage:String) {
   
   // Flag signaling if help was invoked
   var helpInvoked = false
