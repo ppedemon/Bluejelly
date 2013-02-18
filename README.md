@@ -11,14 +11,13 @@ Java virtual machine. If features the following toolchain:
     programs can be assembled to Java classes that the Bluejelly Runtime can execute on a JVM.
 
 * **The Low Level Lazy Language (aka L4):** a low level pure functional language, powerful 
-    enough to write real-world programs with it without *too much* pain. The L4 compiler
-    compiles L4 modules to assembler, that in turn are compiled to Java classes by the 
-    Bluejelly Assembler.
+    enough to write real-world programs without *too much* pain. The L4 compiler compiles L4
+    modules to assembler, that in turn are compiled to Java classes by the Bluejelly Assembler.
 
 ## Future Work
 
 The main missing piece is a full fledged Haskell-like pure functional language built on
-top of L4. Bluejelly progresses at the pace of my spare time, so this might take a while.
+top of L4. As Bluejelly progress is dictated by my spare time, this might take a while.
 
 ## Development
 
