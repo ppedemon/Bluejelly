@@ -25,11 +25,11 @@ object FileUtils {
    */
   def createDir(dir:File) {
     def failMsg = "Could not create directory " + dir
-	if(dir.isDirectory || dir.mkdirs())
+    if(dir.isDirectory || dir.mkdirs())
       ()
-	else if(dir.exists)
+    else if(dir.exists)
       sys.error(failMsg + ": file exists and is not a directory.")
-	else
+    else
       sys.error(failMsg)
   }
 
@@ -39,11 +39,11 @@ object FileUtils {
    */
   def createTempDir:File = {
     def create(attempts:Int):File = {
-	  if(attempts > maxAttempts) {
-	    sys.error("Could not create temporary directory")
+      if(attempts > maxAttempts) {
+        sys.error("Could not create temporary directory")
       } else {
         val randomName = "asm_" + Integer.toHexString(random.nextInt)
-		val f = new File(tempDirBase, randomName)
+        val f = new File(tempDirBase, randomName)
         try { 
           createDir(f); f 
         } catch { 
@@ -51,7 +51,7 @@ object FileUtils {
         }
       }
     }
-	create(0)
+    create(0)
   }
 
   /**
