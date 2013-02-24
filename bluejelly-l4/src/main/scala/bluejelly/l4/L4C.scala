@@ -83,11 +83,14 @@ class L4C(cfg:Config) {
         val m6 = Flatten.flatten(m5)
         if (cfg shouldStopAt FLATTEN) { saveAsm(m6); return }
         
-        // If we reached this point, emit the class file!
-        val asmCfg = new AsmConfig
-        asmCfg.outDir = cfg.outDir
-        val asm = new Assembler(asmCfg, m6)
-        asm assemble    
+        // If we reached this point, assemble the module and emit class file
+        val out = Assembler.assemble(m6, false)
+        if (out.isLeft) {
+          out.left.get foreach {println(_)}
+          return
+        } else {
+          Assembler.save(cfg.outDir, m6.name, out.right.get)
+        }
     }
   }
     

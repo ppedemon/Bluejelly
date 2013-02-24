@@ -14,7 +14,6 @@ import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.Properties
-
 import org.objectweb.asm.ClassWriter.COMPUTE_MAXS
 import org.objectweb.asm.Opcodes.ACC_FINAL
 import org.objectweb.asm.Opcodes.ACC_PUBLIC
@@ -25,10 +24,10 @@ import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.FieldVisitor
-
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.TreeMap
 import scala.collection.mutable.MutableList
+import java.io.Reader
 
 /*
  * Assembler configuration
@@ -66,7 +65,7 @@ class Assembler(cfg:AsmConfig, m:Module) {
    * Assemble a whole module: functions + dictionaries.
    * @param m [[bluejelly.asm.Module]] to assemble
    */
-  def assemble {    
+  def assemble():Array[Byte] = {    
     // Create class for module to compile
     val name = m.name.replace('.','/')
     val w:ClassWriter = new ClassWriter(COMPUTE_FRAMES)
@@ -87,9 +86,8 @@ class Assembler(cfg:AsmConfig, m:Module) {
     for (f <- m funcs) assemble(w, f)
     w.visitEnd
 
-    // Save class
-    val bytes:Array[Byte] = w.toByteArray
-    save(name, bytes)
+    // Return byte array for generated class
+    w.toByteArray
   }
     
   // Assemble a function
@@ -406,19 +404,7 @@ class Assembler(cfg:AsmConfig, m:Module) {
       invokeVoidCtxMethod("altBasicPrologue")(v)
       assemble(v, a.b)
     }
-  }
-  
-  //Save generated class
-  private def save(name:String, bytes:Array[Byte]) {
-    val fullName = cfg.outDir + '/' + name + ".class"
-    val ix = fullName lastIndexOf '/'
-    val path = fullName.take(ix)
-    new File(path).mkdirs()
-    val out = new FileOutputStream(fullName)
-    out write bytes
-    out close
-  }
-  
+  }  
 }
 
 /**
@@ -428,6 +414,9 @@ object Assembler {
   
   import bluejelly.utils._
   
+  private val exit_success = 0
+  private val exit_failure = 1
+
   private val appName = "bas"
   private val version = "The Bluejelly Assembler, v" + appVersion
   
@@ -451,36 +440,106 @@ object Assembler {
       case e:IOException => "<?>"
     }
   }
+ 
+  /**
+   * Assemble a module.
+   * 
+   * @param m    {@link Module} to assemble
+   * @wantsDebugInfo    true if output should include debug information
+   * 
+   * @return
+   *   Left(errs), where es is a list of errors, if compilation fails
+   *   Right(bytes), bytes of resulting class if compilation succeeds
+   */
+  def assemble(
+      m:Module, 
+      wantsDebugInfo:Boolean):Either[List[String],Array[Byte]] = {
+    val v = new Validator(m)
+    val (ok,errs) = v validate()
+    if (ok) {
+      val cfg = new AsmConfig
+      cfg.debugInfo = wantsDebugInfo
+      val a = new Assembler(cfg, m)
+      val bytes = a.assemble()
+      Right(bytes)
+    } else {
+      val es = errs.map(_.toString).toList
+      Left(es)
+    }
+  }
+  
+  /**
+   * Assemble a module whose source code is provided by a {@link Reader}.
+   * 
+   * @param m    {@link Reader} providing source code to assemble
+   * @wantsDebugInfo    true if output should include debug information
+   * 
+   * @return
+   *   Left(errs), where es is a list of errors, if compilation fails
+   *   Right(bytes), bytes of resulting class if compilation succeeds
+   */
+  def assemble(
+      in:Reader, 
+      wantsDebugInfo:Boolean):Either[List[String],Array[Byte]] = {
+    val r = new UnicodeFilter(in)
+    val p = Parser.parseAll(Parser.module, r)
+    p match {
+      case f@Parser.Failure(_,_) => Left(List(f.toString))
+      case Parser.Success(m,_) => assemble(m, wantsDebugInfo)
+    }
+  }
 
-  // Process a single file
-  def assemble(cfg:AsmConfig, sourceName:String) {
+  /**
+   * Save a compiled class.
+   * @param outDir        base output folder
+   * @param moduleName    name of the compiled module
+   * @param bytes         bytes of the compiled class we want to save
+   */
+  def save(outDir:String, moduleName:String, bytes:Array[Byte]) {
+    val fullName = outDir + '/' + moduleName.replace('.','/') + ".class"
+    val ix = fullName lastIndexOf '/'
+    val path = fullName.take(ix)
+    new File(path).mkdirs()
+    val out = new FileOutputStream(fullName)
+    out write bytes
+    out close
+  }
+
+  // Assemble a file, errors are dumped to the string. This is
+  // invoked when the assembler is executed from the command line.
+  private def process(cfg:AsmConfig, sourceName:String):Int = {
     val r = new UnicodeFilter(new FileReader(sourceName))
     val p = Parser.parseAll(Parser.module, r)
     p match {
-      case f@Parser.Failure(_,_) => println(f)
-      case Parser.Success(m,_) => {
+      case f@Parser.Failure(_,_) => 
+        println(f)
+        exit_failure
+      case Parser.Success(m,_) =>
         if (cfg.prettyPrint) {
           val w = new PrintWriter(System.out)
           m.ppr(w)(0)
           w flush()
+          exit_success
         } else {
           val v = new Validator(m)
           val (ok,errs) = v validate()
           if (ok) {
             val a = new Assembler(cfg,m)
-            a assemble
+            val bytes = a.assemble()
+            save(cfg.outDir, m.name, bytes)
+            exit_success
           } else {
             v dumpErrs (errs, new PrintWriter(System.err))
             val e = if (errs.length == 1) "error" else "errors"
             System.err.println(
               "Found %d %s, compilation of `%s' aborted!\n" format (
                   errs.length,e,sourceName))
+            exit_failure
           }
         } 
-      }
     }
   }
-  
+
   def main(argv:Array[String]) {
     if (!arg.parse(argv)) return
     
@@ -491,7 +550,8 @@ object Assembler {
       println("Use -h or --help for a list of possible options")
       return;
     }
-    cfg.files foreach {assemble(cfg,_)}
+    val codes = cfg.files map {process(cfg,_)}
+    if (codes.sum > 0) exit_failure else exit_success
   }
 
 }

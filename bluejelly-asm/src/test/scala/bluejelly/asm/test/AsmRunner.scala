@@ -10,9 +10,9 @@ package bluejelly.asm.test
 import java.io.File
 import java.util.Properties
 import org.scalatest._
-
 import bluejelly.asm.{AsmConfig,Assembler}
 import bluejelly.utils.{BrtRunner,FileUtils}
+import java.io.FileReader
 
 /**
  * Suite trait for tests that need to compile and run assembler modules.
@@ -23,14 +23,20 @@ trait AsmRunner extends BeforeAndAfterAll { this:Suite =>
   val srcModDir = "/testmods.src/"
   val binDir = FileUtils.createTempDir
   val brtRunner = new BrtRunner(brtCp) 
-  val config = asmConfig
 
   override def afterAll() {
     FileUtils.delete(binDir)
   }
 
-  def assemble(modName:String) {
-    Assembler.assemble(config, getAbsolutePath(modName))
+  def assemble(modFileName:String) {
+    val modFile = getAbsolutePath(modFileName)
+    val out = Assembler.assemble(new FileReader(modFile), false)
+    if (out.isLeft) {
+      fail(out.left.get.toString)
+    } else {
+      val modName = modFileName replaceFirst("\\.jas$","")
+      Assembler.save(binDir.toString, modName, out.right.get)
+    }
   }
 
   def run(modName:String, cmd:String):String = {
@@ -61,12 +67,6 @@ trait AsmRunner extends BeforeAndAfterAll { this:Suite =>
     val brtProps = new Properties
     brtProps load is
     brtProps getProperty "cp"
-  }
-
-  private def asmConfig:AsmConfig = {
-    val cfg = new AsmConfig
-    cfg.outDir = binDir.toString
-    cfg
   }
 
   private def getAbsolutePath(modName:String):String =
