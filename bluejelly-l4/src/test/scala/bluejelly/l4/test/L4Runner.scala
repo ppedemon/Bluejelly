@@ -10,9 +10,10 @@ package bluejelly.l4.test
 import java.io.File
 import java.util.Properties
 import org.scalatest._
-
 import bluejelly.l4.{Config,L4C}
 import bluejelly.utils.{BrtRunner,FileUtils}
+import java.io.FileReader
+import java.io.PrintWriter
 
 /**
  * Suite trait for tests that need to compile and run L4 modules.
@@ -23,14 +24,21 @@ trait L4Runner extends BeforeAndAfterAll { this:Suite =>
   val srcModDir = "/testmods.src/"
   val binDir = FileUtils.createTempDir
   val brtRunner = new BrtRunner(brtCp) 
-  val l4c = createL4C
 
   override def afterAll() {
     FileUtils.delete(binDir)
   }
 
   def compile(modName:String) {
-    l4c.compile(getAbsolutePath(modName))
+    val modFile = getAbsolutePath(modName)
+    val out = L4C.compile(new FileReader(modFile))
+    if (out.isLeft) {
+      out.left.get.dumpTo(new PrintWriter(System.err))
+      fail("Failed to compile: " + modName)
+    } else {
+      val className = modName replaceFirst("\\.l4$","")
+      L4C.save(binDir.toString, className, out.right.get)
+    }
   }
 
   def run(modName:String, cmd:String):String = {
@@ -61,12 +69,6 @@ trait L4Runner extends BeforeAndAfterAll { this:Suite =>
     val brtProps = new Properties
     brtProps load is
     brtProps getProperty "cp"
-  }
-
-  private def createL4C:L4C = {
-    val cfg = new Config
-    cfg.outDir = binDir.toString
-    new L4C(cfg)
   }
 
   private def getAbsolutePath(modName:String):String =

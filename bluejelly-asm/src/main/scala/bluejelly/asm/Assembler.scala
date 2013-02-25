@@ -512,7 +512,7 @@ object Assembler {
     val p = Parser.parseAll(Parser.module, r)
     p match {
       case f@Parser.Failure(_,_) => 
-        println(f)
+        System.err.println(f)
         exit_failure
       case Parser.Success(m,_) =>
         if (cfg.prettyPrint) {
@@ -540,18 +540,29 @@ object Assembler {
     }
   }
 
-  def main(argv:Array[String]) {
-    if (!arg.parse(argv)) return
+  /**
+   * Entry point for command line invocation.
+   * @argv    command line arguments for the assembler
+   */
+  def main(argv:Array[String]) {    
+    if (!arg.parse(argv)) {
+      System.exit(exit_failure)
+      return
+    }
     
-    if (arg.helpInvoked) return
-    if (cfg.version) {println(version); return}
-    if (cfg.files.isEmpty) {
+    var exit_code = exit_success
+    if (arg.helpInvoked)
+      ()
+    else if (cfg.version)
+      println(version)
+    else if (cfg.files.isEmpty) {
       println(appName + ": no input files")
       println("Use -h or --help for a list of possible options")
-      return;
+      exit_code = exit_failure
+    } else {
+      val results = cfg.files map {process(cfg,_)}
+      exit_code = if (results.sum > 0) exit_failure else exit_success
     }
-    val codes = cfg.files map {process(cfg,_)}
-    if (codes.sum > 0) exit_failure else exit_success
+    System.exit(exit_code)
   }
-
 }

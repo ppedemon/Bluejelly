@@ -28,14 +28,14 @@ trait AsmRunner extends BeforeAndAfterAll { this:Suite =>
     FileUtils.delete(binDir)
   }
 
-  def assemble(modFileName:String) {
-    val modFile = getAbsolutePath(modFileName)
+  def assemble(modName:String) {
+    val modFile = getAbsolutePath(modName)
     val out = Assembler.assemble(new FileReader(modFile), false)
     if (out.isLeft) {
       fail(out.left.get.toString)
     } else {
-      val modName = modFileName replaceFirst("\\.jas$","")
-      Assembler.save(binDir.toString, modName, out.right.get)
+      val className = modName replaceFirst("\\.jas$","")
+      Assembler.save(binDir.toString, className, out.right.get)
     }
   }
 

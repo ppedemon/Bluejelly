@@ -10,6 +10,7 @@ import scala.text._
 import scala.text.Document._
 import java.io.StringWriter
 import bluejelly.utils.Errors
+import scala.util.parsing.input.Position
 
 /**
  * Custom error bag.
@@ -34,27 +35,27 @@ private class L4Errors extends Errors(false) {
     val doc = gnest(
       gnest("duplicated data declaration" :/: quote(d.ref) :/: "at:" :/: text(d.pos.toString)) :/: 
       gnest("(previous declaration was at:" :/: prev.pos.toString :: text(")")))
-    error(ppr(doc))
+    error(d.pos, ppr(doc))
   }
   
   def dupExtern(e:ExtDecl, prev:ExtDecl) {
     val doc = gnest(
       gnest("duplicated extern declaration" :/: quote(e.n) :/: "at:" :/: text(e.pos.toString)) :/: 
       gnest("(previous declaration was at:" :/: prev.pos.toString :: text(")")))
-    error(ppr(doc))
+    error(e.pos, ppr(doc))
   }
   
   def localExtern(e:ExtDecl) {
     val doc = gnest("extern declaration for local function" :/: quote(e.n) 
       :/: "at:" :/: text(e.pos.toString))
-    error(ppr(doc))    
+    error(e.pos, ppr(doc))    
   }
   
   def dupFun(f:FunDecl, prev:FunDecl) {
     val doc = gnest(
       gnest("duplicated function declaration" :/: quote(f.n) :/: "at:" :/: text(f.pos.toString)) :/: 
       gnest("(previous declaration was at:" :/: prev.pos.toString :: text(")")))
-    error(ppr(doc))
+    error(f.pos, ppr(doc))
   }
   
   private def wrongPat(f:FunDecl, p:Pat, d:Document) = {
@@ -65,7 +66,7 @@ private class L4Errors extends Errors(false) {
       gnest(
         group("in function:" :/: text(f.n.toString)) :/: 
         group("at:" :/: text(f.pos.toString))))
-    error(ppr(doc))
+    error(p.pos, ppr(doc))
   }
   
   def undefPat(f:FunDecl, p:Pat, c:ConRef) {
@@ -86,10 +87,10 @@ private class L4Errors extends Errors(false) {
     val doc = gnest(
       gnest("non-linear parameter(s):" :/: pprList(vs)) :/:
       gnest("in function:" :/: quote(f.n) :/: "at:" :/: text(f.pos.toString)))
-    error(ppr(doc))
+    error(f.pos, ppr(doc))
   }
   
-  private def genExprMsg(act:String=>Unit)(f:FunDecl, expr:Expr, d:Document) {
+  private def genExprMsg(act:(Position,String)=>Unit)(f:FunDecl, expr:Expr, d:Document) {
     val doc = gnest(d :/: 
       gnest(
         group("in expression:" :/: PrettyPrinter.ppr(expr)) :/: 
@@ -97,7 +98,7 @@ private class L4Errors extends Errors(false) {
       gnest(
         group("in function:" :/: text(f.n.toString)) :/: 
         group("at:" :/: text(f.pos.toString))))
-      act(ppr(doc))
+      act(expr.pos, ppr(doc))
   }
   
   def wrongExpr = genExprMsg(error)_
