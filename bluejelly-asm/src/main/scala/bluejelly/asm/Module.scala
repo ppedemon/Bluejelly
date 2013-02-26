@@ -8,7 +8,9 @@
 package bluejelly.asm
 
 import java.io.Writer
+
 import scala.collection.mutable.MutableList
+import scala.util.parsing.input.Positional
 
 /**
   * A function with a given arity, possibly a matcher 
@@ -23,7 +25,7 @@ final class Function(
     val name:String, 
     val arity : Int, 
     val matcher : Boolean, 
-    val b:Block) extends PrettyPrintable {
+    val b:Block) extends PrettyPrintable with Positional {
 
   // Pretty print a function
   def ppr(w:Writer)(implicit x:Int) {

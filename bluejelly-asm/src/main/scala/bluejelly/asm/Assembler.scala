@@ -448,23 +448,22 @@ object Assembler {
    * @wantsDebugInfo    true if output should include debug information
    * 
    * @return
-   *   Left(errs), where es is a list of errors, if compilation fails
+   *   Left(errs), where errs is an error object, if compilation fails
    *   Right(bytes), bytes of resulting class if compilation succeeds
    */
-  def assemble(
+  def assemble[T >: Errors](
       m:Module, 
-      wantsDebugInfo:Boolean):Either[List[String],Array[Byte]] = {
+      wantsDebugInfo:Boolean):Either[T,Array[Byte]] = {
     val v = new Validator(m)
-    val (ok,errs) = v validate()
-    if (ok) {
+    val merrs = v validate()
+    if (merrs.isEmpty) {
       val cfg = new AsmConfig
       cfg.debugInfo = wantsDebugInfo
       val a = new Assembler(cfg, m)
       val bytes = a.assemble()
       Right(bytes)
     } else {
-      val es = errs.map(_.toString).toList
-      Left(es)
+      Left(merrs.get)
     }
   }
   
@@ -478,13 +477,16 @@ object Assembler {
    *   Left(errs), where es is a list of errors, if compilation fails
    *   Right(bytes), bytes of resulting class if compilation succeeds
    */
-  def assemble(
+  def assemble[T >: Errors](
       in:Reader, 
-      wantsDebugInfo:Boolean):Either[List[String],Array[Byte]] = {
+      wantsDebugInfo:Boolean):Either[T,Array[Byte]] = {
     val r = new UnicodeFilter(in)
     val p = Parser.parseAll(Parser.module, r)
     p match {
-      case f@Parser.Failure(_,_) => Left(List(f.toString))
+      case f@Parser.NoSuccess(msg,next) =>
+        val errs = new AsmErrors
+        errs.error(f.next.pos, msg)
+        Left(errs)
       case Parser.Success(m,_) => assemble(m, wantsDebugInfo)
     }
   }
@@ -511,7 +513,7 @@ object Assembler {
     val r = new UnicodeFilter(new FileReader(sourceName))
     val p = Parser.parseAll(Parser.module, r)
     p match {
-      case f@Parser.Failure(_,_) => 
+      case f@Parser.NoSuccess(_,_) => 
         System.err.println(f)
         exit_failure
       case Parser.Success(m,_) =>
@@ -522,18 +524,18 @@ object Assembler {
           exit_success
         } else {
           val v = new Validator(m)
-          val (ok,errs) = v validate()
-          if (ok) {
+          val merrs = v validate()
+          if (merrs.isEmpty) {
             val a = new Assembler(cfg,m)
             val bytes = a.assemble()
             save(cfg.outDir, m.name, bytes)
             exit_success
           } else {
-            v dumpErrs (errs, new PrintWriter(System.err))
-            val e = if (errs.length == 1) "error" else "errors"
+            merrs.get.dumpTo(new PrintWriter(System.err))
+            val e = if (merrs.get.items.length == 1) "error" else "errors"
             System.err.println(
               "Found %d %s, compilation of `%s' aborted!\n" format (
-                  errs.length,e,sourceName))
+                  merrs.get.items.length,e,sourceName))
             exit_failure
           }
         } 

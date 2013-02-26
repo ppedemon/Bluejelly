@@ -8,11 +8,8 @@
 package bluejelly.asm
 
 import scala.util.control.Exception.catching
-import scala.util.control.Exception.throwableSubtypeToCatcher
 import scala.util.parsing.combinator.JavaTokenParsers
-import scala.util.parsing.input.Position
 import scala.util.parsing.input.Positional
-import scala.collection.mutable.MutableList
 
 /**
   * Parse an assembler module.
@@ -76,7 +73,9 @@ object Parser extends JavaTokenParsers {
   def idint:((String,Int) => Instr) => Parser[Instr] = f =>
     ident ~ ("," ~> pint) ^^ {case x ~ y => f(x,y)} 
 
-    
+  // Shorthand for positioned combinator
+  def $[T <: Positional](p:Parser[T]) = positioned(p)
+  
   def table = Map(
     "enter"   -> success(Enter), 
     "ret"     -> success(Return),
@@ -124,7 +123,7 @@ object Parser extends JavaTokenParsers {
     def handler(i:String):PartialFunction[Throwable,Parser[Instr]] = {
       case _ => failure("Invalid instruction: " + i)
     }
-    ident >> {instr => catching (handler(instr)) (table(instr))}
+    $(ident >> {instr => catching (handler(instr)) (table(instr))})
   }
 
   // Parse an instruction block
@@ -166,8 +165,8 @@ object Parser extends JavaTokenParsers {
   
   // Parse a complete function
   def fun:Parser[Function] = 
-    (".fun" ~> funHeader <~ ":") ~ block <~ ".end" ^^
-          {case n ~ a ~ b => new Function(n, a._1, a._2, b)}
+    $((".fun" ~> funHeader <~ ":") ~ block <~ ".end" ^^
+          {case n ~ a ~ b => new Function(n, a._1, a._2, b)})
   
   // Parse a whole module
   def module:Parser[Module] = {

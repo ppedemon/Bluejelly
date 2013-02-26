@@ -7,8 +7,10 @@
 
 package bluejelly.asm
 
-import java.io.Writer
 import java.io.StringWriter
+import java.io.Writer
+
+import scala.util.parsing.input.Positional
 
 /**
   * Something pretty-printable.
@@ -27,7 +29,7 @@ trait PrettyPrintable {
 /**
   * Base class for an assembler instruction. 
   */
-abstract class Instr extends PrettyPrintable {
+abstract class Instr extends PrettyPrintable with Positional {
   def ppr(w:Writer)(implicit x:Int) = Instr.ppr(this,w,x)
 }
 

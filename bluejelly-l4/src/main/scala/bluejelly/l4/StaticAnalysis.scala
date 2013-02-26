@@ -6,11 +6,15 @@
  */
 package bluejelly.l4
 
-import scala.text._
-import scala.text.Document._
 import java.io.StringWriter
-import bluejelly.utils.Errors
+
+import scala.text.Document
+import scala.text.Document.group
+import scala.text.Document.nest
+import scala.text.Document.text
 import scala.util.parsing.input.Position
+
+import bluejelly.utils.Errors
 
 /**
  * Custom error bag.

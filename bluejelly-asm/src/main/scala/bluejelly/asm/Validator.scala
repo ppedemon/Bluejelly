@@ -7,15 +7,65 @@
 
 package bluejelly.asm
 
-import scala.collection.immutable.Queue
-import java.io.PrintWriter
+import java.io.StringWriter
+
+import scala.text.Document
+import scala.text.Document.group
+import scala.text.Document.nest
+import scala.text.Document.text
+
+import bluejelly.utils.Errors
 
 /**
- * An item describing an error found in a module.
+ * Custom error bag.
  * @author ppedemon
  */
-class ErrorItem(val what:String, val where:String, val msg:String) {
-  override def toString = "In %s `%s': %s" format (what, where, msg)
+class AsmErrors extends Errors(false) {
+  
+  private def quote[T](v:T):String = "`%s'" format v
+  
+  private def ppr(d:Document):String = {
+    val s = new StringWriter
+    d.format(75, s)
+    s flush ()
+    s toString
+  }
+  
+  private def gnest(d:Document):Document = group(nest(2,d))
+  
+  private def pprList[T](xs:List[T]):Document = text(xs mkString ("[",",","]"))
+  
+  def dupFunction(f:Function, prev:Function) {
+    val doc = gnest(
+      gnest("duplicated function declaration" :/: quote(f.name) :/: "at:" :/: text(f.pos.toString)) :/: 
+      gnest("(previous declaration was at:" :/: prev.pos.toString :: text(")")))
+    error(f.pos, ppr(doc))
+  }
+  
+  def invalidRefInFun(f:Function, i:Instr, ref:String) {
+    val doc = gnest(
+      group("invalid function reference: " :/: text(quote(ref))) :/:
+      gnest(
+        group("in instruction:" :/: text(i.toString)) :/:
+        group("at: " :/: text(i.pos.toString))) :/:
+      gnest(
+        group("in function:" :/: text(quote(f.name))) :/: 
+        group("at:" :/: text(f.pos.toString))))
+      error(f.pos, ppr(doc))
+  }
+
+  def repeatedAltsInFun[U](f:Function, i:Instr, vs:List[U]) {
+    val v = if (vs.size == 1) "value" else "values"
+    val msg = "repeated %s in case alternatives:" format v
+    val doc = gnest(
+      gnest(
+        group(msg :/: pprList(vs)) :/:
+        group("in match instruction at:" :/: text(i.pos.toString))) :/:
+      gnest(
+        group("in function:" :/: text(quote(f.name))) :/: 
+        group("at:" :/: text(f.pos.toString))))
+      error(f.pos, ppr(doc))
+  }
 }
 
 /** 
@@ -24,41 +74,24 @@ class ErrorItem(val what:String, val where:String, val msg:String) {
  */
 class Validator(val m:Module) {
 
-  import bluejelly.utils.State
-  import bluejelly.utils.St._
+  private type Env = Map[String,Function]
   
-  // State for collecting names and detecting duplicate declarations
-  type E = Queue[ErrorItem]
-  
-  // Simple state for validating a module:
-  //  E: error queue where we will accumulate errors as we traverse a module
-  //  Set[String]: namespace for declared functions
-  type T = (E,Set[String])
-  
-  // Nop over the T state
-  private def nop:State[T,Unit] = upd(identity:T=>T)
-  
-  // Quote a string
-  private def quote(s:String) = "`%s'" format s
-    
-  // Collect names from a list, checking for repeated stuff
-  private def collectNames(
-      ns:List[String],
-      f:String => E => E):State[E,Set[String]] = ns match {
-    case List() => ret(Set())
-    case n::ns  => for {
-      seen <- collectNames(ns,f)
-      _ <- upd((e:E) => if (seen contains n) f(n)(e) else e)
-    } yield (seen + n)
-  }
-  
-  // Collect function names
-  private def collect():State[E,Set[String]] = {
-     def funDup(s:String)(e:E) = 
-       new ErrorItem("module", m.name, "duplicated function " + quote(s)) +: e
-     collectNames(m.funcs.map(_.name), funDup)
-  }
+  private val errors = new AsmErrors
 
+  /*
+   * Collect functions in the module to validate.
+   */
+  private def collectFunctions():Env = {
+    (m.funcs foldLeft Map[String,Function]()){case (map,f) => 
+      if (map.contains(f.name)) {
+        errors.dupFunction(f, map(f.name))
+        map
+      } else {
+        map + (f.name -> f)
+      }
+    }
+  }
+  
   /*
    * Separate an identifier in qualifier and local id. If the id is 
    * unqualified, return module's name.
@@ -68,131 +101,99 @@ class Validator(val m:Module) {
     if (ix == -1) (m.name,s) else (s substring (0,ix), s substring (ix+1))
   } 
   
-  // Is the given name a valid function reference?
-  private def validateFunRef(d:String):State[T,Boolean] = {
-    val (q,id) = unqual(d)
-    if (q != m.name) ret(true) else for {st <- get} yield (st._2 contains id)
-  }
-
-  // Handle an invalid reference to a function in the function named [funName]
-  private def invalidRefInFun(
-      funName:String, 
-      what:String, 
-      refName:String):State[T,Unit] = {
-    val msg = "invalid %s reference `%s'" format (what,refName)
-    val item = new ErrorItem("function", funName, msg)
-    upd {case (e,fs) => (item +: e,fs)}    
+  /*
+   * Check whether the given reference is valid. References are valid
+   * if they are external (referring to another module) or if they
+   * refer to an existing local function.
+   */
+  private def validateInstrRef(env:Env,f:Function,i:Instr, ref:String) {
+    val (q,id) = unqual(ref)
+    if (q == m.name && !(env contains id))
+      errors.invalidRefInFun(f, i, ref)
   }
     
-  // Validate the reference [refName] found in an instruction 
-  // inside function [funName] definition
-  private def validateInstrRef(
-      funName:String, 
-      what:String, 
-      refName:String,
-      v:String => State[T,Boolean]):State[T,Boolean] = 
-    for {
-      ok <- v(refName)
-      _  <- if (ok) nop else invalidRefInFun(funName,what,refName)
-    } yield ok
-    
-  // Validate an instruction inside a function named [funName]
-  private def validateInstr(funName:String, i:Instr):State[T,Boolean] = i match {
-    case Jump(funId)
-      => validateInstrRef(funName, "function", funId, validateFunRef)
-    case EvalVar(_,funId) 
-      => validateInstrRef(funName, "function", funId, validateFunRef)
-    case PushCode(funId)  
-      => validateInstrRef(funName, "function", funId, validateFunRef)
-    case PushCont(funId)
-      => validateInstrRef(funName, "function", funId, validateFunRef)
-    case MatchCon(alts,mdef)
-      => validateMatch(funName, alts, mdef)
-    case MatchInt(alts,mdef)
-      => validateMatch(funName, alts, mdef)
-    case MatchDbl(alts,mdef)
-      => validateMatch(funName, alts, mdef)
-    case MatchChr(alts,mdef)
-      => validateMatch(funName, alts, mdef)
-    case _ => ret(true)
+  /*
+   * Validate case alternatives.
+   */
+  private def validateAlts[U](env:Env,f:Function)(alts:List[Alt[U]]):Unit = 
+    alts foreach {a => validateBlock(env,f)(a.b)}
+
+  /*
+   * Check for repeated alternatives in some alts. Return whether there
+   * are repeated alternatives, and the list of repeated values in order
+   * of appearance.
+   */
+  private def repeatedAlts[U](alts:List[Alt[U]]):(Boolean,List[U]) = {
+    val (_,_,rep) = (alts foldLeft (Set[U](),Set[U](),List[U]())) {
+      case (t@(_,rep,_),alt) if rep contains alt.v => t
+      case ((seen,rep,repList),alt) if seen contains alt.v => 
+        (seen,rep + alt.v, alt.v::repList)
+      case ((seen,rep,repList),alt) => (seen + alt.v, rep, repList)
+    }
+    (!rep.isEmpty,rep.reverse)
   }
 
-  // Validate a match instruction body
+  /*
+   * Validate a match instruction.
+   */
   private def validateMatch[U](
-      where:String,
-      alts:List[Alt[U]], 
-      mdef:Option[Block]):State[T,Boolean] = {
-    if (repeatedAlts(alts)) {
-      val item = new ErrorItem("function", where, "repeated values in case alternatives")
-      for {_ <- upd {s:T => (item +: s._1,s._2)}} yield false
+      env:Env,
+      f:Function,
+      i:Instr,
+      alts:List[Alt[U]],
+      mdef:Option[Block]) {
+    val (hasReps,reps) = repeatedAlts(alts)
+    if (hasReps) {
+      errors.repeatedAltsInFun(f, i, reps)
     } else {
-      for {
-        defltOk <- validateBlock(where, mdef map (_.is) getOrElse List())
-        altsOk  <- validateAlts(where, alts)
-      } yield (altsOk && defltOk)
+      validateAlts(env,f)(alts)
+      mdef foreach validateBlock(env,f)
     }
   }
-  
-  // Check for repeated alternatives in some alts
-  private def repeatedAlts[U](alts:List[Alt[U]]):Boolean =
-    (((Set[U](),false) /: alts) {
-      case (p@(_,true),_) => p
-      case ((seen,false),alt) if seen contains alt.v => (seen,true)
-      case ((seen,_),alt) => (seen + alt.v,false)
-    })._2
-  
-  // Validate a case alternatives
-  private def validateAlts[U](
-      where:String, 
-      alts:List[Alt[U]]):State[T,Boolean] = alts match {
-    case List() => ret(true)
-    case i::is  => for {
-      restOk <- validateAlts(where,is)
-      thisOk <- validateBlock(where, i.b.is)
-    } yield (thisOk && restOk)
-  }
-    
-  // Validate a list of instructions (i.e., a block)
-  private def validateBlock(where:String, is:List[Instr]):State[T,Boolean] = is match {
-    case List() => ret(true)
-    case i::is  => for {
-      restOk <- validateBlock(where, is)
-      thisOk <- validateInstr(where, i)
-    } yield (thisOk && restOk)
-  }
-  
-  // Validate a function
-  private def validateFun(f:Function):State[T,Boolean] = 
-    validateBlock(f.name, f.b.is)
-  
-  // Validate all functions in a module
-  private def validateFuns(fs:List[Function]):State[T,Boolean] = fs match {
-    case List() => ret(true)
-    case f::fs  => for {
-      restOk <- validateFuns(fs)
-      thisOk <- validateFun(f)
-    } yield (thisOk && restOk)
-  }
-    
-  /**
-   * Dump the given errors to some writer sink.
-   * @param e    errors to dump
-   * @param w    writer sink where errors will be dumped
+
+  /*
+   * Validate an instruction inside a function.
    */
-  def dumpErrs(e:E, w:PrintWriter) { e foreach (w println _); w flush }
+  private def validateInstr(env:Env,f:Function)(i:Instr):Unit = i match {
+    case Jump(funId)
+      => validateInstrRef(env, f, i, funId)
+    case EvalVar(_,funId) 
+      => validateInstrRef(env, f, i, funId)
+    case PushCode(funId)  
+      => validateInstrRef(env, f, i, funId)
+    case PushCont(funId)
+      => validateInstrRef(env, f, i, funId)
+    case MatchCon(alts,mdef)
+      => validateMatch(env, f, i, alts, mdef)
+    case MatchInt(alts,mdef)
+      => validateMatch(env, f, i, alts, mdef)
+    case MatchDbl(alts,mdef)
+      => validateMatch(env, f, i, alts, mdef)
+    case MatchChr(alts,mdef)
+      => validateMatch(env, f, i, alts, mdef)
+    case _ => ()
+  }
+    
+  /*
+   * Validate a block.
+   */
+  private def validateBlock(env:Env,f:Function)(b:Block):Unit = 
+    b.is foreach validateInstr(env,f)
+  
+  /*
+   * Validate all functions in a module.
+   */
+  private def validateFuns(env:Env,fs:List[Function]):Unit = 
+    fs foreach {f => validateBlock(env,f)(f.b)}
 
   /**
    * Validate the given module.
-   * 
-   * @return a pair consisting a flag indicating whether validation
-   * succeeded, and a queue of error items (empty on successful validation)
+   * @return Some[AsmErrors] if validation fails, Nothing otherwise.
    */
-  def validate():(Boolean,Queue[ErrorItem]) = {
-    val (fs,e) = collect()(Queue())
-    if (!(e isEmpty)) return (false,e)
-    
-    val st = (e,fs)
-    val (ok,(e1,_)) = validateFuns(m.funcs)(st)
-    return (ok, e1)
+  def validate[T >: Errors]():Option[T] = {
+    val env = collectFunctions()
+    if (errors.hasErrors) return Some(errors)
+    validateFuns(env, m.funcs)
+    if (errors.hasErrors) Some(errors) else None
   }
 }

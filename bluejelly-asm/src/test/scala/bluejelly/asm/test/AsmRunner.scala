@@ -13,6 +13,7 @@ import org.scalatest._
 import bluejelly.asm.{AsmConfig,Assembler}
 import bluejelly.utils.{BrtRunner,FileUtils}
 import java.io.FileReader
+import java.io.PrintWriter
 
 /**
  * Suite trait for tests that need to compile and run assembler modules.
@@ -32,7 +33,8 @@ trait AsmRunner extends BeforeAndAfterAll { this:Suite =>
     val modFile = getAbsolutePath(modName)
     val out = Assembler.assemble(new FileReader(modFile), false)
     if (out.isLeft) {
-      fail(out.left.get.toString)
+      out.left.get.dumpTo(new PrintWriter(System.err))
+      fail("Failed to compile: " + modName)
     } else {
       val className = modName replaceFirst("\\.jas$","")
       Assembler.save(binDir.toString, className, out.right.get)

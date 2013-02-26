@@ -14,16 +14,15 @@ import java.io.PrintWriter
 import java.io.Reader
 import java.io.StringWriter
 import java.util.Properties
-
 import scala.collection.mutable.MutableList
 import scala.util.parsing.input.NoPosition
-
 import bluejelly.asm.Assembler
 import bluejelly.utils.Args
 import bluejelly.utils.Errors
 import bluejelly.utils.StrOpt
 import bluejelly.utils.UnicodeFilter
 import bluejelly.utils.UnitOpt
+import bluejelly.utils.Errors
 
 // Phases of the L4C compiler
 private object Phase extends Enumeration {
@@ -51,7 +50,7 @@ class L4C {
   import L4C.{exit_success,exit_failure}
   
   // Implement compiler pipeline
-  private def compilerPipeline(m:Module):Either[Errors,Array[Byte]] = {
+  private def compilerPipeline[T >: Errors](m:Module):Either[T,Array[Byte]] = {
     val result = StaticAnalysis.analyze(m)
     if (!result.isRight) return Left(result.left.get)
     
@@ -63,13 +62,7 @@ class L4C {
     val m5 = PeepholeOptimizer.optimize(result.right.get, m4)
     val m6 = Flatten.flatten(m5)
     val asmOut = Assembler.assemble(m6, false)
-    if (asmOut.isLeft) {
-      // TODO Use Errors in assembler and correct this
-      val errs = new Errors(true)
-      asmOut.left.get foreach {errs.error(NoPosition,_)}
-      Left(errs)
-    } else
-      Right(asmOut.right.get)    
+    asmOut
   }
   
   // Pass a file thru the compiler pipeline, return success or failure code;
@@ -78,7 +71,7 @@ class L4C {
     val r = new UnicodeFilter(new FileReader(name))
     val p = Parser.parseAll(Parser.module, r)
     p match {
-      case f@Parser.Failure(_,_) => 
+      case f@Parser.NoSuccess(msg,next) => 
         System.err.println(f)
         exit_failure
       case Parser.Success(m,_) =>
@@ -120,8 +113,7 @@ class L4C {
         // If we reached this point, assemble the module and emit class file
         val out = Assembler.assemble(m6, false)
         if (out.isLeft) {
-          // TODO Use Errors in assembler and correct this
-          out.left.get foreach {System.err.println(_)}
+          out.left.get.dumpTo(new PrintWriter(System.err))
           exit_failure
         } else {
           Assembler.save(cfg.outDir, m6.name, out.right.get)
@@ -229,9 +221,9 @@ object L4C {
     val r = new UnicodeFilter(in)
     val p = Parser.parseAll(Parser.module, r)
     p match {
-      case f@Parser.Failure(_,_) => 
+      case f@Parser.NoSuccess(msg,next) => 
         val errs = new Errors(true)
-        errs.error(f.next.pos, f.msg)
+        errs.error(next.pos, msg)
         Left(errs)
       case Parser.Success(m,_) =>
         compile(m)
