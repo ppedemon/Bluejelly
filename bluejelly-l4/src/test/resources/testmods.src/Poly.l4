@@ -10,7 +10,7 @@ module Poly
 #   (/=) :: a -> a -> Bool
 #   x /= y = not (x == y)
 #
-# A class generates the following:
+# This class generates the following:
 
 data Eq{0,2}
 
@@ -47,7 +47,7 @@ fun dict$Eq$Int = Eq bluejelly.Int.eq bluejelly.Int.neq
 data Nil{0,0}
 data Cons{1,2}
 
-fun dict$Eq$List$Int d = Eq (eqList d) (ne$Def dict$Eq$List$Int)
+fun dict$Eq$List d = Eq (eqList d) (ne$Def (dict$Eq$List d))
 
 fun eqList d xs ys = 
   let! xs$ = xs in
@@ -68,7 +68,11 @@ fun eqList d xs ys =
 
 fun dummyEq d x y = eq d x y   
 fun intDummyEq x y = dummyEq dict$Eq$Int x y
-fun intListDummyEq xs ys = dummyEq (dict$Eq$List$Int dict$Eq$Int) xs ys
+fun intListDummyEq xs ys = dummyEq (dict$Eq$List dict$Eq$Int) xs ys
+
+fun dummyNeq d x y = ne d x y
+fun intDummyNeq x y = dummyNeq dict$Eq$Int x y
+fun intListDummyNeq xs ys = dummyNeq (dict$Eq$List dict$Eq$Int) xs ys
 
 fun testIntEq = intDummyEq 1 1
 fun testIntNeq = intDummyEq 2 1
@@ -83,6 +87,14 @@ fun testNeqList0 = intListDummyEq Nil xs
 fun testNeqList1 = intListDummyEq xs Nil
 fun testNeqList2 = intListDummyEq xs ys
 fun testNeqList3 = intListDummyEq ys xs
+
+fun testIntDefNeq0 = intDummyNeq 1 2 # Expected: True
+fun testIntDefNeq1 = intDummyNeq 2 2 # Expected: False
+
+fun testDefNeqList0 = intListDummyNeq Nil xs # Expected: True
+fun testDefNeqList1 = intListDummyNeq xs Nil # Expected: True
+fun testDefNeqList2 = intListDummyNeq xs xs  # Expected: False
+fun testDefNeqList3 = intListDummyNeq xs ys  # Expected: True
 
 # ------------------------------------------------------------------------
 # Auxiliary boolean definitions

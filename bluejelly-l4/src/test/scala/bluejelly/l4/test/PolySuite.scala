@@ -37,5 +37,20 @@ class PolySuite extends FunSuite with L4Runner {
       ("^Poly.testNeqList3","False")
     ))
   }
+  
+  test("default inequality must work on ints") {
+    check("Poly.l4", Seq(
+        ("^Poly.testIntDefNeq0","True"),
+        ("^Poly.testIntDefNeq1","False")
+    ))
+  }
+  
+  test("default inequality must work on list of ints") {
+    check("Poly.l4", Seq(
+        ("^Poly.testDefNeqList0","True"),
+        ("^Poly.testDefNeqList1","True"),
+        ("^Poly.testDefNeqList2","False"),
+        ("^Poly.testDefNeqList3","True")
+    ))
+  }
 }
-
