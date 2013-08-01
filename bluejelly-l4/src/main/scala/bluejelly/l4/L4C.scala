@@ -190,7 +190,7 @@ object L4C {
           "--debug-resolver Send resolver to stdout output and stop")),
       ("--debug-opt", new UnitOpt(
           _ => cfg.stopAt = OPT, 
-          "--debug-resolver Send optimizer output to stdout and stop")),        
+          "--debug-opt Send optimizer output to stdout and stop")),        
       ("-S", new UnitOpt(
           _ => cfg.stopAt = FLATTEN, 
           "-S Create assembler file for the compiler module")),
