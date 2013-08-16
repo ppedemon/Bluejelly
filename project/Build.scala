@@ -23,7 +23,7 @@ object BluejellyBuild extends Build {
 
   lazy val bluejelly = Project(
     id = "bluejelly",
-    base = file(".")) aggregate(runtime,utils,asm,l4)
+    base = file(".")) aggregate(runtime,utils,asm,l4,bjc)
 
   lazy val runtime = Project(
     id = "bluejelly-runtime",
@@ -107,6 +107,17 @@ object BluejellyBuild extends Build {
     ) 
   ) dependsOn(asm,utils)
   
+  lazy val bjc = Project(
+    id = "bluejelly-bjc",
+    base = file("bluejelly-bjc"),
+    settings = Project.defaultSettings ++ assemblySettings ++ Seq(
+      libraryDependencies += Deps.scalaTest,
+      test in assembly := {},
+      jarName in assembly <<= (name,version) { (n,v) => "%s-%s.jar" format (n,v) },
+      distTask
+    )
+  ) dependsOn(l4,utils)
+
   /**
    * Bag of dependency specifications.
    */
