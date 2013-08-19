@@ -6,7 +6,8 @@
  */
 package bluejelly.bjc
 
-import scala.util.parsing.input.CharSequenceReader
+import scala.util.parsing.input.Reader
+import bluejelly.bjc.parser.LayoutScanner
 
 /**
  * Entry point for the Bluejelly compiler.
@@ -14,16 +15,17 @@ import scala.util.parsing.input.CharSequenceReader
  */
 object BluejellyCompiler {
   
-  import Lexer._
+  import parser.Lexer._
   
-  private def scan(s:Scanner):List[Token] = s.first match {
-    case EOI => Nil
+  private def scan(s:Reader[Token]):List[Token] = s.first match {
+    case EOI() => Nil
     case t@ErrorToken(msg) => List(t)
     case t => t::scan(s.rest)
   }
   
   def main(args:Array[String]) {
-    val scanner = new Scanner("\t-----| foo_F_G |-- {- Nested {-\n\n-} Comments {-{--}-}-} M.+. -> x.F.f.g x.F.g x.F.f.. x.F.. x.F:. \"groovy \\\t\\string\\n\" 0xBAD")
+    //val scanner = new LayoutScanner("where \n  x=1 \n where \n  y=2")
+    val scanner = new LayoutScanner("{ 'a' x=1 \n  let \n   x=2 \n   x=3  {-wtf?-}\n}")
     val toks = scan(scanner)
     for (t <- toks) println("%s:%s" format (t.pos,t))
   }

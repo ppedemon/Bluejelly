@@ -4,7 +4,7 @@
  * This source code is distributed under the terms of 
  * the BSD license, see the LICENSE file for details.
  */
-package bluejelly.bjc
+package bluejelly.bjc.parser
 
 import scala.util.parsing.input.{Positional}
 import scala.util.parsing.combinator.{Parsers}
@@ -42,42 +42,42 @@ object Lexer extends Parsers with Tokens {
       '!', '#', '$', '%', '&', '*', '+', '.', '/', '<', 
       '=', '>', '?', '@', '\\', '^', '|', '-', '~', ':')
   
-  private def keywords = Map(
-      "case"      -> TCase,
-      "class"     -> TClass,
-      "data"      -> TData,
-      "default"   -> TDefault,
-      "deriving"  -> TDeriving,
-      "do"        -> TDo,
-      "else"      -> TElse,
-      "if"        -> TIf,
-      "import"    -> TImport,
-      "in"        -> TIn,
-      "infix"     -> TInfix,
-      "infixl"    -> TInfixl,
-      "infixr"    -> TInfixr,
-      "instance"  -> TInstance,
-      "let"       -> TLet,
-      "module"    -> TModule,
-      "of"        -> TOf,
-      "primitive" -> TPrim,
-      "then"      -> TThen,
-      "type"      -> TType,
-      "where"     -> TWhere,
-      "_"         -> TUnder
+  private def keywords:Map[String, Unit => Token] = Map(
+      "case"      -> (_ => new TCase),
+      "class"     -> (_ => new TClass),
+      "data"      -> (_ => new TData),
+      "default"   -> (_ => new TDefault),
+      "deriving"  -> (_ => new TDeriving),
+      "do"        -> (_ => new TDo),
+      "else"      -> (_ => new TElse),
+      "if"        -> (_ => new TIf),
+      "import"    -> (_ => new TImport),
+      "in"        -> (_ => new TIn),
+      "infix"     -> (_ => new TInfix),
+      "infixl"    -> (_ => new TInfixl),
+      "infixr"    -> (_ => new TInfixr),
+      "instance"  -> (_ => new TInstance),
+      "let"       -> (_ => new TLet),
+      "module"    -> (_ => new TModule),
+      "of"        -> (_ => new TOf),
+      "primitive" -> (_ => new TPrim),
+      "then"      -> (_ => new TThen),
+      "type"      -> (_ => new TType),
+      "where"     -> (_ => new TWhere),
+      "_"         -> (_ => new TUnder)
   )
   
-  private def reservedOps = Map(
-      ".." -> TDotDot,
-      ":"  -> TColon,
-      "::" -> TCoCo,
-      "="  -> TEq,
-      "\\" -> TLam,
-      "<-" -> TLArr,
-      "->" -> TRArr,
-      "=>" -> TDArr,
-      "@"  -> TAt,
-      "~"  -> TTilde
+  private def reservedOps:Map[String, Unit => Token] = Map(
+      ".." -> (_ => new TDotDot),
+      ":"  -> (_ => new TColon),
+      "::" -> (_ => new TCoCo),
+      "="  -> (_ => new TEq),
+      "\\" -> (_ => new TLam),
+      "<-" -> (_ => new TLArr),
+      "->" -> (_ => new TRArr),
+      "=>" -> (_ => new TDArr),
+      "@"  -> (_ => new TAt),
+      "~"  -> (_ => new TTilde)
   )
   
   def isSymbol(c:Char) = 
@@ -105,7 +105,8 @@ object Lexer extends Parsers with Tokens {
     case '\''   => "'"
     case '"'    => "\""
     case '\\'   => "\\"
-    case _ if c.isControl || c.isSpaceChar => "\\%s" format (Integer.toString(c,8))
+    case _ if c.isControl || c.isSpaceChar => 
+      "\\%s" format (Integer.toString(c,8))
     case _ => "%c" format c
   }  
 
@@ -145,13 +146,13 @@ object Lexer extends Parsers with Tokens {
     |(modid <~ '.') ~ varsym ^? 
       {case q~sym if !(reservedOps contains sym) => VarSym(Name(q,sym))} 
     |varid  ^^ 
-      {id => keywords.getOrElse(id, VarId(Name(id)))}
+      {id => keywords.getOrElse(id, (_:Unit) => new VarId(Name(id)))()}
     |conid  ^^ 
       {id => ConId(Name(id))}
     |consym ^^ 
-      {sym => reservedOps.getOrElse(sym, ConSym(Name(sym)))}
+      {sym => reservedOps.getOrElse(sym, (_:Unit) => ConSym(Name(sym)))()}
     |varsym ^^ 
-      {sym => reservedOps.getOrElse(sym, VarSym(Name(sym)))})
+      {sym => reservedOps.getOrElse(sym, (_:Unit) => VarSym(Name(sym)))()})
 
   // ---------------------------------------------------------------------
   // Floating point literals
@@ -178,7 +179,7 @@ object Lexer extends Parsers with Tokens {
     } 
       
   // ---------------------------------------------------------------------
-  // Integer point literals (decimal, hexadecimal or octal)
+  // Integer literals (decimal, hexadecimal or octal)
   // ---------------------------------------------------------------------
   private def hexit = elem("hexadecimal digit", 
       c => (c >= 'a' && c <= 'f') || 
@@ -223,7 +224,8 @@ object Lexer extends Parsers with Tokens {
     any >> {c => err("invalid escape character: `%c'" format c)}
     
   private def validChr(cs:Char*) = 
-    elem("", c => !(cs contains c) && !c.isControl && (c == ' ' || !c.isWhitespace))
+    elem("", c => 
+      !(cs contains c) && !c.isControl && (c == ' ' || !c.isWhitespace))
  
   private def gap = '\\' ~ rep1(white) ~ '\\' ^^^ ""
     
@@ -237,28 +239,28 @@ object Lexer extends Parsers with Tokens {
   // ---------------------------------------------------------------------
   // Special symbols
   // ---------------------------------------------------------------------  
-  def special = 
-    '(' ^^^ TLParen |
-    ')' ^^^ TRParen |
-    '[' ^^^ TLBrack |
-    ']' ^^^ TRBrack |
-    '{' ^^^ TLCurly |
-    '}' ^^^ TRCurly |
-    ',' ^^^ TComma  |
-    ';' ^^^ TSemi   |
-    '`' ^^^ TBack
+  def special:Parser[Token] = 
+    '(' ^^^ new TLParen |
+    ')' ^^^ new TRParen |
+    '[' ^^^ new TLBrack |
+    ']' ^^^ new TRBrack |
+    '{' ^^^ new TLCurly |
+    '}' ^^^ new TRCurly |
+    ',' ^^^ new TComma  |
+    ';' ^^^ new TSemi   |
+    '`' ^^^ new TBack
 
     
   // ---------------------------------------------------------------------
   // Everything together
   // ---------------------------------------------------------------------
   def token:Parser[Token] = positioned(
-    ident       |
-    special     |
-    floating    |
-    integer     |
-    char        |
-    string      |
-    eoi ^^^ EOI |
+    ident           |
+    special         |
+    floating        |
+    integer         |
+    char            |
+    string          |
+    eoi ^^^ new EOI |
     any >> {c => err("invalid character: `%c'" format c)})
 }

@@ -4,10 +4,11 @@
  * This source code is distributed under the terms of 
  * the BSD license, see the LICENSE file for details.
  */
-package bluejelly.bjc
+package bluejelly.bjc.parser
 
 import scala.annotation.tailrec
-import scala.util.parsing.input.{Reader, CharArrayReader}
+import scala.collection.immutable.PagedSeq
+import scala.util.parsing.input.{Reader, CharArrayReader, PagedSeqReader}
 import Lexer._
 
 /**
@@ -20,15 +21,17 @@ class Scanner(in:Reader[Char]) extends Reader[Token] {
   import CharArrayReader.EofCh
   
   def this(in:String) = this(new CharArrayReader(in.toCharArray()))
+  def this(in:java.io.Reader) = this(new PagedSeqReader(PagedSeq.fromReader(in)))
 
-  private val (tok:Token,rest1:Reader[Char],rest2:Reader[Char]) = 
-    skipWhiteStuff(in) match {
+  private val (tok,rest1,rest2) = 
+    (skipWhiteStuff(in)) match {
       case (in1,false) => 
-        val empty = new Scanner("")
-        (errorToken("unclosed comment"), empty, empty)
+        val empty = new CharArrayReader(Array())
+        (errorToken(in.pos, "unclosed comment"), empty, empty)
       case (in1,_) => token(in1) match {
         case Lexer.Success(tok, in2) => (tok, in1, in2)
-        case ns:Lexer.NoSuccess => (errorToken(ns.msg), ns.next, skip(ns.next))
+        case ns:Lexer.NoSuccess => 
+          (errorToken(ns.next.pos,ns.msg), ns.next, skip(ns.next))
       }
     }
 
