@@ -18,7 +18,7 @@ object BluejellyBuild extends Build {
   override lazy val settings = super.settings ++ Seq(
     name := "bluejelly",
     version := "1.0",
-    scalacOptions += "-deprecation"
+    scalacOptions ++= Seq("-deprecation","-unchecked")
   )
 
   lazy val bluejelly = Project(
