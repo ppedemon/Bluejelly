@@ -25,7 +25,7 @@ object BluejellyCompiler {
   
   def main(args:Array[String]) {
     //val scanner = new LayoutScanner("where \n  x=1 \n where \n  y=2")
-    val scanner = new LayoutScanner("{ 'a' x=1 \n  let \n   x=2 \n   x=3  {-wtf?-}\n}")
+    val scanner = new LayoutScanner("{ -1 'a' x=1 \n  let \n   x=2 \n   x=3 \n   \"a\\    \\b\" {-wtf?-}\n}")
     val toks = scan(scanner)
     for (t <- toks) println("%s:%s" format (t.pos,t))
   }

@@ -158,7 +158,7 @@ object Lexer extends Parsers with Tokens {
   // Floating point literals
   // ---------------------------------------------------------------------
   private def fpStr(int:String, dec:String, exp:Option[String]) = 
-    int + "." + dec + exp.getOrElse("")
+    int + (if (dec.isEmpty) "" else "." + dec) + exp.getOrElse("")
   
   private def exp:Parser[String] = 
     (oneOf('e','E') ~> opt(oneOf('+','-'))) ~ rep1(digit) ^^ {
@@ -170,7 +170,7 @@ object Lexer extends Parsers with Tokens {
     (rep1(digit) <~ '.') ~ rep1(digit) ~ opt(exp) ^^ 
       {case i~d~e => val s = fpStr(i.mkString, d.mkString, e); (s,s.toDouble)} |
     rep1(digit) ~ exp ^^
-      {case i~e => val s = fpStr(i.mkString, "0", Some(e)); (s,s.toDouble)}
+      {case i~e => val s = fpStr(i.mkString, "", Some(e)); (s,s.toDouble)}
     
   def floating = 
     floatingNum >> {

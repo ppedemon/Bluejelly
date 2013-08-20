@@ -1,5 +1,37 @@
+-- Integer literals
 1
 0X0123456789ABCDEF
 0x0123456789abcdef
 0o107
 0O200
+
+-- Floating point literals
+1.4e3
+1.4e+3
+1.4E-3
+8e+2
+1e+100000 -- This is an overflow error (as in Scala)
+1e-100000 -- This is a zero (as in Scala)
+
+-- Character literals
+'a'
+'\a'
+'\b'
+'\f'
+'\n'
+'\r'
+'\t'
+'\v'
+'\\'
+'\''
+'\"'
+'"'
+'\127'
+''
+'\z' -- Invalid escape character
+
+-- String literals
+"Lorem Ipsum \
+    \\\\'blah blah blah\\\"'\'\"\n" 
+"你好世界"
+"\u4f60\u597d\u4e16\u754c"

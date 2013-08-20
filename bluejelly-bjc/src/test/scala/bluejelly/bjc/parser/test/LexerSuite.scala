@@ -33,6 +33,11 @@ class LexerSuite extends FunSuite {
     s.first match {
       case EOI() =>
         assert(expected.isEmpty, "premature EOI, expected: %s" format expected)
+      case ErrorToken(_) =>
+        val e = expected.head
+        assert(e.isInstanceOf[ErrorToken], 
+            "expected error, but got: %s" format e)
+        checkLexerOutput(s.rest, expected.tail)
       case t => 
         var e = expected.head
         assert(t == expected.head, "wrong token: %s, expected %s" format (t,e))
@@ -56,6 +61,30 @@ class LexerSuite extends FunSuite {
         IntLit(BigInt("123456789abcdef",16)),
         IntLit(BigInt("123456789abcdef",16)),
         IntLit(0107),
-        IntLit(0200)))
+        IntLit(0200),
+        FloatLit(1.4e3),
+        FloatLit(1.4e3),
+        FloatLit(1.4e-3),
+        FloatLit(8e2),
+        ErrorToken(""),
+        FloatLit(0),
+        CharLit('a'),
+        CharLit('\7'),
+        CharLit('\b'),
+        CharLit('\f'),
+        CharLit('\n'),
+        CharLit('\r'),
+        CharLit('\t'),
+        CharLit('\13'),
+        CharLit('\\'),
+        CharLit('\''),
+        CharLit('"'),
+        CharLit('"'),
+        CharLit('\127'),
+        ErrorToken(""),
+        ErrorToken(""),
+        StringLit("Lorem Ipsum \\'blah blah blah\\\"''\"\n"),
+        StringLit("你好世界"),
+        StringLit("你好世界")))
   }
 }
