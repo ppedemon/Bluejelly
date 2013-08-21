@@ -1,0 +1,26 @@
+-- Possibly qualified varids
+a'b
+M.a
+bluejelly.lexer.Lexer.lex
+
+-- Possibly qualified conids
+List
+List.List
+bluejelly.List.List
+
+-- Possibly qualified varsyms
+--> -- This is a tricky one!
+M..+.
+bluejelly.lexer.Lexer..:.
+
+-- Possibly qualified consyms
+:+
+Complex.:+
+bluejelly.Complex.:+
+
+-- Tricky stuff from Sect. 2.4 of the Haskell Report
+f.g -- function composition
+F.g -- qualified g
+f.. -- two tokens: f and `..'
+F.. -- qualified (.)
+F.  -- two tokens: F and (.)

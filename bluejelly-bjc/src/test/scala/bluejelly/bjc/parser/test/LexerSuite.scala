@@ -12,6 +12,7 @@ import org.scalatest.FunSuite
 
 import bluejelly.utils.UnicodeFilter
 import bluejelly.bjc.parser.{Lexer,Scanner,LayoutScanner}
+import bluejelly.utils.Name
 
 
 /**
@@ -86,5 +87,31 @@ class LexerSuite extends FunSuite {
         StringLit("Lorem Ipsum \\'blah blah blah\\\"''\"\n"),
         StringLit("你好世界"),
         StringLit("你好世界")))
+  }
+  
+  test("Lexer must lex identifiers and symbols correctly") {
+    testScanner("idents.in", Seq(
+        VarId(Name("a'b")),
+        VarId(Name("M","a")),
+        VarId(Name("bluejelly.lexer.Lexer","lex")),
+        ConId(Name("List")),
+        ConId(Name("List","List")),
+        ConId(Name("bluejelly.List","List")),
+        VarSym(Name("-->")),
+        VarSym(Name("M",".+.")),
+        VarSym(Name("bluejelly.lexer.Lexer",".:.")),
+        ConSym(Name(":+")),
+        ConSym(Name("Complex",":+")),
+        ConSym(Name("bluejelly.Complex",":+")),
+        VarId(Name("f")),
+        VarSym(Name(".")),
+        VarId(Name("g")),
+        VarId(Name("F","g")),
+        VarId(Name("f")),
+        TDotDot(),
+        VarSym(Name("F",".")),
+        ConId(Name("F")),
+        VarSym(Name("."))
+    ))
   }
 }
