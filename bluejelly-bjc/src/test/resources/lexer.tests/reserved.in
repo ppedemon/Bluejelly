@@ -1,0 +1,5 @@
+-- Special symbols
+()[]{},;`
+
+-- A mix of reserved operators and custom ops
+->> ... ::: :: : @~ @ ~ =>= => <= = >

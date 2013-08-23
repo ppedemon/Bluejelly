@@ -56,6 +56,10 @@ class LexerSuite extends FunSuite {
     checkLexerOutput(s, expected)
   }
 
+  test("Lexer must ignore comments properly") {
+    testScanner("empty.in", Nil)
+  }
+  
   test("Lexer must lex literals correctly") {
     testScanner("literals.in", Seq(
         IntLit(1),
@@ -112,6 +116,27 @@ class LexerSuite extends FunSuite {
         VarSym(Name("F",".")),
         ConId(Name("F")),
         VarSym(Name("."))
+    ))
+  }
+    
+  test("Lexer must handle (reserved) symbols correctly") {
+    testScanner("reserved.in", Seq(
+      TLParen(), TRParen(), TLBrack(), 
+      TRBrack(), TLCurly(), TRCurly(),
+      TComma() , TSemi()  , TBack(),
+      VarSym(Name("->>")),
+      VarSym(Name("...")),
+      ConSym(Name(":::")),
+      TCoCo(),
+      TColon(),
+      VarSym(Name("@~")),
+      TAt(),
+      TTilde(),
+      VarSym(Name("=>=")),
+      TDArr(),
+      VarSym(Name("<=")),
+      TEq(),
+      VarSym(Name(">"))
     ))
   }
 }
