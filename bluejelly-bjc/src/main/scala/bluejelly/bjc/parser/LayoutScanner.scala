@@ -133,6 +133,8 @@ class LayoutScanner(
   def this(in:String) = this(new Scanner(in))
   def this(in:java.io.Reader) = this(new Scanner(in))
   
+  // This HAS to be lazy, otherwise we would chain
+  // LayoutScanner constructor calls... that's bad!
   private lazy val (tok,next) = b(this)
   
   override def source = in.source

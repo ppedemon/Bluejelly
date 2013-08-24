@@ -20,13 +20,13 @@ import Lexer._
 class Scanner(in:Reader[Char]) extends Reader[Token] {
   import CharArrayReader.EofCh
   
-  def this(in:String) = this(new CharArrayReader(in.toCharArray()))
-  def this(in:java.io.Reader) = this(new PagedSeqReader(PagedSeq.fromReader(in)))
+  def this(in:String) = this(new PositionedReader(in))
+  def this(in:java.io.Reader) = this(new PositionedReader(in))
 
   private val (tok,rest1,rest2) = 
     (skipWhiteStuff(in)) match {
       case (in1,false) => 
-        val empty = new CharArrayReader(Array())
+        val empty = new PositionedReader("")
         (errorToken(in.pos, "unclosed comment"), empty, empty)
       case (in1,_) => token(in1) match {
         case Lexer.Success(tok, in2) => (tok, in1, in2)
@@ -58,7 +58,8 @@ class Scanner(in:Reader[Char]) extends Reader[Token] {
     if (peek(in,2) == "--")
       skipWhile(in, _ == '-') match {
         case in1 if in.atEnd => in1
-        case in1 if !isSymbol(in1.first) => skipWhile(in1, c => c != '\n' && c != '\r')
+        case in1 if !isSymbol(in1.first) => 
+          skipWhile(in1, c => c != '\n' && c != '\r' && c != '\f')
         case _ => in 
       }      
     else in

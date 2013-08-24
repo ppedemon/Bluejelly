@@ -6,11 +6,13 @@
  */
 package bluejelly.bjc
 
-import scala.util.parsing.input.Reader
-import bluejelly.bjc.parser.LayoutScanner
-import bluejelly.utils.UnicodeFilter
 import java.io.InputStreamReader
 import java.io.FileReader
+
+import scala.util.parsing.input.Reader
+
+import bluejelly.bjc.parser.{Scanner,LayoutScanner}
+import bluejelly.utils.UnicodeFilter
 
 /**
  * Entry point for the Bluejelly compiler.
@@ -27,8 +29,8 @@ object BluejellyCompiler {
   }
   
   def main(args:Array[String]) {
-    val scanner = new LayoutScanner("| || ||| ||||")
+    val scanner = new LayoutScanner("-- line comment\fa\r\n \"a\\\n\\b\"     a F.g\tx")
     val toks = scan(scanner)
-    for (t <- toks) println("%s:%s" format (t.pos,t))
+    for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
   }
 }
