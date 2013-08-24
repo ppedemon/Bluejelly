@@ -88,7 +88,7 @@ object LayoutScanner {
     (ctx.isEmpty && t != EOI()) || (!ctx.isEmpty && t.pos.column > ctx.top)
   
   private def isSame(t:Token, ctx:Stack[Int]) = 
-    !ctx.isEmpty && t.pos.column == ctx.top
+    t != EOI() && !ctx.isEmpty && t.pos.column == ctx.top
   
   private def isDedent(t:Token, ctx:Stack[Int]) =   
     !ctx.isEmpty && t.pos.column < ctx.top

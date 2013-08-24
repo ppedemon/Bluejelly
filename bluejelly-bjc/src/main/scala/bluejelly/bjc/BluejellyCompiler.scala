@@ -8,6 +8,9 @@ package bluejelly.bjc
 
 import scala.util.parsing.input.Reader
 import bluejelly.bjc.parser.LayoutScanner
+import bluejelly.utils.UnicodeFilter
+import java.io.InputStreamReader
+import java.io.FileReader
 
 /**
  * Entry point for the Bluejelly compiler.
@@ -24,8 +27,7 @@ object BluejellyCompiler {
   }
   
   def main(args:Array[String]) {
-    //val scanner = new LayoutScanner("where \n  x=1 \n where \n  y=2")
-    val scanner = new LayoutScanner("{=> =}")
+    val scanner = new LayoutScanner("| || ||| ||||")
     val toks = scan(scanner)
     for (t <- toks) println("%s:%s" format (t.pos,t))
   }

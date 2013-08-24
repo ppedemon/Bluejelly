@@ -43,6 +43,10 @@ class LexerSuite extends FunSuite {
         var e = expected.head
         assert(t == expected.head, "wrong token: %s, expected %s" format (t,e))
         checkLexerOutput(s.rest, expected.tail)
+      /*
+      case EOI() => println(s.first)
+      case t => println(t); checkLexerOutput(s.rest, expected);
+      */
     }
   }
   
@@ -137,6 +141,39 @@ class LexerSuite extends FunSuite {
       VarSym(Name("<=")),
       TEq(),
       VarSym(Name(">"))
+    ))
+  }
+  
+  test("Lexer must insert layout tokens correctly") {
+    testLayoutScanner("layout.in", Seq(
+        VLCurly(),
+        TWhere(),
+        VLCurly(),
+        VarId(Name("x")), TEq(), IntLit(1),
+        TSemi(),
+        VarId(Name("y")), TEq(), IntLit(2),
+        TSemi(),
+        TWhere(),
+        VLCurly(), VRCurly(),
+        VRCurly(),
+        TSemi(),
+        VarId(Name("a")),
+        //
+        TSemi(),
+        TWhere(), VLCurly(),
+        VarId(Name("x")), TEq(), IntLit(1),
+        TWhere(), VLCurly(), VarId(Name("y")), TEq(), IntLit(2), VRCurly(),
+        VRCurly(),
+        //
+        TSemi(),
+        TDo(),
+        TLCurly(),
+        VarId(Name("x")), TLArr(), VarId(Name("f")), TSemi(),
+        VarId(Name("y")), TLArr(), VarId(Name("g")), TSemi(),
+        VarId(Name("return")), VarSym(Name("$")), 
+        VarId(Name("x")), VarId(Name("y")),
+        TRCurly(),
+        VRCurly()
     ))
   }
 }

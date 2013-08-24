@@ -73,6 +73,7 @@ object Lexer extends Parsers with Tokens {
       "::" -> (_ => new TCoCo),
       "="  -> (_ => new TEq),
       "\\" -> (_ => new TLam),
+      "|"  -> (_ => new TBar),
       "<-" -> (_ => new TLArr),
       "->" -> (_ => new TRArr),
       "=>" -> (_ => new TDArr),
