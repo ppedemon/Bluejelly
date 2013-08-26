@@ -11,7 +11,7 @@ import java.io.FileReader
 
 import scala.util.parsing.input.Reader
 
-import bluejelly.bjc.parser.{Scanner,LayoutScanner}
+import bluejelly.bjc.parser.{Scanner,LayoutScanner,BluejellyParser}
 import bluejelly.utils.UnicodeFilter
 
 /**
@@ -29,8 +29,10 @@ object BluejellyCompiler {
   }
   
   def main(args:Array[String]) {
-    val scanner = new LayoutScanner("-- line comment\fa\r\n \"a\\\n\\b\"     a F.g\tx")
-    val toks = scan(scanner)
-    for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
+    //val scanner = new LayoutScanner("-- line comment\fa\r\n \"a\\\n\\b\"     a F.g\tx")
+    //val toks = scan(scanner)
+    //for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
+    val result = BluejellyParser.phrase(BluejellyParser.program, "module X where {-{-Comment-}-}")
+    println(result)
   }
 }
