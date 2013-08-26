@@ -143,5 +143,19 @@ class LayoutScanner(
   def atEnd = in.atEnd
   
   def first = tok
-  def rest = next  
+  def rest = next
+  
+  /*
+   * So the parse can do the right thing in cases like:
+   * 
+   *  f x = let z = x+1 in z 
+   * 
+   * The layout rules implemented by the LayouyScanner object
+   * will never insert a VLCurly before the `in' token. So the 
+   * parser has to handle the error by trying to pop the current 
+   * layout context if possible.
+   */
+  // inImplicitLayout duplicates code in LayoutScanner object, ugh...
+  def inImplicitLayout = !ctx.isEmpty && ctx.top > 0
+  def popCurrentLayout = new LayoutScanner(in,b,ctx.pop)
 }

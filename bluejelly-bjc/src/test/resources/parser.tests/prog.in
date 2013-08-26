@@ -1,0 +1,3 @@
+module X where
+
+let w;x;y in z
