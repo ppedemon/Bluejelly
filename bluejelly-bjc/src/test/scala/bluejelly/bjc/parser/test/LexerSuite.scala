@@ -10,9 +10,8 @@ import java.io.InputStreamReader
 import scala.util.parsing.input.Reader
 import org.scalatest.FunSuite
 
-import bluejelly.utils.UnicodeFilter
 import bluejelly.bjc.parser.{Lexer,Scanner,LayoutScanner}
-import bluejelly.utils.Name
+import bluejelly.utils.{Name,UnicodeFilter}
 
 
 /**
@@ -43,10 +42,6 @@ class LexerSuite extends FunSuite {
         var e = expected.head
         assert(t == expected.head, "wrong token: %s, expected %s" format (t,e))
         checkLexerOutput(s.rest, expected.tail)
-      /*
-      case EOI() => println(s.first)
-      case t => println(t); checkLexerOutput(s.rest, expected);
-      */
     }
   }
   
@@ -100,24 +95,24 @@ class LexerSuite extends FunSuite {
   test("Lexer must lex identifiers and symbols correctly") {
     testScanner("idents.in", Seq(
         VarId(Name("a'b")),
-        VarId(Name("M","a")),
-        VarId(Name("bluejelly.lexer.Lexer","lex")),
+        QVarId(Name("M","a")),
+        QVarId(Name("bluejelly.lexer.Lexer","lex")),
         ConId(Name("List")),
-        ConId(Name("List","List")),
-        ConId(Name("bluejelly.List","List")),
+        QConId(Name("List","List")),
+        QConId(Name("bluejelly.List","List")),
         VarSym(Name("-->")),
-        VarSym(Name("M",".+.")),
-        VarSym(Name("bluejelly.lexer.Lexer",".:.")),
+        QVarSym(Name("M",".+.")),
+        QVarSym(Name("bluejelly.lexer.Lexer",".:.")),
         ConSym(Name(":+")),
-        ConSym(Name("Complex",":+")),
-        ConSym(Name("bluejelly.Complex",":+")),
+        QConSym(Name("Complex",":+")),
+        QConSym(Name("bluejelly.Complex",":+")),
         VarId(Name("f")),
         VarSym(Name(".")),
         VarId(Name("g")),
-        VarId(Name("F","g")),
+        QVarId(Name("F","g")),
         VarId(Name("f")),
         TDotDot(),
-        VarSym(Name("F",".")),
+        QVarSym(Name("F",".")),
         ConId(Name("F")),
         VarSym(Name("."))
     ))

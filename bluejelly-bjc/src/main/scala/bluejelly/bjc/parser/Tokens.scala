@@ -22,10 +22,14 @@ trait Tokens {
   // Identifiers
   case class VarId(val id:Name) extends Token
   case class ConId(val id:Name) extends Token
+  case class QVarId(val id:Name) extends Token
+  case class QConId(val id:Name) extends Token
   
   // Symbols
   case class VarSym(val sym:Name) extends Token
   case class ConSym(val sym:Name) extends Token
+  case class QVarSym(val sym:Name) extends Token
+  case class QConSym(val sym:Name) extends Token
   
   // Literals
   case class FloatLit(val x:Double) extends Token

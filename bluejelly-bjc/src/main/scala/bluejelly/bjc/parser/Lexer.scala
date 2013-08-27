@@ -139,13 +139,13 @@ object Lexer extends Parsers with Tokens {
   // ---------------------------------------------------------------------
   def ident =
     ((modid <~ '.') ~ varid ^? 
-      {case q~id if !(keywords contains id) => VarId(Name(q,id))}
+      {case q~id if !(keywords contains id) => QVarId(Name(q,id))}
     |(modid <~ '.') ~ conid ^^ 
-      {case q~id => ConId(Name(q,id))}
+      {case q~id => QConId(Name(q,id))}
     |(modid <~ '.') ~ consym ^? 
-      {case q~sym if !(reservedOps contains sym) => ConSym(Name(q,sym))} 
+      {case q~sym if !(reservedOps contains sym) => QConSym(Name(q,sym))} 
     |(modid <~ '.') ~ varsym ^? 
-      {case q~sym if !(reservedOps contains sym) => VarSym(Name(q,sym))} 
+      {case q~sym if !(reservedOps contains sym) => QVarSym(Name(q,sym))} 
     |varid  ^^ 
       {id => keywords.getOrElse(id, (_:Unit) => new VarId(Name(id)))()}
     |conid  ^^ 
