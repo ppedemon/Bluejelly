@@ -84,6 +84,7 @@ trait Tokens {
   case class TDArr() extends Token
   case class TAt() extends Token
   case class TTilde() extends Token
+  case class TMinus() extends Token
   
   // Implicit layout
   case class VLCurly() extends Token

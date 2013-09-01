@@ -78,7 +78,8 @@ object Lexer extends Parsers with Tokens {
       "->" -> (_ => new TRArr),
       "=>" -> (_ => new TDArr),
       "@"  -> (_ => new TAt),
-      "~"  -> (_ => new TTilde)
+      "~"  -> (_ => new TTilde),
+      "-"  -> (_ => new TMinus)
   )
   
   def isSymbol(c:Char) = 

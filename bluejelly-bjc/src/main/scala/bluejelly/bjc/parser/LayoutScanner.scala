@@ -155,7 +155,6 @@ class LayoutScanner(
    * parser has to handle the error by trying to pop the current 
    * layout context if possible.
    */
-  // inImplicitLayout duplicates code in LayoutScanner object, ugh...
-  def inImplicitLayout = !ctx.isEmpty && ctx.top > 0
+  def inImplicitLayout = LayoutScanner.inImplicitLayout(ctx)
   def popCurrentLayout = new LayoutScanner(in,b,ctx.pop)
 }

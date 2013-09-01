@@ -17,7 +17,7 @@ import scala.util.parsing.input.{Reader,Position,CharArrayReader,PagedSeqReader}
  * @author ppedemon
  */
 class ExplicitPosition(
-    source:CharSequence,  // The while string
+    source:CharSequence,  // The whole string so far
     rowOffset:Int,
     row:Int, 
     col:Int) extends Position {
