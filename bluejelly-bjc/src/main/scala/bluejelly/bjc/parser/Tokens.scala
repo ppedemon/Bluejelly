@@ -74,7 +74,6 @@ trait Tokens {
 
   // Reserved
   case class TDotDot() extends Token
-  case class TColon() extends Token
   case class TCoCo() extends Token
   case class TEq() extends Token
   case class TLam() extends Token

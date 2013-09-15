@@ -28,7 +28,7 @@ object BluejellyCompiler {
   }
   
   def main(args:Array[String]) {
-    val scanner = new LayoutScanner("--> - -- a")
+    val scanner = new LayoutScanner("--> : - -- a")
     val toks = scan(scanner)
     for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
     /*

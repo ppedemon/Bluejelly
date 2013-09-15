@@ -69,7 +69,6 @@ object Lexer extends Parsers with Tokens {
   
   private def reservedOps:Map[String, Unit => Token] = Map(
       ".." -> (_ => new TDotDot),
-      ":"  -> (_ => new TColon),
       "::" -> (_ => new TCoCo),
       "="  -> (_ => new TEq),
       "\\" -> (_ => new TLam),
