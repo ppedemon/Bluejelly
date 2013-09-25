@@ -6,10 +6,12 @@
  */
 package bluejelly.bjc.parser
 
+import java.math.BigInteger
+
 import scala.util.parsing.input.{Positional}
 import scala.util.parsing.combinator.{Parsers}
+
 import bluejelly.utils.Name
-import java.math.BigInteger
 
 /**
  * Basic lexer for the bluejelly top-level language.
@@ -50,6 +52,7 @@ object Lexer extends Parsers with Tokens {
       "deriving"  -> (_ => new TDeriving),
       "do"        -> (_ => new TDo),
       "else"      -> (_ => new TElse),
+      "forall"    -> (_ => new TForall),
       "if"        -> (_ => new TIf),
       "import"    -> (_ => new TImport),
       "in"        -> (_ => new TIn),
@@ -77,8 +80,7 @@ object Lexer extends Parsers with Tokens {
       "->" -> (_ => new TRArr),
       "=>" -> (_ => new TDArr),
       "@"  -> (_ => new TAt),
-      "~"  -> (_ => new TTilde),
-      "-"  -> (_ => new TMinus)
+      "~"  -> (_ => new TTilde)
   )
   
   def isSymbol(c:Char) = 
@@ -145,15 +147,20 @@ object Lexer extends Parsers with Tokens {
     |(modid <~ '.') ~ consym ^? 
       {case q~sym if !(reservedOps contains sym) => QConSym(Name(q,sym))} 
     |(modid <~ '.') ~ varsym ^? 
-      {case q~sym if !(reservedOps contains sym) => QVarSym(Name(q,sym))} 
+      {case q~sym if !((sym matches "-{2,}") || (reservedOps contains sym)) => 
+        QVarSym(Name(q,sym))} 
     |varid  ^^ 
-      {id => keywords.getOrElse(id, (_:Unit) => new VarId(Name(id)))()}
+      {case "as" => TAs()
+       case "hiding" => THiding()
+       case "qualified" => TQualified()
+       case id => keywords.getOrElse(id, (_:Unit) => new VarId(Name(id)))()}
     |conid  ^^ 
       {id => ConId(Name(id))}
     |consym ^^ 
-      {sym => reservedOps.getOrElse(sym, (_:Unit) => ConSym(Name(sym)))()}
-    |varsym ^^ 
-      {sym => reservedOps.getOrElse(sym, (_:Unit) => VarSym(Name(sym)))()})
+      {case sym => reservedOps.getOrElse(sym, (_:Unit) => ConSym(Name(sym)))()}
+    |varsym ^^
+      {case "-" => TMinus()
+       case sym => reservedOps.getOrElse(sym, (_:Unit) => VarSym(Name(sym)))()})
 
   // ---------------------------------------------------------------------
   // Floating point literals

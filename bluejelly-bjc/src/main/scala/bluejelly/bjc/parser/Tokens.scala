@@ -38,6 +38,7 @@ trait Tokens {
   case class StringLit(val x:String) extends Token
   
   // Keywords
+  case class TAs() extends Token
   case class TCase() extends Token
   case class TClass() extends Token
   case class TData() extends Token
@@ -45,6 +46,8 @@ trait Tokens {
   case class TDeriving() extends Token
   case class TDo() extends Token
   case class TElse() extends Token
+  case class TForall() extends Token
+  case class THiding() extends Token
   case class TIf() extends Token
   case class TImport() extends Token
   case class TIn() extends Token
@@ -56,6 +59,7 @@ trait Tokens {
   case class TModule() extends Token
   case class TOf() extends Token
   case class TPrim() extends Token
+  case class TQualified() extends Token
   case class TThen() extends Token
   case class TType() extends Token
   case class TWhere() extends Token

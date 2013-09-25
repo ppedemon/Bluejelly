@@ -28,13 +28,13 @@ object BluejellyCompiler {
   }
   
   def main(args:Array[String]) {
-    val scanner = new LayoutScanner("--> : - -- a")
+    /*
+    val scanner = new LayoutScanner("qualified A.hiding B.- - M.-- a M.@")
     val toks = scan(scanner)
     for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
-    /*
-    val result = BluejellyParser.phrase(BluejellyParser.program, 
-        "module X where let w;z;y in z")
-    println(result)
     */
+    val result = BluejellyParser.phrase(BluejellyParser.program, 
+        "module X where a.M.x (Prelude.-) x hiding (+) (-) (-->) (M.-->)")
+    println(result)
   }
 }

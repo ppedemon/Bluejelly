@@ -97,12 +97,18 @@ class LexerSuite extends FunSuite {
         VarId(Name("a'b")),
         QVarId(Name("M","a")),
         QVarId(Name("bluejelly.lexer.Lexer","lex")),
+        TQualified(),
+        QVarId(Name("Prelude","as")),
         ConId(Name("List")),
         QConId(Name("List","List")),
         QConId(Name("bluejelly.List","List")),
         VarSym(Name("-->")),
         QVarSym(Name("M",".+.")),
         QVarSym(Name("bluejelly.lexer.Lexer",".:.")),
+        QVarSym(Name("Prelude","-")),
+        QVarSym(Name("Prelude","--+")),
+        ConId(Name("Prelude")),
+        VarSym(Name(".--")),
         ConSym(Name(":+")),
         QConSym(Name("Complex",":+")),
         QConSym(Name("bluejelly.Complex",":+")),
@@ -136,7 +142,8 @@ class LexerSuite extends FunSuite {
       TDArr(),
       VarSym(Name("<=")),
       TEq(),
-      VarSym(Name(">"))
+      VarSym(Name(">")),
+      TMinus()
     ))
   }
   

@@ -2,6 +2,8 @@
 a'b
 M.a
 bluejelly.lexer.Lexer.lex
+qualified
+Prelude.as
 
 -- Possibly qualified conids
 List
@@ -12,6 +14,9 @@ bluejelly.List.List
 --> -- This is a tricky one!
 M..+.
 bluejelly.lexer.Lexer..:.
+Prelude.-
+Prelude.--+
+Prelude.--
 
 -- Possibly qualified consyms
 :+
