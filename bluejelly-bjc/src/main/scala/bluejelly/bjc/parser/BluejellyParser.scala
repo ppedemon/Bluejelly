@@ -120,10 +120,10 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
 
   // Keywords
-  private def module = elem("keyword `module'", _.isInstanceOf[TModule])
-  private def where  = elem("keyword `where'", _.isInstanceOf[TWhere])
-  private def let    = elem("keyword `let'", _.isInstanceOf[TLet])
-  private def in     = elem("keyword `in'", _.isInstanceOf[TIn])
+  private def module = elem(kwd("module"), _.isInstanceOf[TModule])
+  private def where  = elem(kwd("where"), _.isInstanceOf[TWhere])
+  private def let    = elem(kwd("let"), _.isInstanceOf[TLet])
+  private def in     = elem(kwd("in"), _.isInstanceOf[TIn])
     
   // Reserved stuff
   private def minus = elem(_.isInstanceOf[TMinus])
