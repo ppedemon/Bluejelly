@@ -17,7 +17,7 @@ import bluejelly.utils.Name
  */
 trait Tokens {
   // Abstract tokens (we know the position of every token)
-  abstract class Token extends Positional
+  sealed abstract class Token extends Positional
 
   // Identifiers
   case class VarId(val id:Name) extends Token
@@ -56,6 +56,7 @@ trait Tokens {
   case class TInfixr() extends Token
   case class TInstance() extends Token
   case class TLet() extends Token
+  case class TMDo() extends Token
   case class TModule() extends Token
   case class TOf() extends Token
   case class TPrim() extends Token

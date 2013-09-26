@@ -52,7 +52,6 @@ object Lexer extends Parsers with Tokens {
       "deriving"  -> (_ => new TDeriving),
       "do"        -> (_ => new TDo),
       "else"      -> (_ => new TElse),
-      "forall"    -> (_ => new TForall),
       "if"        -> (_ => new TIf),
       "import"    -> (_ => new TImport),
       "in"        -> (_ => new TIn),
@@ -61,6 +60,7 @@ object Lexer extends Parsers with Tokens {
       "infixr"    -> (_ => new TInfixr),
       "instance"  -> (_ => new TInstance),
       "let"       -> (_ => new TLet),
+      "mdo"       -> (_ => new TMDo),
       "module"    -> (_ => new TModule),
       "of"        -> (_ => new TOf),
       "primitive" -> (_ => new TPrim),
@@ -151,6 +151,7 @@ object Lexer extends Parsers with Tokens {
         QVarSym(Name(q,sym))} 
     |varid  ^^ 
       {case "as" => TAs()
+       case "forall" => TForall() 
        case "hiding" => THiding()
        case "qualified" => TQualified()
        case id => keywords.getOrElse(id, (_:Unit) => new VarId(Name(id)))()}

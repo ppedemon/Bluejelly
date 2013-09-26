@@ -45,10 +45,15 @@ object BluejellyParser extends Parsers {
   private def badLayout(s:String) = "%s, possibly due to bad layout" format s
   
   def unexpected(t:Token) = t match {
-    case VarId(n)   => identifier(n.toString)
-    case ConId(n)   => identifier(n.toString)
-    case QVarId(n)  => identifier(n.toString)
-    case QConId(n)  => identifier(n.toString)
+    case VarId(n)     => identifier(n.toString)
+    case ConId(n)     => identifier(n.toString)
+    case QVarId(n)    => identifier(n.toString)
+    case QConId(n)    => identifier(n.toString)
+    case TAs()        => identifier("as")
+    case TForall()    => identifier("forall")
+    case THiding()    => identifier("hiding")
+    case TQualified() => identifier("qualified")  
+
     case VarSym(n)  => operator(n.toString)
     case ConSym(n)  => operator(n.toString)
     case QVarSym(n) => operator(n.toString)
@@ -66,7 +71,6 @@ object BluejellyParser extends Parsers {
     case TDeriving() => kwd("deriving")
     case TDo()       => kwd("do")
     case TElse()     => kwd("else")
-    case TForall()   => kwd("forall")
     case TIf()       => kwd("if")
     case TImport()   => kwd("import")
     case TIn()       => kwd("in")
@@ -75,6 +79,7 @@ object BluejellyParser extends Parsers {
     case TInfixr()   => kwd("infixr")
     case TInstance() => kwd("instance")
     case TLet()      => kwd("let")
+    case TMDo()      => kwd("mdo")
     case TModule()   => kwd("module")
     case TOf()       => kwd("of")
     case TPrim()     => kwd("primitive")
@@ -82,11 +87,7 @@ object BluejellyParser extends Parsers {
     case TType()     => kwd("type")
     case TWhere()    => kwd("where")
     
-    case TAs()        => "`as'"
-    case THiding()    => "`hiding'"
-    case TQualified() => "`qualified'"  
-    case TUnder()     => "`_'"
-      
+    case TUnder()     => "`_'"      
     case TLParen() => "`('"
     case TRParen() => "`('"
     case TLBrack() => "`['"
@@ -151,11 +152,13 @@ object BluejellyParser extends Parsers {
   private def varid = 
     ( elem("identifier", _.isInstanceOf[VarId]) ^^ 
         { case VarId(id) => unqualId(id.name) }
-    | elem("as", _.isInstanceOf[TAs]) ^^^ 
+    | elem("identifier", _.isInstanceOf[TAs]) ^^^ 
         { unqualId(Symbol("as")) }
-    | elem("hiding", _.isInstanceOf[THiding]) ^^^ 
+    | elem("identifier", _.isInstanceOf[TForall]) ^^^ 
+        { unqualId(Symbol("forall")) }
+    | elem("identifier", _.isInstanceOf[THiding]) ^^^ 
         { unqualId(Symbol("hiding")) }
-    | elem("qualified", _.isInstanceOf[TQualified]) ^^^ 
+    | elem("identifier", _.isInstanceOf[TQualified]) ^^^ 
         { unqualId(Symbol("qualified")) })
 
   private def varopNoMinus = elem("operator", _.isInstanceOf[VarSym]) ^^
@@ -201,7 +204,7 @@ object BluejellyParser extends Parsers {
       case in:LayoutScanner if in.inImplicitLayout => 
         Success(new VLCurly, in.popCurrentLayout)
       case in => 
-        Error("possibly incorrect indentation", in)
+        Error("possibly bad layout", in)
     }
   
   // Parser entry points
