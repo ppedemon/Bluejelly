@@ -16,6 +16,7 @@ object BluejellyParser extends Parsers {
   
   import Lexer._
   import bluejelly.bjc.common.Name._
+  import bluejelly.bjc.ast.NameConstants._
   
   type Elem = Token
     
@@ -117,20 +118,38 @@ object BluejellyParser extends Parsers {
   }
 
   // ---------------------------------------------------------------------
-  // Basic parsers for tokens
+  // Token parsers
   // ---------------------------------------------------------------------
 
+  // Names
+  private def VARID = elem("identifier",_.isInstanceOf[VarId]) ^^ 
+    { case VarId(id) => unqualId(id.name) }
+  private def VAROP = elem("operator",_.isInstanceOf[VarSym]) ^^ 
+    { case VarSym(op) => unqualOp(op.name) }
+  private def QVARID = elem("identifier",_.isInstanceOf[QVarId]) ^^ 
+    { case QVarId(id) => qualId(id.qual.get,id.name) }
+  private def QVAROP = elem("operator",_.isInstanceOf[QVarSym]) ^^ 
+    { case QVarSym(op) => qualOp(op.qual.get,op.name) }
+  private def CONID = elem("constructor",_.isInstanceOf[ConId]) ^^
+    { case ConId(id) => unqualId(id.name)}
+  private def CONOP = elem("constructor",_.isInstanceOf[ConSym]) ^^
+    { case ConSym(op) => unqualOp(op.name)}
+  private def QCONID = elem("constructor",_.isInstanceOf[QConId]) ^^
+    { case QConId(id) => qualId(id.qual.get,id.name)}
+  private def QCONOP = elem("constructor",_.isInstanceOf[QConSym]) ^^
+    { case QConSym(op) => qualOp(op.qual.get,op.name)}
+  
   // Keywords
   private def module = elem(kwd("module"), _.isInstanceOf[TModule])
   private def where  = elem(kwd("where"), _.isInstanceOf[TWhere])
   private def let    = elem(kwd("let"), _.isInstanceOf[TLet])
   private def in     = elem(kwd("in"), _.isInstanceOf[TIn])
     
-  // Reserved stuff
+  // Reserved
   private def minus = elem(_.isInstanceOf[TMinus])
   private def back  = elem(_.isInstanceOf[TBack])
   
-  // Special operators
+  // Special
   private def lpar    = elem(_.isInstanceOf[TLParen])
   private def rpar    = elem(_.isInstanceOf[TRParen])
   private def lcurly  = elem(_.isInstanceOf[TLCurly])
@@ -143,44 +162,53 @@ object BluejellyParser extends Parsers {
   private def eoi = elem("end of input", _.isInstanceOf[EOI])
 
   // ---------------------------------------------------------------------
-  // Variables + Operators
+  // Variables + Constructors (as identifiers or operators)
   // ---------------------------------------------------------------------
   
-  private def modid = elem("module name", _.isInstanceOf[ConId]) ^^ 
-    { case ConId(id) => id }
-
   private def varid = 
-    ( elem("identifier", _.isInstanceOf[VarId]) ^^ 
-        { case VarId(id) => unqualId(id.name) }
-    | elem("identifier", _.isInstanceOf[TAs]) ^^^ 
-        { unqualId(Symbol("as")) }
-    | elem("identifier", _.isInstanceOf[TForall]) ^^^ 
-        { unqualId(Symbol("forall")) }
-    | elem("identifier", _.isInstanceOf[THiding]) ^^^ 
-        { unqualId(Symbol("hiding")) }
-    | elem("identifier", _.isInstanceOf[TQualified]) ^^^ 
-        { unqualId(Symbol("qualified")) })
-
-  private def varopNoMinus = elem("operator", _.isInstanceOf[VarSym]) ^^
-    { case VarSym(op) => unqualOp(op.name) }
-  
-  private def varop = 
-    varopNoMinus | 
-    minus ^^^ { unqualOp(Symbol("-")) } |
-    back ~> varid <~ back
- 
+    ( elem("identifier", _.isInstanceOf[TAs]) ^^^ nmAs
+    | elem("identifier", _.isInstanceOf[TForall]) ^^^ nmForall
+    | elem("identifier", _.isInstanceOf[THiding]) ^^^ nmHiding
+    | elem("identifier", _.isInstanceOf[TQualified]) ^^^ nmQualified
+    | VARID)
+   
   private def vars = 
-    varid | 
-    lpar ~> varopNoMinus <~ rpar | 
-    lpar ~> minus <~ rpar ^^^ { unqualOp(Symbol("-")) }
+    varid | lpar ~> VAROP <~ rpar | lpar ~> minus <~ rpar ^^^ nmMinus
   
   private def qvar = 
-    ( elem("identifier", _.isInstanceOf[QVarId]) ^^ 
-        { case QVarId(id) => qualId(id.qual.get, id.name)}
-    | lpar ~> elem("operator", _.isInstanceOf[QVarSym]) <~ rpar ^^
-        { case QVarSym(op) => qualOp(op.qual.get,op.name)}
-    | vars)
+    QVARID | lpar ~> QVAROP <~ rpar | vars
+
+  private def varopNoMinus = 
+    VAROP | back ~> varid <~ back
+  
+  private def varop = 
+    varopNoMinus | minus ^^^ nmMinus
     
+  private def qvaropNoMinus = 
+    QVAROP | back ~> QVARID <~ back | varopNoMinus
+    
+  private def qvarop = 
+    qvaropNoMinus | minus ^^^ nmMinus
+    
+  private def con = 
+    CONID  | lpar ~> CONOP  <~ rpar
+  
+  private def qcon = 
+    QCONID | lpar ~> QCONOP <~ rpar | con
+  
+  private def conop = 
+    CONOP  | back ~> CONID  <~ back
+  
+  private def qconop = 
+    QCONOP | back ~> QCONID <~ back | conop
+  
+  private def qconid = 
+    QCONID | CONID  
+
+  private def op = varop | conop
+  private def qop = qvarop | qconop
+  private def modid = qconid
+  
   // A program
   def program = 
     (module ~> modid <~ where) ~ (vlcurly ~> body <~ vrcurly) |
@@ -188,7 +216,7 @@ object BluejellyParser extends Parsers {
 
   private def body = 
     //(let ~> block <~ in) ~ varid
-    qvar*
+    (qvar|qvarop)*
 
   /*  
   private def block = 

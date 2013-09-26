@@ -17,6 +17,15 @@ import bluejelly.bjc.common.PrettyPrintable
  */
 trait AstElem extends Positional with PrettyPrintable
 
+// Some useful name constants
+object NameConstants {
+  import bluejelly.bjc.common.Name.{unqualId,unqualOp}
+  val nmMinus     = unqualOp('-)
+  val nmAs        = unqualId('as)
+  val nmForall    = unqualId('forall)
+  val nmHiding    = unqualId('hiding)
+  val nmQualified = unqualId('qualified)
+}
 
 // ----------------------------------------------------------------------
 // Types
