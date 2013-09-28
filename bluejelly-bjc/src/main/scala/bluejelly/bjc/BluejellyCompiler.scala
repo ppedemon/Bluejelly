@@ -12,6 +12,7 @@ import java.io.FileReader
 import scala.util.parsing.input.Reader
 
 import bluejelly.bjc.parser.{Scanner,LayoutScanner,BluejellyParser}
+import bluejelly.utils.UnicodeFilter
 
 /**
  * Entry point for the Bluejelly compiler.
@@ -28,13 +29,16 @@ object BluejellyCompiler {
   }
   
   def main(args:Array[String]) {
+    val in = new UnicodeFilter(new FileReader("tmp/prog.in"))
+    val result = BluejellyParser.phrase(BluejellyParser.program, in)
+    result match {
+      case err@BluejellyParser.NoSuccess(_,_) => println(err)
+      case BluejellyParser.Success(m,_) => println(m)
+    }
     /*
     val scanner = new LayoutScanner("qualified A.hiding B.- - M.-- a M.@")
     val toks = scan(scanner)
     for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
     */
-    val result = BluejellyParser.phrase(BluejellyParser.program, 
-        "module M(C(a,M.b),D(..),Complex((:+),),a,b,E(,),(-))")
-    println(result)
   }
 }

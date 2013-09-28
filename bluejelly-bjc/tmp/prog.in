@@ -1,0 +1,5 @@
+module X where
+
+import A
+import qualified B(a)
+import Set as S hiding(a,C(a,(+)),Z(..),)

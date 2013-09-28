@@ -144,6 +144,10 @@ object BluejellyParser extends Parsers {
   // Keywords
   private def module = elem(kwd("module"), _.isInstanceOf[TModule])
   private def where  = elem(kwd("where"), _.isInstanceOf[TWhere])
+  private def imp    = elem(kwd("import"),_.isInstanceOf[TImport])
+  private def as     = elem(kwd("as"), _.isInstanceOf[TAs])
+  private def qual   = elem(kwd("qualified"), _.isInstanceOf[TQualified])
+  private def hiding = elem(kwd("hiding"), _.isInstanceOf[THiding])
   private def let    = elem(kwd("let"), _.isInstanceOf[TLet])
   private def in     = elem(kwd("in"), _.isInstanceOf[TIn])
     
@@ -168,7 +172,6 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
   // Variables + Constructors (as identifiers or operators)
   // ---------------------------------------------------------------------
-  
   private def varid = 
     ( elem("identifier", _.isInstanceOf[TAs]) ^^^ nmAs
     | elem("identifier", _.isInstanceOf[TForall]) ^^^ nmForall
@@ -216,7 +219,6 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
   // Exports
   // ---------------------------------------------------------------------
-
   private def export = positioned(
     ( qconid <~ (lpar ~ dotdot ~ rpar) ^^ {EAll(_)}
     | qconid ~ (lpar ~> enames <~ rpar) ^^ {case e~es => ESome(e,es)}
@@ -226,16 +228,41 @@ object BluejellyParser extends Parsers {
   
   private def enames = repsep(qvar|qcon,comma) <~ (comma?)
   
-  private def expspec = 
-    lpar ~> (repsep(export,comma) <~ (comma?)) <~ rpar
-  
+  private def expSpec = 
+    lpar ~> (repsep(export,comma) <~ (comma?)) <~ rpar | success(Nil)
+
   // ---------------------------------------------------------------------
-  // Top level module
+  // Imports
+  // ---------------------------------------------------------------------
+   private def inames = repsep(vars|con,comma) <~ (comma?)
+
+   private def impSpec = 
+     ( CONID <~ (lpar ~ dotdot ~ rpar) ^^ {IAll(_)}
+     | CONID ~ (lpar ~> inames <~ rpar) ^^ {case i~is => ISome(i,is)}
+     | CONID ^^ {INone(_)}
+     | vars ^^ {IVar(_)})
+   
+   private def imports = 
+     lpar ~> (repsep(impSpec,comma) <~ (comma?)) <~ rpar
+     
+   private def hImports = 
+     (hiding?) ~ imports ^^ {case h~is =>(h.isDefined,is)} |
+     success((false,Nil))
+     
+   private def impDecl:Parser[ImpDecl] = positioned(
+     imp ~> ((qual?) ~ modid ~ ((as ~> modid)?) ~ hImports) ^^ {
+       case q~m~a~i => new ImpDecl(m,q.isDefined,a,i._1,i._2)
+     })
+     
+   private def impDecls = repsep(impDecl,semi) <~ (semi?)
+     
+  // ---------------------------------------------------------------------
+  // Blocks, with implicit or explicit layout
   // ---------------------------------------------------------------------
 
-  def program = 
-    module ~> (modid ~ expspec) ^^ {case m~es => new Module(m,es)} |
-    lexError
+  private def block[T](p:Parser[T]) = 
+    vlcurly ~> p <~ close |
+    lcurly  ~> p <~ rcurly
   
   private def close = 
     vrcurly |
@@ -245,6 +272,19 @@ object BluejellyParser extends Parsers {
       case in => 
         Error("possibly bad layout", in)
     }
+
+  // ---------------------------------------------------------------------
+  // Top level module
+  // ---------------------------------------------------------------------
+
+  def program = 
+    ( module ~> (modid ~ expSpec ~ (where ~> block(modDecls))) ^^
+        { case m~es~body => new Module(m,es,body) }
+    | block(modDecls) ^^ 
+        { new Module(unqualId('Main), List(EVar(unqualId('main))), _) }
+    | lexError)
+  
+  private def modDecls = impDecls
   
   // Parser entry points
   def phrase[T](p:Parser[T], in:String) = 

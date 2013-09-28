@@ -45,6 +45,9 @@ trait PrettyPrintable {
  * @author ppedemon
  */
 object PprUtils {
+  
+  def nl = text("\n")
+  
   def quoted(x:Any) = text("`%s'" format x)
 
   def gnest(d:Document) = group(nest(2,d))
@@ -57,6 +60,9 @@ object PprUtils {
     }
   }
 
+  def cat(ds:List[Document]):Document = 
+    ds.foldLeft[Document](empty)(cat(_,_))
+    
   def between(l:String, d:Document, r:String) = 
     group(l :: d :: text(r))
       
@@ -72,4 +78,7 @@ object PprUtils {
     
   def pprList(xs:List[PrettyPrintable])  = between("[",pprMany(xs,","),"]")
   def pprTuple(xs:List[PrettyPrintable]) = between("(",pprMany(xs,","),")")
+  
+  def vppr(xs:List[PrettyPrintable]) = 
+    xs.foldRight[Document](empty)((x,d) => cat(x.ppr, nl :: d))
 }

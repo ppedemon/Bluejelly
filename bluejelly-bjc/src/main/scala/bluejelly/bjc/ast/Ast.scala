@@ -7,7 +7,7 @@
 package bluejelly.bjc.ast
 
 import scala.text.Document
-import scala.text.Document.{text}
+import scala.text.Document._
 import scala.util.parsing.input.Positional
 
 import bluejelly.bjc.common.Name
@@ -15,6 +15,7 @@ import bluejelly.bjc.common.Name._
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.PprUtils
 import bluejelly.bjc.common.PprUtils._
+import bluejelly.bjc.common.SimpleName
 
 // Some useful name constants
 object NameConstants {
@@ -53,9 +54,48 @@ case class EMod(name:Name) extends Export {
 }
 
 // -----------------------------------------------------------------------
-// Top level modules
+// Imports
 // -----------------------------------------------------------------------
 
-class Module(val name:Name, val exports:List[Export]) extends PrettyPrintable {
-  def ppr = "module" :/: name.ppr :: pprTuple(exports)
+abstract sealed class Import extends AstElem;
+case class IVar(name:Name) extends Import {
+  def ppr = name.ppr
+}
+case class INone(name:Name) extends Import {
+  def ppr = name.ppr
+}
+case class IAll(name:Name) extends Import {
+  def ppr = name.ppr :: text("(..)")
+}
+case class ISome(name:Name,children:List[Name]) extends Import {
+  def ppr = name.ppr :: pprTuple(children map asId)
+}
+
+class ImpDecl(
+    val modId:Name, 
+    val qualified:Boolean,
+    val alias:Option[Name],
+    val hidden:Boolean,
+    val imports:List[Import]) extends AstElem {
+  def ppr = group(
+    cat(List(
+      text("import"),
+      if (qualified) text("qualified") else empty,
+      modId.ppr,
+      alias.map("as" :/: _.ppr).getOrElse(empty),
+      if (hidden) text("hiding") else empty)) ::
+    (if (imports.isEmpty) empty else pprTuple(imports)))
+}
+
+// -----------------------------------------------------------------------
+// Top level module
+// -----------------------------------------------------------------------
+
+class Module(
+    val name:Name, 
+    val exports:List[Export],
+    val impDecls:List[ImpDecl]) extends PrettyPrintable {
+  def ppr = 
+    group("module" :/: name.ppr :: pprTuple(exports) :/: text("where")) :: nl ::
+    gnest(vppr(impDecls))
 }
