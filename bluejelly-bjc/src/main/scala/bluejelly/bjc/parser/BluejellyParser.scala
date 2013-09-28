@@ -16,6 +16,8 @@ object BluejellyParser extends Parsers {
   
   import Lexer._
   import bluejelly.bjc.common.Name._
+  
+  import bluejelly.bjc.ast._
   import bluejelly.bjc.ast.NameConstants._
   
   type Elem = Token
@@ -146,8 +148,10 @@ object BluejellyParser extends Parsers {
   private def in     = elem(kwd("in"), _.isInstanceOf[TIn])
     
   // Reserved
-  private def minus = elem(_.isInstanceOf[TMinus])
-  private def back  = elem(_.isInstanceOf[TBack])
+  private def minus  = elem(_.isInstanceOf[TMinus])
+  private def back   = elem(_.isInstanceOf[TBack])
+  private def dotdot = elem(_.isInstanceOf[TDotDot])
+  private def comma  = elem(_.isInstanceOf[TComma])
   
   // Special
   private def lpar    = elem(_.isInstanceOf[TLParen])
@@ -208,23 +212,30 @@ object BluejellyParser extends Parsers {
   private def op = varop | conop
   private def qop = qvarop | qconop
   private def modid = qconid
+
+  // ---------------------------------------------------------------------
+  // Exports
+  // ---------------------------------------------------------------------
+
+  private def export = positioned(
+    ( qconid <~ (lpar ~ dotdot ~ rpar) ^^ {EAll(_)}
+    | qconid ~ (lpar ~> enames <~ rpar) ^^ {case e~es => ESome(e,es)}
+    | qvar ^^ {EVar(_)}
+    | qcon ^^ {EVar(_)}
+    | module ~> modid ^^ {EMod(_)}))
   
-  // A program
+  private def enames = repsep(qvar|qcon,comma) <~ (comma?)
+  
+  private def expspec = 
+    lpar ~> (repsep(export,comma) <~ (comma?)) <~ rpar
+  
+  // ---------------------------------------------------------------------
+  // Top level module
+  // ---------------------------------------------------------------------
+
   def program = 
-    (module ~> modid <~ where) ~ (vlcurly ~> body <~ vrcurly) |
+    module ~> (modid ~ expspec) ^^ {case m~es => new Module(m,es)} |
     lexError
-
-  private def body = 
-    //(let ~> block <~ in) ~ varid
-    (qvar|qvarop)*
-
-  /*  
-  private def block = 
-    lcurly  ~> cmds <~ rcurly |
-    vlcurly ~> cmds <~ close
-    
-  private def cmds = rep1sep(varid, semi)
-  */
   
   private def close = 
     vrcurly |

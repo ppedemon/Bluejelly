@@ -6,6 +6,8 @@
  */
 package bluejelly.bjc.common
 
+import scala.text.Document.text
+
 /**
  * The <code>SimpleName</code> class models a name found in source code.
  * @author ppedemon
@@ -50,12 +52,13 @@ case class Tuple(arity:Int) extends SimpleName {
  * A <code>Name</code> is the common class for simple and qualified names.
  * @author ppedemon
  */
-sealed abstract class Name(val name:SimpleName) {
+sealed abstract class Name(val name:SimpleName) extends PrettyPrintable {
   def isId = name match {case Id(_) => true; case _ => false}
   def isOp = name match {case Op(_) => true; case _ => false}
   def isTuple = name match {case Tuple(_) => true; case _ => false}
   def qualified:Boolean
   def qualifier:Option[Symbol]
+  def ppr = text(toString)
 }
 
 /**
@@ -101,4 +104,19 @@ object Name {
   def qualOp(modId:Symbol, name:Symbol) = Qual(modId, Op(name))
   def qualId(modId:Symbol, name:Symbol) = Qual(modId, Id(name))
   def qualTuple(modId:Symbol, arity:Int) = Qual(modId, Tuple(arity))
+  
+  def asId(n:Name) = new PrettyPrintable {
+    def ppr = n.name match {
+      case Id(_)|Tuple(_) => n.ppr
+      case Op(_) => text("(%s)" format n)
+    }
+  }
+
+  def asOp(n:Name) = new PrettyPrintable {
+    def ppr = n.name match {
+      case Id(_) => text("`%s`" format n)
+      case Op(_)|Tuple(_) => n.ppr
+    }
+  }
+
 }

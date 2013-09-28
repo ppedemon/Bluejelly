@@ -34,8 +34,7 @@ object BluejellyCompiler {
     for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
     */
     val result = BluejellyParser.phrase(BluejellyParser.program, 
-        "module X where a.M.x (Prelude.-) `M.x` " +
-        "! (!) . (.) hiding (+) (-) (-->) (M.-->) M.forall forall")
+        "module M(C(a,M.b),D(..),Complex((:+),),a,b,E(,),(-))")
     println(result)
   }
 }

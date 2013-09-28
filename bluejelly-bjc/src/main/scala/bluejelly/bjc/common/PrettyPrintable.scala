@@ -67,7 +67,7 @@ object PprUtils {
     xs match {
       case Nil => empty
       case List(x) => x.ppr
-      case x::xs => x.ppr :/: sep :/: pprMany(xs,sep)
+      case x::xs => cat(x.ppr :: text(sep), pprMany(xs,sep))
     })
     
   def pprList(xs:List[PrettyPrintable])  = between("[",pprMany(xs,","),"]")
