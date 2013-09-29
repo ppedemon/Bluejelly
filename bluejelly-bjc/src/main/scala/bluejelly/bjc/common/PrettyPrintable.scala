@@ -64,7 +64,7 @@ object PprUtils {
     ds.foldLeft[Document](empty)(cat(_,_))
     
   def between(l:String, d:Document, r:String) = 
-    group(l :: d :: text(r))
+    l :: d :: text(r)
       
   def pprMany(xs:List[PrettyPrintable]) = 
     group(xs.foldRight[Document](empty)((x,d) => cat(x.ppr,d)))
@@ -80,5 +80,5 @@ object PprUtils {
   def pprTuple(xs:List[PrettyPrintable]) = between("(",pprMany(xs,","),")")
   
   def vppr(xs:List[PrettyPrintable]) = 
-    xs.foldRight[Document](empty)((x,d) => cat(x.ppr, nl :: d))
+    xs.foldRight[Document](empty)((x,d) => x.ppr :: nl :: d)
 }

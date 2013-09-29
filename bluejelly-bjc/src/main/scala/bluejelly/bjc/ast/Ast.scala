@@ -15,7 +15,6 @@ import bluejelly.bjc.common.Name._
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.PprUtils
 import bluejelly.bjc.common.PprUtils._
-import bluejelly.bjc.common.SimpleName
 
 // Some useful name constants
 object NameConstants {
@@ -59,7 +58,7 @@ case class EMod(name:Name) extends Export {
 
 abstract sealed class Import extends AstElem;
 case class IVar(name:Name) extends Import {
-  def ppr = name.ppr
+  def ppr = asId(name).ppr
 }
 case class INone(name:Name) extends Import {
   def ppr = name.ppr
@@ -77,14 +76,16 @@ class ImpDecl(
     val alias:Option[Name],
     val hidden:Boolean,
     val imports:List[Import]) extends AstElem {
-  def ppr = group(
-    cat(List(
-      text("import"),
-      if (qualified) text("qualified") else empty,
-      modId.ppr,
-      alias.map("as" :/: _.ppr).getOrElse(empty),
-      if (hidden) text("hiding") else empty)) ::
-    (if (imports.isEmpty) empty else pprTuple(imports)))
+  def ppr = {
+    val d0 = if (qualified) text("import qualified") else text("import")
+    val d1 = group(if (alias.isEmpty) 
+      d0 :/: modId.ppr else 
+      d0 :/: modId.ppr :/: "as" :/: alias.get.ppr)
+    val d2 = if (hidden) 
+      d1 :/: "hiding" :: pprTuple(imports) else 
+      d1 :: pprTuple(imports)
+    d2
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -96,6 +97,6 @@ class Module(
     val exports:List[Export],
     val impDecls:List[ImpDecl]) extends PrettyPrintable {
   def ppr = 
-    group("module" :/: name.ppr :: pprTuple(exports) :/: text("where")) :: nl ::
-    gnest(vppr(impDecls))
+    gnest("module" :/: name.ppr :: pprTuple(exports) :/: text("where")) :/:
+    gnest(nl :: vppr(impDecls))
 }

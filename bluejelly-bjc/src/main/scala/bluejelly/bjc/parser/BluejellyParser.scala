@@ -16,7 +16,6 @@ object BluejellyParser extends Parsers {
   
   import Lexer._
   import bluejelly.bjc.common.Name._
-  
   import bluejelly.bjc.ast._
   import bluejelly.bjc.ast.NameConstants._
   
@@ -150,7 +149,17 @@ object BluejellyParser extends Parsers {
   private def hiding = elem(kwd("hiding"), _.isInstanceOf[THiding])
   private def let    = elem(kwd("let"), _.isInstanceOf[TLet])
   private def in     = elem(kwd("in"), _.isInstanceOf[TIn])
-    
+  
+  private def dot = elem(_ match {
+    case t:VarSym => (t.asInstanceOf[VarSym].sym.name == Symbol("."))
+    case _ => false
+  })
+  
+  private def bang = elem(_ match {
+    case t:VarSym => (t.asInstanceOf[VarSym].sym.name == '!)
+    case _ => false
+  })
+  
   // Reserved
   private def minus  = elem(_.isInstanceOf[TMinus])
   private def back   = elem(_.isInstanceOf[TBack])
@@ -214,7 +223,11 @@ object BluejellyParser extends Parsers {
 
   private def op = varop | conop
   private def qop = qvarop | qconop
-  private def modid = qconid
+  
+  private def modid = ((VARID <~ dot)*) ~ CONID ^^ {
+    case qs~m => 
+      if (qs.isEmpty) m else qualId(Symbol(qs mkString ("",".","")), m.name)
+  }
 
   // ---------------------------------------------------------------------
   // Exports

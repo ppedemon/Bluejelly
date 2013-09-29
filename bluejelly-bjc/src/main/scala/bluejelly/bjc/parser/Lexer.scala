@@ -148,7 +148,7 @@ object Lexer extends Parsers with Tokens {
       {case q~sym if !(reservedOps contains sym) => QConSym(Name(q,sym))} 
     |(modid <~ '.') ~ varsym ^? 
       {case q~sym if !((sym matches "-{2,}") || (reservedOps contains sym)) => 
-        QVarSym(Name(q,sym))} 
+        QVarSym(Name(q,sym))}
     |varid  ^^ 
       {case "as" => TAs()
        case "forall" => TForall() 
