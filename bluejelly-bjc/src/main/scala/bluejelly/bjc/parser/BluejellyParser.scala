@@ -141,14 +141,14 @@ object BluejellyParser extends Parsers {
     { case QConSym(op) => qualOp(op.qual.get,op.name)}
   
   // Keywords
-  private def module = elem(kwd("module"), _.isInstanceOf[TModule])
-  private def where  = elem(kwd("where"), _.isInstanceOf[TWhere])
-  private def imp    = elem(kwd("import"),_.isInstanceOf[TImport])
-  private def as     = elem(kwd("as"), _.isInstanceOf[TAs])
-  private def qual   = elem(kwd("qualified"), _.isInstanceOf[TQualified])
-  private def hiding = elem(kwd("hiding"), _.isInstanceOf[THiding])
-  private def let    = elem(kwd("let"), _.isInstanceOf[TLet])
-  private def in     = elem(kwd("in"), _.isInstanceOf[TIn])
+  private def module   = elem(kwd("module"), _.isInstanceOf[TModule])
+  private def where    = elem(kwd("where"), _.isInstanceOf[TWhere])
+  private def `import` = elem(kwd("import"),_.isInstanceOf[TImport])
+  private def as       = elem(kwd("as"), _.isInstanceOf[TAs])
+  private def qual     = elem(kwd("qualified"), _.isInstanceOf[TQualified])
+  private def hiding   = elem(kwd("hiding"), _.isInstanceOf[THiding])
+  private def let      = elem(kwd("let"), _.isInstanceOf[TLet])
+  private def in       = elem(kwd("in"), _.isInstanceOf[TIn])
   
   private def dot = elem(_ match {
     case t:VarSym => (t.asInstanceOf[VarSym].sym.name == Symbol("."))
@@ -232,7 +232,7 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
   // Exports
   // ---------------------------------------------------------------------
-  private def export = positioned(
+  private def expSpec = positioned(
     ( qconid <~ (lpar ~ dotdot ~ rpar) ^^ {EAll(_)}
     | qconid ~ (lpar ~> enames <~ rpar) ^^ {case e~es => ESome(e,es)}
     | qvar ^^ {EVar(_)}
@@ -241,8 +241,9 @@ object BluejellyParser extends Parsers {
   
   private def enames = repsep(qvar|qcon,comma) <~ (comma?)
   
-  private def expSpec = 
-    lpar ~> (repsep(export,comma) <~ (comma?)) <~ rpar | success(Nil)
+  private def exports = 
+    ( lpar ~> (repsep(expSpec,comma) <~ (comma?)) <~ rpar ^^ {ExportSome(_)} 
+    | success(ExportAll))
 
   // ---------------------------------------------------------------------
   // Imports
@@ -255,19 +256,24 @@ object BluejellyParser extends Parsers {
      | CONID ^^ {INone(_)}
      | vars ^^ {IVar(_)})
    
-   private def imports = 
+   private def impSpecs = 
      lpar ~> (repsep(impSpec,comma) <~ (comma?)) <~ rpar
      
-   private def hImports = 
-     (hiding?) ~ imports ^^ {case h~is =>(h.isDefined,is)} |
-     success((false,Nil))
+   private def imports = 
+     ((hiding?) ~ impSpecs ^^ {
+       case h~is if h.isDefined => HideSome(is)
+       case _~is => ImportSome(is)
+     }
+     | success(ImportAll))
      
-   private def impDecl:Parser[ImpDecl] = positioned(
-     imp ~> ((qual?) ~ modid ~ ((as ~> modid)?) ~ hImports) ^^ {
-       case q~m~a~i => new ImpDecl(m,q.isDefined,a,i._1,i._2)
+   private def impDecl = positioned(
+     `import` ~> ((qual?) ~ modid ~ ((as ~> modid)?) ~ imports) ^^ {
+       case q~m~a~i => new ImpDecl(m,q.isDefined,a,i)
      })
      
-   private def impDecls = repsep(impDecl,semi) <~ (semi?)
+   private def impDecls = 
+     repsep(impDecl,semi) <~ (semi?) ^^ 
+       {_ map (i => (m:Module) => m.addImpDecl(i))}
      
   // ---------------------------------------------------------------------
   // Blocks, with implicit or explicit layout
@@ -291,13 +297,13 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
 
   def program = 
-    ( module ~> (modid ~ expSpec ~ (where ~> block(modDecls))) ^^
-        { case m~es~body => new Module(m,es,body) }
+    ( module ~> (modid ~ exports ~ (where ~> block(modDecls))) ^^
+        { case m~es~body => body.foldRight(new Module(m,es))((f,m) => f(m))}
     | block(modDecls) ^^ 
-        { new Module(unqualId('Main), List(EVar(unqualId('main))), _) }
+        { _.foldRight(Module.defaultModule)((f,m) => f(m)) }
     | lexError)
   
-  private def modDecls = impDecls
+  private def modDecls = impDecls 
   
   // Parser entry points
   def phrase[T](p:Parser[T], in:String) = 

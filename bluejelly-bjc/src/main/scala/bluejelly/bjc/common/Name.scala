@@ -8,7 +8,11 @@ package bluejelly.bjc.common
 
 import scala.text.Document.text
 
-sealed abstract class NameClass
+/**
+ * Names can be identifiers or operators.
+ * @author ppedemon
+ */
+sealed trait NameClass
 case object Id extends NameClass
 case object Op extends NameClass
 
@@ -33,7 +37,7 @@ case class Unqual(val name:Symbol,override val nc:NameClass) extends Name(nc) {
   override def qualified = false
   override def qualifier = None
   override def toString = name.toString.drop(1)
-  override def hashCode = name.hashCode
+  override def hashCode = nc.hashCode*17 + name.hashCode
   override def equals(other:Any) = other match {
     case x:Unqual => x.nc == nc && x.name == name 
     case _ => false
@@ -51,7 +55,7 @@ case class Qual(
   override def qualified = true
   override def qualifier = Some(modId)
   override def toString = "%s.%s" format (modId.toString.drop(1), name.toString.drop(1))
-  override def hashCode = modId.hashCode*17 + name.hashCode
+  override def hashCode = (nc.hashCode*17 + modId.hashCode)*17 + name.hashCode
   override def equals(other:Any) = other match {
     case x:Qual => x.nc == nc && x.modId == modId && x.name == name
     case _ => false
@@ -70,15 +74,11 @@ object Name {
   
   def asId(n:Name) = n.nc match {
     case Id => n
-    case Op => new PrettyPrintable {
-      def ppr = text("(%s)" format n)
-    }
+    case Op => new PrettyPrintable { def ppr = text("(%s)" format n) }
   } 
 
   def asOp(n:Name) = n.nc match {
-    case Id => new PrettyPrintable {
-      def ppr = text("`%s`" format n)
-    }
     case Op => n
+    case Id => new PrettyPrintable { def ppr = text("`%s`" format n) }
   } 
 }

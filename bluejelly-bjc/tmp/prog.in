@@ -1,5 +1,7 @@
-module bluejelly.X where
+module bluejelly.X(module custom.B,module S) where
 
 import A
-import qualified bluejelly.org.B
-import qualified ds.Set as S hiding(a,C(a,(+)),Z(..),)
+import B()
+import B hiding()
+import qualified custom.B
+import qualified container.Set as S hiding(a,C(a,(+)),Z(..),)

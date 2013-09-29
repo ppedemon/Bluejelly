@@ -38,53 +38,67 @@ trait AstElem extends Positional with PrettyPrintable
 // Exports
 // -----------------------------------------------------------------------
 
-abstract sealed class Export extends AstElem;
-case class EVar(name:Name) extends Export {
+sealed trait ESpec extends AstElem;
+case class EVar(name:Name) extends ESpec {
   def ppr = asId(name).ppr
 }
-case class EAll(name:Name) extends Export {
+case class EAll(name:Name) extends ESpec {
   def ppr = asId(name).ppr :: text("(..)")
 }
-case class ESome(name:Name,children:List[Name]) extends Export {
+case class ESome(name:Name,children:List[Name]) extends ESpec {
   def ppr = asId(name).ppr :: pprTuple(children map asId)
 }
-case class EMod(name:Name) extends Export {
+case class EMod(name:Name) extends ESpec {
   def ppr = "module" :/: name.ppr
+}
+
+sealed trait Exports extends PrettyPrintable;
+case object ExportAll extends Exports { def ppr = empty }
+case class ExportSome(es:List[ESpec]) extends Exports { 
+  def ppr = pprTuple(es) 
 }
 
 // -----------------------------------------------------------------------
 // Imports
 // -----------------------------------------------------------------------
 
-abstract sealed class Import extends AstElem;
-case class IVar(name:Name) extends Import {
+sealed trait ISpec extends AstElem;
+case class IVar(name:Name) extends ISpec {
   def ppr = asId(name).ppr
 }
-case class INone(name:Name) extends Import {
+case class INone(name:Name) extends ISpec {
   def ppr = name.ppr
 }
-case class IAll(name:Name) extends Import {
+case class IAll(name:Name) extends ISpec {
   def ppr = name.ppr :: text("(..)")
 }
-case class ISome(name:Name,children:List[Name]) extends Import {
+case class ISome(name:Name,children:List[Name]) extends ISpec {
   def ppr = name.ppr :: pprTuple(children map asId)
+}
+
+sealed trait Imports extends PrettyPrintable;
+case object ImportAll extends Imports { def ppr = empty}
+case class ImportSome(val is:List[ISpec]) extends Imports {
+  def ppr = pprTuple(is)
+}
+case class HideSome(val is:List[ISpec]) extends Imports {
+  def ppr = "hiding" :: pprTuple(is)
 }
 
 class ImpDecl(
     val modId:Name, 
     val qualified:Boolean,
     val alias:Option[Name],
-    val hidden:Boolean,
-    val imports:List[Import]) extends AstElem {
+    val imports:Imports) extends AstElem {
   def ppr = {
     val d0 = if (qualified) text("import qualified") else text("import")
     val d1 = group(if (alias.isEmpty) 
       d0 :/: modId.ppr else 
       d0 :/: modId.ppr :/: "as" :/: alias.get.ppr)
-    val d2 = if (hidden) 
-      d1 :/: "hiding" :: pprTuple(imports) else 
-      d1 :: pprTuple(imports)
-    d2
+    imports match {
+      case HideSome(_) => d1 :/: imports.ppr
+      case _ => d1 :: imports.ppr
+    }
   }
 }
 
@@ -94,9 +108,20 @@ class ImpDecl(
 
 class Module(
     val name:Name, 
-    val exports:List[Export],
+    val exports:Exports,
     val impDecls:List[ImpDecl]) extends PrettyPrintable {
+  
+  def this(name:Name,exports:Exports) = this(name,exports,Nil)
+  
+  def addImpDecl(i:ImpDecl) = new Module(name,exports,i::impDecls)
+  
   def ppr = 
-    gnest("module" :/: name.ppr :: pprTuple(exports) :/: text("where")) :/:
+    gnest("module" :/: name.ppr :: exports.ppr :/: text("where")) :/:
     gnest(nl :: vppr(impDecls))
+}
+
+object Module {
+  private def defaultName = unqualId('Main)
+  private def defaultExports = ExportSome(List(EVar(unqualId('main))))
+  def defaultModule = new Module(defaultName, defaultExports)
 }
