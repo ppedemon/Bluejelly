@@ -5,39 +5,19 @@
  * the BSD license, see the LICENSE file for details.
  */
 package bluejelly.bjc.ast
+package module
 
 import scala.text.Document
 import scala.text.Document._
-import scala.util.parsing.input.Positional
 
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.Name._
-import bluejelly.bjc.common.PrettyPrintable
-import bluejelly.bjc.common.PprUtils
 import bluejelly.bjc.common.PprUtils._
-
-// Some useful name constants
-object NameConstants {
-  import bluejelly.bjc.common.Name.{unqualId,unqualOp}
-  val nmMinus     = unqualOp('-)
-  val nmAs        = unqualId('as)
-  val nmForall    = unqualId('forall)
-  val nmHiding    = unqualId('hiding)
-  val nmQualified = unqualId('qualified)
-}
-
-/**
- * Every syntax tree node has a position and is {@link PrettyPrintable}.
- * We record such constraints in the <code>AstElem</code> trait.
- * 
- * @author ppedemon
- */
-trait AstElem extends Positional with PrettyPrintable
+import bluejelly.bjc.common.PrettyPrintable
 
 // -----------------------------------------------------------------------
-// Exports
+// Syntax tree for module exports
 // -----------------------------------------------------------------------
-
 sealed trait ESpec extends AstElem;
 case class EVar(name:Name) extends ESpec {
   def ppr = asId(name).ppr
@@ -59,9 +39,8 @@ case class ExportSome(es:List[ESpec]) extends Exports {
 }
 
 // -----------------------------------------------------------------------
-// Imports
+// Syntax tree for module imports
 // -----------------------------------------------------------------------
-
 sealed trait ISpec extends AstElem;
 case class IVar(name:Name) extends ISpec {
   def ppr = asId(name).ppr
@@ -103,9 +82,8 @@ class ImpDecl(
 }
 
 // -----------------------------------------------------------------------
-// Top level module
+// A top-level module.
 // -----------------------------------------------------------------------
-
 class Module(
     val name:Name, 
     val exports:Exports,

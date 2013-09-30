@@ -16,8 +16,8 @@ object BluejellyParser extends Parsers {
   
   import Lexer._
   import bluejelly.bjc.common.Name._
-  import bluejelly.bjc.ast._
-  import bluejelly.bjc.ast.NameConstants._
+  import bluejelly.bjc.ast.module._
+  import bluejelly.bjc.ast.NameConstants._  
   
   type Elem = Token
     
