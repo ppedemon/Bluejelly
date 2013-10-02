@@ -29,17 +29,3 @@ object NameConstants {
  * @author ppedemon
  */
 trait AstElem extends Positional with PrettyPrintable
-
-/**
- * Common trait for top-level module declarations.
- * @author ppedemon
- */
-trait TopLevelDecl extends AstElem
-
-/**
- * Common trait for declarations that can be local (e.g., they can
- * appear inside a "where" or a "let"). This is a refinement of
- * trait [[TopLevelDecl]].
- * @author ppedemon
- */
-trait Decl extends TopLevelDecl

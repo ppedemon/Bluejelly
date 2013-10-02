@@ -3,5 +3,8 @@ module bluejelly.X(module custom.B,module S) where
 import A
 import B()
 import B hiding()
+
 import qualified custom.B(a,b,c,Eq((==),(/=)))
 import qualified container.Set as S hiding(a,C(a,(+)),Z(..),)
+
+a,b::hiding

@@ -7,6 +7,7 @@
 package bluejelly.bjc.parser
 
 import scala.util.parsing.combinator.Parsers
+import bluejelly.bjc.ast.TySigDecl
 
 /**
  * Bluejelly parser.
@@ -17,6 +18,7 @@ object BluejellyParser extends Parsers {
   import Lexer._
   import bluejelly.bjc.common.Name._
   import bluejelly.bjc.ast
+  import bluejelly.bjc.ast.types
   import bluejelly.bjc.ast.module._
   import bluejelly.bjc.ast.NameConstants._  
   
@@ -166,6 +168,7 @@ object BluejellyParser extends Parsers {
   private def back   = elem(_.isInstanceOf[TBack])
   private def dotdot = elem(_.isInstanceOf[TDotDot])
   private def comma  = elem(_.isInstanceOf[TComma])
+  private def coco   = elem(_.isInstanceOf[TCoCo])
   
   // Special
   private def lpar    = elem(_.isInstanceOf[TLParen])
@@ -272,10 +275,19 @@ object BluejellyParser extends Parsers {
        case q~m~a~i => new ImpDecl(m,q.isDefined,a,i)
      })
      
-   private def impDecls = 
-     repsep(impDecl,semi) <~ (semi?) ^^ 
+   private def impDecls = rep1sep(impDecl,semi+) ^^ 
        {_ map (i => (m:Module) => m.addImpDecl(i))}
+  
+  // ---------------------------------------------------------------------
+  // Declarations
+  // ---------------------------------------------------------------------
      
+  private def topDecl = tysig
+  
+  private def tysig = (repsep(vars,comma) <~ coco) ~ hiding ^^ {
+    case vars~_ => new TySigDecl(vars, types.ArrowCon)
+  }
+  
   // ---------------------------------------------------------------------
   // Blocks, with implicit or explicit layout
   // ---------------------------------------------------------------------
@@ -304,7 +316,15 @@ object BluejellyParser extends Parsers {
         { _.foldRight(Module.defaultModule)((f,m) => f(m)) }
     | lexError)
   
-  private def modDecls = impDecls 
+  private def modDecls = rep(semi) ~> 
+    rep(semi) ~> 
+      ( (impDecls <~ semi) ~ topDecls ^^ {case is~ds => is++ds}
+      | impDecls 
+      | topDecls) |
+    success(Nil)
+  
+  private def topDecls = rep1sep(topDecl, semi+) <~ (semi*) ^^ 
+    (_ map (d => (m:Module) => m.addTopDecl(d)))
   
   // Parser entry points
   def phrase[T](p:Parser[T], in:String) = 

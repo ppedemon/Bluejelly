@@ -87,15 +87,19 @@ class ImpDecl(
 class Module(
     val name:Name, 
     val exports:Exports,
-    val impDecls:List[ImpDecl]) extends PrettyPrintable {
+    val impDecls:List[ImpDecl],
+    val topDecls:List[TopDecl]) extends PrettyPrintable {
   
-  def this(name:Name,exports:Exports) = this(name,exports,Nil)
+  def this(name:Name,exports:Exports) = this(name,exports,Nil,Nil)
   
-  def addImpDecl(i:ImpDecl) = new Module(name,exports,i::impDecls)
+  def addImpDecl(i:ImpDecl) = new Module(name,exports,i::impDecls,topDecls)
+  def addTopDecl(d:TopDecl) = new Module(name,exports,impDecls,d::topDecls)
   
-  def ppr = 
-    gnest("module" :/: name.ppr :: exports.ppr :/: text("where")) :/:
-    gnest(nl :: vppr(impDecls))
+  def ppr = cat(List(
+    gnest("module" :/: name.ppr :: exports.ppr :/: text("where")),
+    if (impDecls.isEmpty) empty else gnest(nl :: vppr(impDecls)),
+    if (topDecls.isEmpty) empty else gnest(nl :: vppr(topDecls))
+  ))
 }
 
 object Module {

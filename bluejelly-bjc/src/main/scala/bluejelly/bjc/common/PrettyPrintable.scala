@@ -80,5 +80,8 @@ object PprUtils {
   def pprTuple(xs:List[PrettyPrintable]) = between("(",pprMany(xs,","),")")
   
   def vppr(xs:List[PrettyPrintable]) = 
-    xs.foldRight[Document](empty)((x,d) => x.ppr :: nl :: d)
+    xs.foldRight[Document](empty) {
+      case (x,DocNil) => x.ppr
+      case (x,d) => x.ppr :: nl :: d
+    }
 }

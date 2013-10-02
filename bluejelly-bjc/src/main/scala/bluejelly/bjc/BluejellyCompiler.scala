@@ -36,10 +36,9 @@ object BluejellyCompiler {
       case BluejellyParser.Success(m,_) => println(m)
     }
     /*
-    val scanner = new LayoutScanner("module bluejelly.X where")
+    val scanner = new LayoutScanner(in)
     val toks = scan(scanner)
     for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
     */
   }
 }
-
