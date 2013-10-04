@@ -100,17 +100,17 @@ object BluejellyParser extends Parsers {
     case TComma()  => "`,'"
     case TBack()   => "backquote"
 
-    case  TDotDot() => "`..'"
-    case  TCoCo()   => "`::'"
-    case  TEq()     => "`='"
-    case  TLam()    => """`\'"""
-    case  TBar()    => "`|'"
-    case  TLArr()   => "`<-'"
-    case  TRArr()   => "`->'"
-    case  TDArr()   => "`=>'"
-    case  TAt()     => "`@'"
-    case  TTilde()  => "`~'"
-    case  TMinus()  => "`-'"
+    case  TDotDot()  => "`..'"
+    case  TCoCo()    => "`::'"
+    case  TEq()      => "`='"
+    case  TLam()     => """`\'"""
+    case  TBar()     => "`|'"
+    case  TLArr()    => "`<-'"
+    case  TRArr()    => "`->'"
+    case  TImplies() => "`=>'"
+    case  TAt()      => "`@'"
+    case  TTilde()   => "`~'"
+    case  TMinus()   => "`-'"
 
     case TLCurly() => badLayout("`{'")
     case TRCurly() => badLayout("`}'")
@@ -144,15 +144,16 @@ object BluejellyParser extends Parsers {
     { case QConSym(op) => qualOp(op.qual.get,op.name)}
   
   // Keywords
-  private def module   = elem(kwd("module"), _.isInstanceOf[TModule])
-  private def where    = elem(kwd("where"), _.isInstanceOf[TWhere])
-  private def `import` = elem(kwd("import"),_.isInstanceOf[TImport])
   private def as       = elem(kwd("as"), _.isInstanceOf[TAs])
-  private def qual     = elem(kwd("qualified"), _.isInstanceOf[TQualified])
+  private def forall   = elem(kwd("forall"), _.isInstanceOf[TForall])
   private def hiding   = elem(kwd("hiding"), _.isInstanceOf[THiding])
-  private def let      = elem(kwd("let"), _.isInstanceOf[TLet])
+  private def `import` = elem(kwd("import"),_.isInstanceOf[TImport])
   private def in       = elem(kwd("in"), _.isInstanceOf[TIn])
-  
+  private def let      = elem(kwd("let"), _.isInstanceOf[TLet])
+  private def module   = elem(kwd("module"), _.isInstanceOf[TModule])
+  private def qual     = elem(kwd("qualified"), _.isInstanceOf[TQualified])
+  private def where    = elem(kwd("where"), _.isInstanceOf[TWhere])
+    
   private def dot = elem(_ match {
     case t:VarSym => (t.asInstanceOf[VarSym].sym.name == Symbol("."))
     case _ => false
@@ -164,15 +165,20 @@ object BluejellyParser extends Parsers {
   })
   
   // Reserved
-  private def minus  = elem(_.isInstanceOf[TMinus])
-  private def back   = elem(_.isInstanceOf[TBack])
-  private def dotdot = elem(_.isInstanceOf[TDotDot])
-  private def comma  = elem(_.isInstanceOf[TComma])
-  private def coco   = elem(_.isInstanceOf[TCoCo])
+  private def minus   = elem(_.isInstanceOf[TMinus])
+  private def back    = elem(_.isInstanceOf[TBack])
+  private def dotdot  = elem(_.isInstanceOf[TDotDot])
+  private def comma   = elem(_.isInstanceOf[TComma])
+  private def coco    = elem(_.isInstanceOf[TCoCo])
+  private def implies = elem(_.isInstanceOf[TImplies])
+  private def rarr    = elem(_.isInstanceOf[TRArr])
+  private def under   = elem(_.isInstanceOf[TUnder])
   
   // Special
   private def lpar    = elem(_.isInstanceOf[TLParen])
   private def rpar    = elem(_.isInstanceOf[TRParen])
+  private def lbrack  = elem(_.isInstanceOf[TLBrack])
+  private def rbrack  = elem(_.isInstanceOf[TRBrack])
   private def lcurly  = elem(_.isInstanceOf[TLCurly])
   private def vlcurly = elem(_.isInstanceOf[VLCurly])
   private def rcurly  = elem(_.isInstanceOf[TRCurly])
@@ -233,6 +239,8 @@ object BluejellyParser extends Parsers {
       if (qs.isEmpty) m else qualId(Symbol(qs mkString ("",".","")), m.name)
   }
 
+  private def commas = (comma+) ^^ {_.length}
+    
   // ---------------------------------------------------------------------
   // Exports
   // ---------------------------------------------------------------------
@@ -252,31 +260,90 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
   // Imports
   // ---------------------------------------------------------------------
-   private def inames = repsep(vars|con,comma) <~ (comma?)
+  private def inames = repsep(vars|con,comma) <~ (comma?)
 
-   private def impSpec = 
-     ( CONID <~ (lpar ~ dotdot ~ rpar) ^^ {IAll(_)}
-     | CONID ~ (lpar ~> inames <~ rpar) ^^ {case i~is => ISome(i,is)}
-     | CONID ^^ {INone(_)}
-     | vars ^^ {IVar(_)})
+  private def impSpec = 
+    ( CONID <~ (lpar ~ dotdot ~ rpar) ^^ {IAll(_)}
+    | CONID ~ (lpar ~> inames <~ rpar) ^^ {case i~is => ISome(i,is)}
+    | CONID ^^ {INone(_)}
+    | vars ^^ {IVar(_)})
    
-   private def impSpecs = 
-     lpar ~> (repsep(impSpec,comma) <~ (comma?)) <~ rpar
+  private def impSpecs = 
+    lpar ~> (repsep(impSpec,comma) <~ (comma?)) <~ rpar
      
-   private def imports = 
-     ((hiding?) ~ impSpecs ^^ {
-       case h~is if h.isDefined => HideSome(is)
-       case _~is => ImportSome(is)
-     }
-     | success(ImportAll))
+  private def imports = 
+    ((hiding?) ~ impSpecs ^^ {
+      case h~is if h.isDefined => HideSome(is)
+      case _~is => ImportSome(is)
+    }
+    | success(ImportAll))
      
-   private def impDecl = positioned(
-     `import` ~> ((qual?) ~ modid ~ ((as ~> modid)?) ~ imports) ^^ {
-       case q~m~a~i => new ImpDecl(m,q.isDefined,a,i)
-     })
+  private def impDecl = positioned(
+    `import` ~> ((qual?) ~ modid ~ ((as ~> modid)?) ~ imports) ^^ {
+      case q~m~a~i => new ImpDecl(m,q.isDefined,a,i)
+    })
      
-   private def impDecls = rep1sep(impDecl,semi+) ^^ 
-       {_ map (i => (m:Module) => m.addImpDecl(i))}
+  private def impDecls = rep1sep(impDecl,semi+) ^^ 
+    {_ map (i => (m:Module) => m.addImpDecl(i))}
+
+  // ---------------------------------------------------------------------
+  // Types
+  // ---------------------------------------------------------------------
+  
+  private def topType:Parser[types.Type] = 
+    (forall ~> (vars+)) ~ (dot ~> qtype) ^^ {
+      case xs~ty => types.PolyType(xs,ty)
+    } | qtype
+  
+  private def qtype = 
+    ((context <~ implies)?) ~ `type` ^^ {
+      case None~ty => ty 
+      case Some(preds)~ty => types.QualType(preds,ty)
+    }
+  
+  private def `type` = 
+    rep(ltype <~ rarr) ~ (btype1|btype2) ^^ {
+      case Nil~ty => ty
+      case tys~ty => types.Type.mkFun(tys,ty)
+    }
+  
+  private def ltype = bpoly | btype1 | btype2
+  private def bpoly = (lpar+) ~> topType <~ (rpar+)
+  
+  private def context = 
+    pred ^^ {List(_)} | 
+    lpar ~> repsep(pred,comma) <~ rpar
+  
+  private def pred = 
+    btype2 ^? (types.Type.mkPred, "invalid predicate: %s" format _)  
+    
+  private def btype1 = 
+    atype1 ~ (atype*) ^^ {
+      case ty~args => types.Type.mkApp(ty, args) 
+    }
+  
+  private def btype2 = 
+    qconid ~ (atype*) ^^ {
+      case n~args => types.Type.mkApp(types.TyCon(n), args)
+    }
+  
+  private def atype = 
+    atype1 | qconid ^^ {types.TyCon(_)}
+  
+  private def atype1:Parser[types.Type] = 
+    ( varid ^^ {types.TyVar(_)}
+    | lpar ~ rarr ~ rpar ^^^ types.ArrowCon
+    | lpar ~> commas <~ rpar ^^ {types.TupleCon(_)}
+    | lpar ~> repsep(`type`,comma) <~ rpar ^^ {
+        case Nil => types.UnitCon
+        case List(ty) => ty
+        case tys => types.Type.mkApp(types.TupleCon(tys.length), tys)
+      }
+    | lbrack ~> (`type`?) <~ rbrack ^^ {
+        case None => types.ListCon
+        case Some(ty) => types.AppType(types.ListCon,ty)
+      }
+    | under ^^^ types.AnonTyVar())
   
   // ---------------------------------------------------------------------
   // Declarations
@@ -284,8 +351,8 @@ object BluejellyParser extends Parsers {
      
   private def topDecl = tysig
   
-  private def tysig = (repsep(vars,comma) <~ coco) ~ hiding ^^ {
-    case vars~_ => new TySigDecl(vars, types.ArrowCon)
+  private def tysig = (repsep(vars,comma) <~ coco) ~ topType ^^ {
+    case vars~ty => new TySigDecl(vars, ty)
   }
   
   // ---------------------------------------------------------------------
@@ -316,10 +383,10 @@ object BluejellyParser extends Parsers {
         { _.foldRight(Module.defaultModule)((f,m) => f(m)) }
     | lexError)
   
-  private def modDecls = rep(semi) ~> 
+  private def modDecls =
     rep(semi) ~> 
-      ( (impDecls <~ semi) ~ topDecls ^^ {case is~ds => is++ds}
-      | impDecls 
+      ( (impDecls <~ (semi+)) ~ topDecls ^^ {case is~ds => is++ds}
+      | impDecls  <~ (semi*)
       | topDecls) |
     success(Nil)
   

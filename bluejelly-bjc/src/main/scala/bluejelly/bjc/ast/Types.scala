@@ -19,30 +19,45 @@ import scala.annotation.tailrec
 trait Type extends AstElem
 
 case class PolyType(val tyvars:List[Name],ty:Type) extends Type {
-  def ppr = gnest("forall" :/: pprMany(tyvars) :/: "." :/: ty.ppr)
+  def ppr = gnest("forall" :/: pprMany(tyvars) :/: text(".") :/: ty.ppr)
 }
 
 case class QualType(val ctx:List[Pred], ty:Type) extends Type {
-  def ppr = gnest(pprTuple(ctx) :/: "=>" :/: ty.ppr)
+  def ppr = gnest(
+    (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: "=>" :/: ty.ppr)
 }
 
 case class FunType(val from:Type, val to:Type) extends Type {
   def ppr = from match {
-    case FunType(_,_) => gnest(between("(",from.ppr,")") :/: "->" :/: to.ppr)
-    case _ => gnest(from.ppr :/: "->" :/: to.ppr) 
+    case PolyType(_,_)|FunType(_,_) => 
+      gnest(between("(",from.ppr,")") :/: "->" :/: to.ppr)
+    case _ => 
+      gnest(from.ppr :/: "->" :/: to.ppr) 
   } 
 }
 
 case class AppType(val fun:Type, val arg:Type) extends Type {
-  def ppr = fun match {
-    case ListCon => group("[" :: arg.ppr :: text("]"))
-    case _ => arg match {
-      case AppType(_,_)|FunType(_,_) => 
-        gnest(fun.ppr :/: between("(",arg.ppr,")"))
-      case _ => 
-        gnest(fun.ppr :/: arg.ppr) 
-    } 
+  lazy val (head,allArgs) = Type.unwind(this)
+
+  def isTuple = head match {
+    case TupleCon(_) => true
+    case _ => false
   }
+  def isList = fun match {
+    case ListCon => true
+    case _ => false
+  }
+  def ppr = 
+    if (isTuple) pprTuple(allArgs) else
+    if (isList) group("[" :: arg.ppr :: text("]")) else
+    arg match {
+      case a@AppType(_,_) if !a.isTuple => 
+        group(fun.ppr :/: between("(",arg.ppr,")"))
+      case PolyType(_,_)|FunType(_,_) =>
+        group(fun.ppr :/: between("(",arg.ppr,")"))
+      case _ => 
+        group(fun.ppr :/: arg.ppr) 
+    } 
 }
 
 case object ArrowCon extends Type { def ppr = text("(->)") }
@@ -56,10 +71,10 @@ case class TupleCon(val arity:Int) extends Type {
 case class TyCon(val name:Name) extends Type { def ppr = name.ppr }
 case class TyVar(val name:Name) extends Type { def ppr = name.ppr }
 
-case object AnonTyVar extends Type {
+case class AnonTyVar() extends Type {
   import bluejelly.bjc.common.NameSupply.freshTyVar
   def name = freshTyVar
-  def ppr = text("#t%s" format name)
+  def ppr = text("t%s" format name)
 }
 
 /*
@@ -77,8 +92,13 @@ object Type {
   @tailrec
   def unwind(ty:Type, args:List[Type] = Nil):(Type,List[Type]) = ty match {
     case AppType(fun,arg) => unwind(fun,arg::args)
-    case _ => (ty,args.reverse)
+    case _ => (ty,args)
   }
+  
+  def mkApp(fun:Type, args:List[Type]) = args.foldLeft(fun)(AppType(_,_))
+  
+  def mkFun(tys:List[Type]) = tys.reduceRight(FunType(_,_))
+  def mkFun(tys:List[Type],ty:Type) = tys.foldRight(ty)(FunType(_,_))
   
   def mkPred = new PartialFunction[Type,Pred] {
     def isDefinedAt(ty:Type) = unwind(ty) match {
@@ -88,5 +108,5 @@ object Type {
     def apply(ty:Type) = unwind(ty) match {
       case (TyCon(name),args) => new Pred(name,args)
     }
-  }
+  }  
 }
