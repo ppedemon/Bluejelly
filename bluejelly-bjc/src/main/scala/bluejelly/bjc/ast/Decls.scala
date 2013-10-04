@@ -7,6 +7,7 @@
 package bluejelly.bjc.ast
 
 import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.Name.{asId}
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 
@@ -27,5 +28,5 @@ trait TopDecl extends AstElem
 trait Decl extends TopDecl
 
 class TySigDecl(val vars:List[Name], val ty:types.Type) extends TopDecl {
-  def ppr = gnest(group(pprMany(vars, ",")) :/: "::" :/: ty.ppr)
+  def ppr = gnest(pprMany(vars map asId, ",") :/: "::" :/: ty.ppr)
 }

@@ -82,6 +82,6 @@ object PprUtils {
   def vppr(xs:List[PrettyPrintable]) = 
     xs.foldRight[Document](empty) {
       case (x,DocNil) => x.ppr
-      case (x,d) => x.ppr :: nl :: d
+      case (x,d) => x.ppr :/: d
     }
 }

@@ -74,10 +74,10 @@ class ImpDecl(
     val d1 = group(if (alias.isEmpty) 
       d0 :/: modId.ppr else 
       d0 :/: modId.ppr :/: "as" :/: alias.get.ppr)
-    imports match {
+    gnest(imports match {
       case HideSome(_) => d1 :/: imports.ppr
       case _ => d1 :: imports.ppr
-    }
+    })
   }
 }
 
@@ -97,8 +97,8 @@ class Module(
   
   def ppr = cat(List(
     gnest("module" :/: name.ppr :: exports.ppr :/: text("where")),
-    if (impDecls.isEmpty) empty else gnest(nl :: vppr(impDecls)),
-    if (topDecls.isEmpty) empty else gnest(nl :: vppr(topDecls))
+    if (impDecls.isEmpty) empty else nl :: vppr(impDecls),
+    if (topDecls.isEmpty) empty else nl :: vppr(topDecls)
   ))
 }
 
