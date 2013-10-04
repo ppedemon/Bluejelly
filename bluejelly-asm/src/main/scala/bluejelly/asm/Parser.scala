@@ -10,6 +10,7 @@ package bluejelly.asm
 import scala.util.control.Exception.catching
 import scala.util.parsing.combinator.JavaTokenParsers
 import scala.util.parsing.input.Positional
+import scala.annotation.tailrec
 
 /**
   * Parse an assembler module.
@@ -32,17 +33,28 @@ object Parser extends JavaTokenParsers {
       '"'  -> '"' ,
       '\'' -> '\'', 
       '\\' -> '\\')
-  def unesc(s:String):String = {
-    val (cs,inEsc,n) = ((List():List[Char],false,0) /: s) {
-      case ((cs,true,n),c) if n > 0 && (c isDigit) => (cs,true,(n<<3)|(c.toInt & 0xf))
-      case ((cs,true,n),c) if n > 0 => (c::n.toChar::cs,false,0)
-      case ((cs,true,0),c) if c isDigit => (cs,true,c.toInt & 0xf)
-      case ((cs,true,0),c) => (escMap(c)::cs,false,0)
-      case ((cs,false,0),'\\') => (cs,true,0)
-      case ((cs,false,0),c) => (c::cs,false,0)
+  @tailrec
+  private def unesc(s:String,r:StringBuilder=new StringBuilder):String = {
+    @tailrec
+    def oct(s:String,n:Int=0):(String,Int) = 
+      if (s.isEmpty) (s,n) else
+      s.head match {
+        case x if x.isDigit => oct(s.tail, (n<<3)|(x.toInt & 0xf))
+        case _ => (s,n)
+      }
+    def esc(s:String) = (s.tail, escMap(s.head))
+    if (s.isEmpty) r.toString else
+    s.head match {
+      case '\\' => s.tail.head match {
+        case c if c.isDigit => 
+          val (rest,n) = oct(s.tail)
+          unesc(rest, r+n.toChar)
+        case _ => 
+          val (rest,c) = esc(s.tail)
+          unesc(rest, r+c)
+      }
+      case c => unesc(s.tail, r+c)
     }
-    val list = if (inEsc) n.toChar::cs else cs
-    list.reverse.mkString
   }
 
   def id = """[a-zA-Z_\$][\w\$]*"""
