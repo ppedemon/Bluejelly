@@ -139,7 +139,7 @@ class LexerSuite extends FunSuite {
       TAt(),
       TTilde(),
       VarSym(Name("=>=")),
-      TDArr(),
+      TImplies(),
       VarSym(Name("<=")),
       TEq(),
       VarSym(Name(">")),

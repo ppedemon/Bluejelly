@@ -85,7 +85,7 @@ trait Tokens {
   case class TBar() extends Token
   case class TLArr() extends Token
   case class TRArr() extends Token
-  case class TDArr() extends Token
+  case class TImplies() extends Token
   case class TAt() extends Token
   case class TTilde() extends Token
   case class TMinus() extends Token
