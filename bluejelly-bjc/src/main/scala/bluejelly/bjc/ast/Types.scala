@@ -27,15 +27,6 @@ case class QualType(val ctx:List[Pred], ty:Type) extends Type {
     (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: "=>" :/: ty.ppr)
 }
 
-case class FunType(val from:Type, val to:Type) extends Type {
-  def ppr = from match {
-    case PolyType(_,_)|FunType(_,_) => 
-      gnest(between("(",from.ppr,")") :/: "->" :/: to.ppr)
-    case _ => 
-      gnest(from.ppr :/: "->" :/: to.ppr) 
-  } 
-}
-
 case class AppType(val fun:Type, val arg:Type) extends Type {
   lazy val (head,allArgs) = Type.unwind(this)
 
@@ -43,17 +34,31 @@ case class AppType(val fun:Type, val arg:Type) extends Type {
     case TupleCon(_) => true
     case _ => false
   }
+  def isFun = head match {
+    case ArrowCon => true
+    case _ => false
+  }
   def isList = fun match {
     case ListCon => true
     case _ => false
   }
+  
   def ppr = 
     if (isTuple) pprTuple(allArgs) else
-    if (isList) group("[" :: arg.ppr :: text("]")) else
+    if (isList) group(between("[",arg.ppr,"]")) else
+    if (isFun) {
+      val (left,right) = allArgs match {
+        case List(f@AppType(_,_),x) if f.isFun => (between("(",f.ppr,")"),x.ppr)
+        case List(f@PolyType(_,_),x) => (between("(",f.ppr,")"),x.ppr)
+        case List(f,x) => (f.ppr,x.ppr)
+        case _ => sys.error("Illegal function args: %s" format allArgs)
+      }
+      group(left :/: "->" :/: right)
+    } else
     arg match {
       case a@AppType(_,_) if !a.isTuple => 
         group(fun.ppr :/: between("(",arg.ppr,")"))
-      case PolyType(_,_)|FunType(_,_) =>
+      case PolyType(_,_) =>
         group(fun.ppr :/: between("(",arg.ppr,")"))
       case _ => 
         group(fun.ppr :/: arg.ppr) 
@@ -97,8 +102,10 @@ object Type {
   
   def mkApp(fun:Type, args:List[Type]) = args.foldLeft(fun)(AppType(_,_))
   
-  def mkFun(tys:List[Type]) = tys.reduceRight(FunType(_,_))
-  def mkFun(tys:List[Type],ty:Type) = tys.foldRight(ty)(FunType(_,_))
+  def mkFun(tys:List[Type]) = 
+    tys.reduceRight((x,y) => AppType(AppType(ArrowCon,x),y))
+  def mkFun(tys:List[Type],ty:Type) = 
+    tys.foldRight(ty)((x,y) => AppType(AppType(ArrowCon,x),y))
   
   def mkPred = new PartialFunction[Type,Pred] {
     def isDefinedAt(ty:Type) = unwind(ty) match {

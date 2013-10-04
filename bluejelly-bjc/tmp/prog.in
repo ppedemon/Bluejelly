@@ -6,14 +6,14 @@ import B hiding()
 
 import qualified custom.B(a,b,c,Eq((==),(/=)))
 import qualified container.Set as S hiding(a,C(a,(+)),Z(..),)
-
 x::Int
 y::[Char]
 a,(+),(-):: forall a b . Prelude.Eq a => a -> a
-
 map :: forall a b . (a -> b) -> A (A x) ([[[a]]],[b])
 (>>=) :: forall a b . Monad m => m a -> (a -> b) -> m b
 empty :: () => a -> b
 polyRank :: (forall a . a -> a) -> (forall a b . (a -> b) -> M a -> b) -> b
 f :: (C [a] b,D _ _, M [] (->)) => [a] -> [b] -> c
 map :: forall a b . (->) a b -> [] a -> [] b
+tuple :: (,) Int ((,) a b) -> (Int,(a,b))
+g :: (a -> b) -> (c -> d)
