@@ -41,7 +41,7 @@ case class ExportSome(es:List[ESpec]) extends Exports {
 // -----------------------------------------------------------------------
 // Syntax tree for module imports
 // -----------------------------------------------------------------------
-sealed trait ISpec extends AstElem;
+sealed trait ISpec extends PrettyPrintable;
 case class IVar(name:Name) extends ISpec {
   def ppr = asId(name).ppr
 }

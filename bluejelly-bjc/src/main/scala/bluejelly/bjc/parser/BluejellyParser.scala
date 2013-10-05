@@ -294,22 +294,22 @@ object BluejellyParser extends Parsers {
   // Types
   // ---------------------------------------------------------------------
   
-  private def topType:Parser[types.Type] = 
-    $((forall ~> (vars+)) ~ (dot ~> qtype) ^^ {
+  private def topType:Parser[types.Type] = $(
+    (forall ~> (vars+)) ~ (dot ~> qtype) ^^ {
       case xs~ty => types.PolyType(xs,ty)
     } | qtype)
   
   private def qtype = 
-    $(((context <~ implies)?) ~ `type` ^^ {
+    ((context <~ implies)?) ~ `type` ^^ {
       case None~ty => ty 
       case Some(preds)~ty => types.QualType(preds,ty)
-    })
+    }
   
   private def `type` = 
-    $(rep(ltype <~ rarr) ~ (btype1|btype2) ^^ {
+    rep(ltype <~ rarr) ~ (btype1|btype2) ^^ {
       case Nil~ty => ty
       case tys~ty => types.Type.mkFun(tys,ty)
-    })
+    }
   
   private def ltype = bpoly | btype1 | btype2
   private def bpoly = (lpar+) ~> topType <~ (rpar+)
@@ -322,38 +322,38 @@ object BluejellyParser extends Parsers {
     btype2 ^? (types.Type.mkPred, "invalid predicate: %s" format _)  
     
   private def btype1 = 
-    $(atype1 ~ (atype*) ^^ {
+    atype1 ~ (atype*) ^^ {
        case ty~args => types.Type.mkApp(ty, args) 
-    })
+    }
   
   private def btype2 = 
-    $(qconid ~ (atype*) ^^ {
+    qconid ~ (atype*) ^^ {
        case n~args => types.Type.mkApp(types.TyCon(n), args)
-    })
+    }
   
   private def atype = 
-    atype1 | $(qconid ^^ {types.TyCon(_)})
+    atype1 | qconid ^^ {types.TyCon(_)}
   
   private def atype1:Parser[types.Type] = 
-    $( varid ^^ {types.TyVar(_)}
-     | lpar ~ rarr ~ rpar ^^^ types.ArrowCon
-     | lpar ~> commas <~ rpar ^^ {types.TupleCon(_)}
-     | lpar ~> repsep(`type`,comma) <~ rpar ^^ {
-         case Nil => types.UnitCon
-         case List(ty) => ty
-         case tys => types.Type.mkApp(types.TupleCon(tys.length), tys)
-       }
-     | lbrack ~> (`type`?) <~ rbrack ^^ {
-         case None => types.ListCon
-         case Some(ty) => types.AppType(types.ListCon,ty)
-       }
-     | under ^^^ types.AnonTyVar())
+    ( varid ^^ {types.TyVar(_)}
+    | lpar ~ rarr ~ rpar ^^^ types.ArrowCon
+    | lpar ~> commas <~ rpar ^^ {types.TupleCon(_)}
+    | lpar ~> repsep(`type`,comma) <~ rpar ^^ {
+        case Nil => types.UnitCon
+        case List(ty) => ty
+        case tys => types.Type.mkApp(types.TupleCon(tys.length), tys)
+      }
+    | lbrack ~> (`type`?) <~ rbrack ^^ {
+        case None => types.ListCon
+        case Some(ty) => types.AppType(types.ListCon,ty)
+      }
+    | under ^^^ types.AnonTyVar())
   
   // ---------------------------------------------------------------------
   // Declarations
   // ---------------------------------------------------------------------
      
-  private def topDecl = tysig
+  private def topDecl = $(tysig)
   
   private def tysig = (repsep(vars,comma) <~ coco) ~ topType ^^ {
     case vars~ty => new TySigDecl(vars, ty)
