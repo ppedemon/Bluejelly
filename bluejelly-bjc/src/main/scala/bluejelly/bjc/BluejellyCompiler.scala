@@ -24,7 +24,7 @@ object BluejellyCompiler {
   
   private def scan(s:Reader[Token]):List[Token] = s.first match {
     case EOI() => Nil
-    case t@ErrorToken(msg) => List(t)
+    case t@ErrorToken(msg) => t::scan(s.rest)
     case t => t::scan(s.rest)
   }
   
@@ -40,14 +40,17 @@ object BluejellyCompiler {
     }
     /*
     val start = System.currentTimeMillis
-    
     val in = new UnicodeFilter(new FileReader("tmp/prog.in"))
-    val scanner = new LayoutScanner(in)
+    val scanner = new /*Layout*/Scanner(in)
     val toks = scan(scanner)
-    for (t <- toks) {}//println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
-    
+    for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
     val end = System.currentTimeMillis()
     printf("Lexing time: %d\n", end-start)
+    */
+    /*
+    val scanner = new LayoutScanner(""" --- ---> M.--+ M.--- """)
+    val toks = scan(scanner)
+    for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
     */
   }
 }

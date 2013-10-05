@@ -34,8 +34,8 @@ class LexerSuite extends FunSuite {
       case EOI() =>
         assert(expected.isEmpty, "premature EOI, expected: %s" format expected)
       case ErrorToken(_) =>
-        val e = expected.head
-        assert(e.isInstanceOf[ErrorToken], 
+        val e = if (expected.isEmpty) null else expected.head
+        assert(e != null && e.isInstanceOf[ErrorToken], 
             "expected error, but got: %s" format e)
         checkLexerOutput(s.rest, expected.tail)
       case t => 
