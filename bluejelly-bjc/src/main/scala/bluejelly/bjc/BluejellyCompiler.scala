@@ -41,14 +41,14 @@ object BluejellyCompiler {
     /*
     val start = System.currentTimeMillis
     val in = new UnicodeFilter(new FileReader("tmp/prog.in"))
-    val scanner = new /*Layout*/Scanner(in)
+    val scanner = new LayoutScanner(in)
     val toks = scan(scanner)
     for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
     val end = System.currentTimeMillis()
     printf("Lexing time: %d\n", end-start)
     */
     /*
-    val scanner = new LayoutScanner(""" --- ---> M.--+ M.--- """)
+    val scanner = new LayoutScanner("""data D a = data.Set.Set a case1_'.M.a_'20'''""")
     val toks = scan(scanner)
     for (t <- toks) println("%s:%s:\n%s" format (t.pos,t,t.pos.longString))
     */

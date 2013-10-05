@@ -7,6 +7,8 @@
 package bluejelly.bjc.parser
 
 import scala.util.parsing.combinator.Parsers
+import scala.util.parsing.input.Positional
+
 import bluejelly.bjc.ast.TySigDecl
 
 /**
@@ -122,7 +124,7 @@ object BluejellyParser extends Parsers {
   }
 
   // ---------------------------------------------------------------------
-  // Token parsers
+  // Basic parsers
   // ---------------------------------------------------------------------
 
   // Names
@@ -188,6 +190,8 @@ object BluejellyParser extends Parsers {
   // EOI token
   private def eoi = elem("end of input", _.isInstanceOf[EOI])
 
+  private def $[T <: Positional](p:Parser[T]) = positioned(p)
+  
   // ---------------------------------------------------------------------
   // Variables + Constructors (as identifiers or operators)
   // ---------------------------------------------------------------------
@@ -244,7 +248,7 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
   // Exports
   // ---------------------------------------------------------------------
-  private def expSpec = positioned(
+  private def expSpec = $(
     ( qconid <~ (lpar ~ dotdot ~ rpar) ^^ {EAll(_)}
     | qconid ~ (lpar ~> enames <~ rpar) ^^ {case e~es => ESome(e,es)}
     | qvar ^^ {EVar(_)}
@@ -278,7 +282,7 @@ object BluejellyParser extends Parsers {
     }
     | success(ImportAll))
      
-  private def impDecl = positioned(
+  private def impDecl = $(
     `import` ~> ((qual?) ~ modid ~ ((as ~> modid)?) ~ imports) ^^ {
       case q~m~a~i => new ImpDecl(m,q.isDefined,a,i)
     })
@@ -291,21 +295,21 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
   
   private def topType:Parser[types.Type] = 
-    (forall ~> (vars+)) ~ (dot ~> qtype) ^^ {
+    $((forall ~> (vars+)) ~ (dot ~> qtype) ^^ {
       case xs~ty => types.PolyType(xs,ty)
-    } | qtype
+    } | qtype)
   
   private def qtype = 
-    ((context <~ implies)?) ~ `type` ^^ {
+    $(((context <~ implies)?) ~ `type` ^^ {
       case None~ty => ty 
       case Some(preds)~ty => types.QualType(preds,ty)
-    }
+    })
   
   private def `type` = 
-    rep(ltype <~ rarr) ~ (btype1|btype2) ^^ {
+    $(rep(ltype <~ rarr) ~ (btype1|btype2) ^^ {
       case Nil~ty => ty
       case tys~ty => types.Type.mkFun(tys,ty)
-    }
+    })
   
   private def ltype = bpoly | btype1 | btype2
   private def bpoly = (lpar+) ~> topType <~ (rpar+)
@@ -318,32 +322,32 @@ object BluejellyParser extends Parsers {
     btype2 ^? (types.Type.mkPred, "invalid predicate: %s" format _)  
     
   private def btype1 = 
-    atype1 ~ (atype*) ^^ {
-      case ty~args => types.Type.mkApp(ty, args) 
-    }
+    $(atype1 ~ (atype*) ^^ {
+       case ty~args => types.Type.mkApp(ty, args) 
+    })
   
   private def btype2 = 
-    qconid ~ (atype*) ^^ {
-      case n~args => types.Type.mkApp(types.TyCon(n), args)
-    }
+    $(qconid ~ (atype*) ^^ {
+       case n~args => types.Type.mkApp(types.TyCon(n), args)
+    })
   
   private def atype = 
-    atype1 | qconid ^^ {types.TyCon(_)}
+    atype1 | $(qconid ^^ {types.TyCon(_)})
   
   private def atype1:Parser[types.Type] = 
-    ( varid ^^ {types.TyVar(_)}
-    | lpar ~ rarr ~ rpar ^^^ types.ArrowCon
-    | lpar ~> commas <~ rpar ^^ {types.TupleCon(_)}
-    | lpar ~> repsep(`type`,comma) <~ rpar ^^ {
-        case Nil => types.UnitCon
-        case List(ty) => ty
-        case tys => types.Type.mkApp(types.TupleCon(tys.length), tys)
-      }
-    | lbrack ~> (`type`?) <~ rbrack ^^ {
-        case None => types.ListCon
-        case Some(ty) => types.AppType(types.ListCon,ty)
-      }
-    | under ^^^ types.AnonTyVar())
+    $( varid ^^ {types.TyVar(_)}
+     | lpar ~ rarr ~ rpar ^^^ types.ArrowCon
+     | lpar ~> commas <~ rpar ^^ {types.TupleCon(_)}
+     | lpar ~> repsep(`type`,comma) <~ rpar ^^ {
+         case Nil => types.UnitCon
+         case List(ty) => ty
+         case tys => types.Type.mkApp(types.TupleCon(tys.length), tys)
+       }
+     | lbrack ~> (`type`?) <~ rbrack ^^ {
+         case None => types.ListCon
+         case Some(ty) => types.AppType(types.ListCon,ty)
+       }
+     | under ^^^ types.AnonTyVar())
   
   // ---------------------------------------------------------------------
   // Declarations
