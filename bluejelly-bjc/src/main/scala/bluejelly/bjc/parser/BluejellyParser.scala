@@ -9,6 +9,9 @@ package bluejelly.bjc.parser
 import scala.util.parsing.combinator.Parsers
 import scala.util.parsing.input.Positional
 
+import bluejelly.bjc.common.PrettyPrintable
+import bluejelly.bjc.common.PprUtils.{pprMany}
+
 /**
  * Bluejelly parser.
  * @author ppedemon
@@ -87,6 +90,7 @@ object BluejellyParser extends Parsers {
     case TLet()      => kwd("let")
     case TMDo()      => kwd("mdo")
     case TModule()   => kwd("module")
+    case TNewtype()  => kwd("newtype")
     case TOf()       => kwd("of")
     case TPrim()     => kwd("primitive")
     case TThen()     => kwd("then")
@@ -387,16 +391,16 @@ object BluejellyParser extends Parsers {
     (conopArg ~ conop ~ conopArg ^^ {
       case ty1~n~ty2 => new AlgDCon(n,List(ty1,ty2))
     }
-    |(qconid|lpar ~> CONOP <~ rpar) ~ (conidArg+) ^^ {
-      case n~tys => new AlgDCon(n, tys)
-    }
-    |con ~ (lbrack ~> (labelGrp*) <~ rbrack) ^^ {
+    |con ~ (lcurly ~> repsep(labelGrp,comma) <~ rcurly) ^^ {
       case n~grps => new RecDCon(n,grps)
+    }
+    |(qconid|lpar ~> CONOP <~ rpar) ~ (conidArg*) ^^ {
+      case n~tys => new AlgDCon(n, tys)
     })
   
   private def qconstr = ((context <~ implies)?) ~ constr ^^ {
-      case None~dcon => dcon
-      case Some(preds)~ty => new QualDCon(preds,ty)
+    case None~dcon => dcon
+    case Some(preds)~ty => new QualDCon(preds,ty)
   }  
 
   private def pconstr = 
@@ -405,15 +409,45 @@ object BluejellyParser extends Parsers {
     }
     |qconstr)
   
-  private def tysynDecl = (ty ~> tyLhs) ~ (eq ~> `type`) ^^ {
-   case (conid~vs)~ty => new TySynDecl(conid,vs,ty)
-  }
+  private def pconstrs = rep1sep(pconstr,bar)
   
+  private def ntyLhs = tyLhs ^? ({
+    case lhs@(conid~List(v)) => (conid,v)
+  },{
+    case conid~vs => "invalid newtype constructor: " + new PrettyPrintable {
+      def ppr = pprMany(conid::vs)
+    }
+  })
+  
+  private def tysynDecl = $((ty ~> tyLhs) ~ (eq ~> `type`) ^^ {
+   case (conid~vs)~ty => new TySynDecl(conid,vs,ty)
+  })
+  
+  private def dataDecl = $(data ~>
+    (((context <~ implies)?) ~ tyLhs ~ (eq ~> pconstrs) ~ (derivings?) ^^ {
+      case preds~(conid~vs)~dcons~ds => 
+        new DataDecl(conid,vs,preds,dcons,ds.getOrElse(Nil))
+    }
+    |((context <~ implies)?) ~ tyLhs ^^ {
+      case preds~(conid~vs) =>
+        new DataDecl(conid,vs,preds,Nil,Nil)
+    }))
+  
+  private def newtyDecl = $(newtype ~> 
+    (((context <~ implies)?) ~ ntyLhs ~ (eq ~> pconstr) ~ (derivings?) ^^ {
+      case preds~p~dcon~ds => 
+        new NewTyDecl(p._1,p._2,preds,dcon,ds.getOrElse(Nil))
+    }))
+    
   // ---------------------------------------------------------------------
   // Declarations
   // ---------------------------------------------------------------------
      
-  private def topDecl = $(tysig|tysynDecl)
+  private def topDecl = $(
+      tysig     |
+      tysynDecl |
+      dataDecl  |
+      newtyDecl )
   
   private def tysig = (commaVars <~ coco) ~ topType ^^ 
     { case vars~ty => new TySigDecl(vars, ty) }

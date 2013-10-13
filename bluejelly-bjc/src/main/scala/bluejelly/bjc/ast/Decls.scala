@@ -43,7 +43,10 @@ case class TySynDecl(
     val n:Name, 
     val vars:List[Name], 
     val rhs:types.Type) extends TopDecl {
-  def ppr = gnest("type" :/: n.ppr :/: pprMany(vars) :/: "=" :/: rhs.ppr)
+  def ppr = gnest(
+      "type" :/: 
+      group(n.ppr :/: pprMany(vars) :/: text("=")) :/: 
+      rhs.ppr)
 }
 
 case class DataDecl(
@@ -52,15 +55,22 @@ case class DataDecl(
     val ctx:Option[List[types.Pred]],
     val rhs:List[DCon],
     val derivings:List[Name]) extends TopDecl {
-  def ppr =
-    gnest(cat(List(
-      text("data"),
-      ctx.map(pprTuple(_) :/: text("=>")).getOrElse(empty),
-      n.ppr, pprMany(vars), text("="), pprMany(rhs,"|"),
-      derivings match { 
-        case Nil => empty 
-        case _ => group("deriving" :: pprTuple(derivings)) 
-      })))
+  def ppr = {
+    val dctx = ctx.map(ctx => group(
+      (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>")))
+      .getOrElse(empty)
+    val dlhs = gnest(cat(List(
+        text("data"), 
+        dctx, 
+        group(n.ppr :/: pprMany(vars)),
+        if (rhs.isEmpty) empty else text("="))))
+    val drhs = pprMany(rhs," |")
+    val ders = derivings match { 
+      case Nil => empty 
+      case _ => group("deriving" :: pprTuple(derivings)) 
+    }
+    gnest(cat(List(dlhs, drhs, ders)))
+  }
 }
 
 case class NewTyDecl(
@@ -69,15 +79,21 @@ case class NewTyDecl(
     val ctx:Option[List[types.Pred]],
     val rhs:DCon,
     val derivings:List[Name]) extends TopDecl {
-  def ppr =
-    gnest(cat(List(
-      text("newtype"),
-      ctx.map(pprTuple(_) :/: text("=>")).getOrElse(empty),
-      n.ppr, v.ppr, text("="), rhs.ppr,
-      derivings match { 
-        case Nil => empty 
-        case _ => group("deriving" :: pprTuple(derivings)) 
-      })))
+  def ppr = {
+    val dctx = ctx.map(ctx => group(
+      (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>")))
+      .getOrElse(empty)
+    val dlhs = gnest(cat(List(
+        text("newtype"), 
+        dctx, 
+        group(n.ppr :/: v.ppr),
+        text("="))))
+    val ders = derivings match { 
+      case Nil => empty 
+      case _ => group("deriving" :: pprTuple(derivings)) 
+    }
+    gnest(cat(List(dlhs, rhs.ppr, ders)))
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -91,7 +107,9 @@ case class PolyDCon(val tyvars:List[Name], val dcon:DCon) extends DCon {
 }
 
 case class QualDCon(val ctx:List[types.Pred], val dcon:DCon) extends DCon {
-  def ppr = gnest(pprTuple(ctx) :/: "=>" :/: dcon.ppr)
+  def ppr = gnest(
+      (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: 
+      "=>" :/: dcon.ppr)
 }
 
 case class AlgDCon(val n:Name, args:List[DConArg]) extends DCon {
@@ -102,7 +120,7 @@ case class AlgDCon(val n:Name, args:List[DConArg]) extends DCon {
 }
 
 case class RecDCon(val n:Name, groups:List[LabelGroup]) extends DCon {
-  def ppr = gnest(n.ppr :: between("{", pprMany(groups), "}"))
+  def ppr = gnest(n.ppr :/: between("{", pprMany(groups,","), "}"))
 }
 
 class DConArg(val ty:types.Type, val strict:Boolean) extends AstElem {
@@ -120,6 +138,8 @@ class LabelGroup(
     ty:types.Type, 
     val strict:Boolean) extends AstElem {
   def ppr = gnest(cat(List(
-      pprMany(labels, ","), if (strict) text("!") else empty, ty.ppr
+      pprMany(labels, ","), 
+      text("::"), 
+      gnest(if (strict) "!"::ty.ppr else ty.ppr)
     )))
 }

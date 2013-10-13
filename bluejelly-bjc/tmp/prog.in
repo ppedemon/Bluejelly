@@ -23,3 +23,12 @@ tuple :: (,) Int ((,) a b) -> (Int,(a,b))
 g :: (a -> b) -> (c -> d)
 
 type Stack a = [a]
+
+data Eq a => List a = Nil 
+                    | forall a . Ord a => Cons a (List a)
+                    | Record {a,b,c :: !Int, stack :: forall a. Stack a}
+                    | StrictCons !a !(List a)
+newtype T a = T a
+data () => Abstract a
+data Num a => Complex a = !a :+ !a
+data Num a => Cmplx a = (:+) !(a) !(a)
