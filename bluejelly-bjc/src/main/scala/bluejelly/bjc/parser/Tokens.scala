@@ -58,6 +58,7 @@ trait Tokens {
   case class TLet() extends Token
   case class TMDo() extends Token
   case class TModule() extends Token
+  case class TNewtype() extends Token
   case class TOf() extends Token
   case class TPrim() extends Token
   case class TQualified() extends Token

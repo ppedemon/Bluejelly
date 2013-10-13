@@ -9,8 +9,6 @@ package bluejelly.bjc.parser
 import scala.util.parsing.combinator.Parsers
 import scala.util.parsing.input.Positional
 
-import bluejelly.bjc.ast.TySigDecl
-
 /**
  * Bluejelly parser.
  * @author ppedemon
@@ -21,6 +19,7 @@ object BluejellyParser extends Parsers {
   import bluejelly.bjc.common.Name._
   import bluejelly.bjc.ast
   import bluejelly.bjc.ast.types
+  import bluejelly.bjc.ast.decls._
   import bluejelly.bjc.ast.module._
   import bluejelly.bjc.ast.NameConstants._  
   
@@ -57,7 +56,6 @@ object BluejellyParser extends Parsers {
     case QVarId(n)    => identifier(n.toString)
     case QConId(n)    => identifier(n.toString)
     case TAs()        => identifier("as")
-    case TForall()    => identifier("forall")
     case THiding()    => identifier("hiding")
     case TQualified() => identifier("qualified")  
 
@@ -78,6 +76,7 @@ object BluejellyParser extends Parsers {
     case TDeriving() => kwd("deriving")
     case TDo()       => kwd("do")
     case TElse()     => kwd("else")
+    case TForall()   => kwd("forall")
     case TIf()       => kwd("if")
     case TImport()   => kwd("import")
     case TIn()       => kwd("in")
@@ -147,13 +146,17 @@ object BluejellyParser extends Parsers {
   
   // Keywords
   private def as       = elem(kwd("as"), _.isInstanceOf[TAs])
+  private def data     = elem(kwd("data"), _.isInstanceOf[TData])
+  private def deriving = elem(kwd("deriving"), _.isInstanceOf[TDeriving])
   private def forall   = elem(kwd("forall"), _.isInstanceOf[TForall])
   private def hiding   = elem(kwd("hiding"), _.isInstanceOf[THiding])
   private def `import` = elem(kwd("import"),_.isInstanceOf[TImport])
   private def in       = elem(kwd("in"), _.isInstanceOf[TIn])
   private def let      = elem(kwd("let"), _.isInstanceOf[TLet])
   private def module   = elem(kwd("module"), _.isInstanceOf[TModule])
+  private def newtype  = elem(kwd("newtype"), _.isInstanceOf[TNewtype])
   private def qual     = elem(kwd("qualified"), _.isInstanceOf[TQualified])
+  private def ty       = elem(kwd("type"), _.isInstanceOf[TType])
   private def where    = elem(kwd("where"), _.isInstanceOf[TWhere])
     
   private def dot = elem(_ match {
@@ -175,6 +178,8 @@ object BluejellyParser extends Parsers {
   private def implies = elem(_.isInstanceOf[TImplies])
   private def rarr    = elem(_.isInstanceOf[TRArr])
   private def under   = elem(_.isInstanceOf[TUnder])
+  private def eq      = elem(_.isInstanceOf[TEq])
+  private def bar     = elem(_.isInstanceOf[TBar])
   
   // Special
   private def lpar    = elem(_.isInstanceOf[TLParen])
@@ -244,7 +249,9 @@ object BluejellyParser extends Parsers {
   }
 
   private def commas = (comma+) ^^ {_.length}
-    
+  
+  private def commaVars = rep1sep(vars,comma)
+  
   // ---------------------------------------------------------------------
   // Exports
   // ---------------------------------------------------------------------
@@ -294,25 +301,25 @@ object BluejellyParser extends Parsers {
   // Types
   // ---------------------------------------------------------------------
   
-  private def topType:Parser[types.Type] = $(
+  private def topType:Parser[types.Type] = $(polyType | qtype)
+  
+  private def polyType:Parser[types.Type] = 
     (forall ~> (vars+)) ~ (dot ~> qtype) ^^ {
       case xs~ty => types.PolyType(xs,ty)
-    } | qtype)
+    }   
+
+  private def qtype = ((context <~ implies)?) ~ `type` ^^ {
+    case None~ty => ty 
+    case Some(preds)~ty => types.QualType(preds,ty)
+  }
   
-  private def qtype = 
-    ((context <~ implies)?) ~ `type` ^^ {
-      case None~ty => ty 
-      case Some(preds)~ty => types.QualType(preds,ty)
-    }
-  
-  private def `type` = 
-    rep(ltype <~ rarr) ~ (btype1|btype2) ^^ {
-      case Nil~ty => ty
-      case tys~ty => types.Type.mkFun(tys,ty)
-    }
+  private def `type` = rep(ltype <~ rarr) ~ (btype1|btype2) ^^ {
+    case Nil~ty => ty
+    case tys~ty => types.Type.mkFun(tys,ty)
+  }
   
   private def ltype = bpoly | btype1 | btype2
-  private def bpoly = (lpar+) ~> topType <~ (rpar+)
+  private def bpoly = (lpar+) ~> polyType <~ (rpar+)
   
   private def context = 
     pred ^^ {List(_)} | 
@@ -321,18 +328,15 @@ object BluejellyParser extends Parsers {
   private def pred = 
     btype2 ^? (types.Type.mkPred, "invalid predicate: %s" format _)  
     
-  private def btype1 = 
-    atype1 ~ (atype*) ^^ {
-       case ty~args => types.Type.mkApp(ty, args) 
-    }
+  private def btype1 = atype1 ~ (atype*) ^^ {
+    case ty~args => types.Type.mkApp(ty, args) 
+  }
   
-  private def btype2 = 
-    qconid ~ (atype*) ^^ {
-       case n~args => types.Type.mkApp(types.TyCon(n), args)
-    }
+  private def btype2 = qconid ~ (atype*) ^^ {
+    case n~args => types.Type.mkApp(types.TyCon(n), args)
+  }
   
-  private def atype = 
-    atype1 | qconid ^^ {types.TyCon(_)}
+  private def atype = atype1 | qconid ^^ {types.TyCon(_)}
   
   private def atype1:Parser[types.Type] = 
     ( varid ^^ {types.TyVar(_)}
@@ -348,16 +352,71 @@ object BluejellyParser extends Parsers {
         case Some(ty) => types.AppType(types.ListCon,ty)
       }
     | under ^^^ types.AnonTyVar())
+
+  // ---------------------------------------------------------------------
+  // Type constructors, type synonyms, new types
+  // ---------------------------------------------------------------------
+  
+  private def tyLhs = CONID ~ (varid*)
+  private def mbang = (bang?) ^^ {_.map(_=>true).getOrElse(false)}
+  
+  private def derivings = 
+    deriving ~> qconid ^^ {List(_)}
+    deriving ~> (lpar ~> repsep(qconid,comma) <~ rpar)
+  
+  private def labelGrp = 
+    ((commaVars <~ coco) ~ polyType ^^ { 
+      case vs~ty => new LabelGroup(vs,ty,false)
+    }
+    |(commaVars <~ coco) ~ (mbang ~ `type`) ^^ {
+      case vs~(strict~ty) => new LabelGroup(vs,ty,strict)
+    })
+  
+  private def conopArg = 
+    (bpoly ^^ {new DConArg(_,false)} 
+    |mbang ~ (atype+) ^^ {
+      case strict~(ty::tys) => new DConArg(types.Type.mkApp(ty, tys),strict)
+      case _ => sys.error("impossible")
+    })
+  
+  private def conidArg = 
+    (bpoly ^^ {new DConArg(_,false)} 
+    |mbang ~ atype ^^ {case strict~ty => new DConArg(ty,strict)})
+    
+  private def constr = 
+    (conopArg ~ conop ~ conopArg ^^ {
+      case ty1~n~ty2 => new AlgDCon(n,List(ty1,ty2))
+    }
+    |(qconid|lpar ~> CONOP <~ rpar) ~ (conidArg+) ^^ {
+      case n~tys => new AlgDCon(n, tys)
+    }
+    |con ~ (lbrack ~> (labelGrp*) <~ rbrack) ^^ {
+      case n~grps => new RecDCon(n,grps)
+    })
+  
+  private def qconstr = ((context <~ implies)?) ~ constr ^^ {
+      case None~dcon => dcon
+      case Some(preds)~ty => new QualDCon(preds,ty)
+  }  
+
+  private def pconstr = 
+    ((forall ~> (vars+)) ~ (dot ~> qconstr) ^^ {
+      case vs~qcon => new PolyDCon(vs,qcon)
+    }
+    |qconstr)
+  
+  private def tysynDecl = (ty ~> tyLhs) ~ (eq ~> `type`) ^^ {
+   case (conid~vs)~ty => new TySynDecl(conid,vs,ty)
+  }
   
   // ---------------------------------------------------------------------
   // Declarations
   // ---------------------------------------------------------------------
      
-  private def topDecl = $(tysig)
+  private def topDecl = $(tysig|tysynDecl)
   
-  private def tysig = (repsep(vars,comma) <~ coco) ~ topType ^^ {
-    case vars~ty => new TySigDecl(vars, ty)
-  }
+  private def tysig = (commaVars <~ coco) ~ topType ^^ 
+    { case vars~ty => new TySigDecl(vars, ty) }
   
   // ---------------------------------------------------------------------
   // Blocks, with implicit or explicit layout

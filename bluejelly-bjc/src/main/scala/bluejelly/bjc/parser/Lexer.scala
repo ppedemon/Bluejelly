@@ -7,12 +7,13 @@
 package bluejelly.bjc.parser
 
 import java.math.BigInteger
-import scala.util.parsing.input.{Positional}
-import scala.util.parsing.combinator.{RegexParsers}
-import bluejelly.utils.Name
-import bluejelly.utils.InterpolableString._
+
 import scala.annotation.tailrec
 import scala.collection.mutable.StringBuilder
+import scala.util.parsing.input.{Positional}
+import scala.util.parsing.combinator.{RegexParsers}
+
+import bluejelly.utils.Name
 
 /**
  * Basic lexer for the bluejelly top-level language.
@@ -44,29 +45,31 @@ object Lexer extends RegexParsers with Tokens {
   // Basic definitions
   // ---------------------------------------------------------------------
   private val keywords:Map[String, Unit => Token] = Map(
-      "case"      -> (_ =>  TCase()),
-      "class"     -> (_ =>  TClass()),
-      "data"      -> (_ =>  TData()),
-      "default"   -> (_ =>  TDefault()),
-      "deriving"  -> (_ =>  TDeriving()),
-      "do"        -> (_ =>  TDo()),
-      "else"      -> (_ =>  TElse()),
-      "if"        -> (_ =>  TIf()),
-      "import"    -> (_ =>  TImport()),
-      "in"        -> (_ =>  TIn()),
-      "infix"     -> (_ =>  TInfix()),
-      "infixl"    -> (_ =>  TInfixl()),
-      "infixr"    -> (_ =>  TInfixr()),
-      "instance"  -> (_ =>  TInstance()),
-      "let"       -> (_ =>  TLet()),
-      "mdo"       -> (_ =>  TMDo()),
-      "module"    -> (_ =>  TModule()),
-      "of"        -> (_ =>  TOf()),
-      "primitive" -> (_ =>  TPrim()),
-      "then"      -> (_ =>  TThen()),
-      "type"      -> (_ =>  TType()),
-      "where"     -> (_ =>  TWhere()),
-      "_"         -> (_ =>  TUnder())
+      "case"      -> (_ => TCase()),
+      "class"     -> (_ => TClass()),
+      "data"      -> (_ => TData()),
+      "default"   -> (_ => TDefault()),
+      "deriving"  -> (_ => TDeriving()),
+      "do"        -> (_ => TDo()),
+      "else"      -> (_ => TElse()),
+      "forall"    -> (_ => TForall()),
+      "if"        -> (_ => TIf()),
+      "import"    -> (_ => TImport()),
+      "in"        -> (_ => TIn()),
+      "infix"     -> (_ => TInfix()),
+      "infixl"    -> (_ => TInfixl()),
+      "infixr"    -> (_ => TInfixr()),
+      "instance"  -> (_ => TInstance()),
+      "let"       -> (_ => TLet()),
+      "mdo"       -> (_ => TMDo()),
+      "module"    -> (_ => TModule()),
+      "newtype"   -> (_ => TNewtype()),
+      "of"        -> (_ => TOf()),
+      "primitive" -> (_ => TPrim()),
+      "then"      -> (_ => TThen()),
+      "type"      -> (_ => TType()),
+      "where"     -> (_ => TWhere()),
+      "_"         -> (_ => TUnder())
   )
   
   private val reservedOps:Map[String, Unit => Token] = Map(
@@ -173,7 +176,6 @@ object Lexer extends RegexParsers with Tokens {
   @inline
   private def varId(q:Option[String],s:String) = q match {
     case None if s == "as" => TAs()
-    case None if s == "forall" => TForall()
     case None if s == "hiding" => THiding()
     case None if s == "qualified" => TQualified()
     case None => VarId(Name(s))

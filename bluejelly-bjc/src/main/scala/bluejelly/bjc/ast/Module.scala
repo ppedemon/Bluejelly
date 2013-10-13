@@ -15,6 +15,8 @@ import bluejelly.bjc.common.Name._
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 
+import decls._
+
 // -----------------------------------------------------------------------
 // Syntax tree for module exports
 // -----------------------------------------------------------------------
