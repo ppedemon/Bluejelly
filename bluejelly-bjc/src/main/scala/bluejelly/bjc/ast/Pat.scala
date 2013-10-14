@@ -61,7 +61,7 @@ case class AppPat(val p:Pat, val arg:Pat) extends Pat {
     if (isList) group(between("[",arg.ppr,"]")) else
     arg match {
       case a@AppPat(_,_) if !a.isTuple => group(p.ppr :/: par(arg.ppr))
-      case InfixPat(_,_,_) => group(p.ppr :/: par(arg.ppr))
+      case InfixPat(_,_,_)|RecPat(_,_) => group(p.ppr :/: par(arg.ppr))
       case _ => group(p.ppr :/: arg.ppr) 
     } 
 }
