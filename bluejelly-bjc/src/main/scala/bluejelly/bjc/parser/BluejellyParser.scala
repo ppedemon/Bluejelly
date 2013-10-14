@@ -252,7 +252,7 @@ object BluejellyParser extends Parsers {
       if (qs.isEmpty) m else qualId(Symbol(qs mkString ("",".","")), m.name)
   }
 
-  private def commas = (comma+) ^^ {_.length}
+  private def commas = (comma+) ^^ {_.length+1}
   
   private def commaVars = rep1sep(vars,comma)
   
@@ -337,23 +337,23 @@ object BluejellyParser extends Parsers {
   }
   
   private def btype2 = qconid ~ (atype*) ^^ {
-    case n~args => types.Type.mkApp(types.TyCon(n), args)
+    case n~args => types.Type.mkApp(types.Type.tyCon(n), args)
   }
   
-  private def atype = atype1 | qconid ^^ {types.TyCon(_)}
+  private def atype = atype1 | qconid ^^ {types.Type.tyCon(_)}
   
   private def atype1:Parser[types.Type] = 
     ( varid ^^ {types.TyVar(_)}
-    | lpar ~ rarr ~ rpar ^^^ types.ArrowCon
-    | lpar ~> commas <~ rpar ^^ {types.TupleCon(_)}
+    | lpar ~ rarr ~ rpar ^^^ types.Type.arrowCon
+    | lpar ~> commas <~ rpar ^^ {types.Type.tupleCon(_)}
     | lpar ~> repsep(`type`,comma) <~ rpar ^^ {
-        case Nil => types.UnitCon
+        case Nil => types.Type.unitCon
         case List(ty) => ty
-        case tys => types.Type.mkApp(types.TupleCon(tys.length), tys)
+        case tys => types.Type.mkApp(types.Type.tupleCon(tys.length), tys)
       }
     | lbrack ~> (`type`?) <~ rbrack ^^ {
-        case None => types.ListCon
-        case Some(ty) => types.AppType(types.ListCon,ty)
+        case None => types.Type.listCon
+        case Some(ty) => types.AppType(types.Type.listCon,ty)
       }
     | under ^^^ types.AnonTyVar())
 

@@ -126,7 +126,7 @@ case class RecDCon(val n:Name, groups:List[LabelGroup]) extends DCon {
 class DConArg(val ty:types.Type, val strict:Boolean) extends AstElem {
   def ppr = {
     val d = ty match {
-      case types.PolyType(_,_)|types.AppType(_,_) => between("(",ty.ppr,")")
+      case types.PolyType(_,_)|types.AppType(_,_) => par(ty.ppr)
       case _ => ty.ppr
     }
     gnest(if (strict) "!"::d else d)

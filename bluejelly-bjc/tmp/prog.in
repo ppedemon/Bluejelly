@@ -28,7 +28,8 @@ data Eq a => List a = Nil
                     | forall a . Ord a => Cons a (List a)
                     | Record {a,b,c :: !Int, stack :: forall a. Stack a}
                     | StrictCons !a !(List a)
+                    | Existencial (forall a . a -> a) (x.M.T a) (a -> (a->b) -> b) 
 newtype T a = T a
 data () => Abstract a
 data Num a => Complex a = !a :+ !a
-data Num a => Cmplx a = (:+) !(a) !(a)
+data Num a => Cmplx a = (:+) (forall a . a) !a

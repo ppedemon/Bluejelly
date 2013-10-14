@@ -66,6 +66,8 @@ object PprUtils {
   def between(l:String, d:Document, r:String) = 
     l :: d :: text(r)
       
+  def par(d:Document) = between("(",d,")")   
+    
   def pprMany(xs:List[PrettyPrintable]) = 
     group(xs.foldRight[Document](empty)((x,d) => cat(x.ppr,d)))
     

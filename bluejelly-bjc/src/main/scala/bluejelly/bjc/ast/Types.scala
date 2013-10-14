@@ -31,15 +31,15 @@ case class AppType(val fun:Type, val arg:Type) extends Type {
   lazy val (head,allArgs) = Type.unwind(this)
 
   def isTuple = head match {
-    case TupleCon(_) => true
+    case TyCon(TupleCon(_)) => true
     case _ => false
   }
   def isFun = head match {
-    case ArrowCon => true
+    case TyCon(ArrowCon) => true
     case _ => false
   }
   def isList = fun match {
-    case ListCon => true
+    case TyCon(ListCon) => true
     case _ => false
   }
   
@@ -48,8 +48,8 @@ case class AppType(val fun:Type, val arg:Type) extends Type {
     if (isList) group(between("[",arg.ppr,"]")) else
     if (isFun) {
       val (left,right) = allArgs match {
-        case List(f@AppType(_,_),x) if f.isFun => (between("(",f.ppr,")"),x.ppr)
-        case List(f@PolyType(_,_),x) => (between("(",f.ppr,")"),x.ppr)
+        case List(f@AppType(_,_),x) if f.isFun => (par(f.ppr),x.ppr)
+        case List(f@PolyType(_,_),x) => (par(f.ppr),x.ppr)
         case List(f,x) => (f.ppr,x.ppr)
         case _ => sys.error("Illegal function args: %s" format allArgs)
       }
@@ -57,24 +57,16 @@ case class AppType(val fun:Type, val arg:Type) extends Type {
     } else
     arg match {
       case a@AppType(_,_) if !a.isTuple => 
-        group(fun.ppr :/: between("(",arg.ppr,")"))
+        group(fun.ppr :/: par(arg.ppr))
       case PolyType(_,_) =>
-        group(fun.ppr :/: between("(",arg.ppr,")"))
+        group(fun.ppr :/: par(arg.ppr))
       case _ => 
         group(fun.ppr :/: arg.ppr) 
     } 
 }
 
-case object ArrowCon extends Type { def ppr = text("(->)") }
-case object UnitCon  extends Type { def ppr = text("()") }
-case object ListCon  extends Type { def ppr = text("[]") }
-
-case class TupleCon(val arity:Int) extends Type { 
-  def ppr = text("(%s)" format (","*arity))
-}
-
-case class TyCon(val name:Name) extends Type { def ppr = name.ppr }
 case class TyVar(val name:Name) extends Type { def ppr = name.ppr }
+case class TyCon(val tycon:GCon) extends Type { def ppr = tycon.ppr }
 
 case class AnonTyVar() extends Type {
   import bluejelly.bjc.common.NameSupply.freshTyVar
@@ -100,12 +92,18 @@ object Type {
     case _ => (ty,args)
   }
   
+  def tyCon(n:Name) = TyCon(Con(n))
+  def listCon = TyCon(ListCon)
+  def unitCon = TyCon(UnitCon)
+  def arrowCon = TyCon(ArrowCon)
+  def tupleCon(arity:Int) = TyCon(TupleCon(arity))
+  
   def mkApp(fun:Type, args:List[Type]) = args.foldLeft(fun)(AppType(_,_))
   
   def mkFun(tys:List[Type]) = 
-    tys.reduceRight((x,y) => AppType(AppType(ArrowCon,x),y))
+    tys.reduceRight((x,y) => AppType(AppType(TyCon(ArrowCon),x),y))
   def mkFun(tys:List[Type],ty:Type) = 
-    tys.foldRight(ty)((x,y) => AppType(AppType(ArrowCon,x),y))
+    tys.foldRight(ty)((x,y) => AppType(AppType(TyCon(ArrowCon),x),y))
   
   def mkPred = new PartialFunction[Type,Pred] {
     def isDefinedAt(ty:Type) = unwind(ty) match {
@@ -113,7 +111,7 @@ object Type {
       case _ => false
     }
     def apply(ty:Type) = unwind(ty) match {
-      case (TyCon(name),args) => new Pred(name,args)
+      case (TyCon(Con(name)),args) => new Pred(name,args)
     }
   }  
 }
