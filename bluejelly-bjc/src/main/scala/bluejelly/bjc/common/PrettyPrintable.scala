@@ -86,4 +86,26 @@ object PprUtils {
       case (x,DocNil) => x.ppr
       case (x,d) => x.ppr :/: d
     }
+  
+  def pprChrLit(c:Char) = 
+    text("'%s'" format printChar(c))
+  def pprStrLit(s:String) = 
+    text("\"%s\"" format (s flatMap (printChar(_,true))))
+  
+  private def printChar(c:Char,isStr:Boolean=false) = c match {
+    case '\n'   => "\\n"
+    case '\r'   => "\\r"
+    case '\t'   => "\\t"
+    case '\f'   => "\\f"
+    case '\b'   => "\\b"
+    case '\07'  => "\\a"
+    case '\013' => "\\v"
+    case '\''   => if (isStr) "'" else "\\'"
+    case '"'    => if (isStr) "\\\"" else "\""
+    case '\\'   => "\\\\"
+    case _ if c.isControl || c.isSpaceChar => 
+      "\\u%s" format (Integer.toHexString(c))
+    case _ => "%c" format c
+  }  
+
 }

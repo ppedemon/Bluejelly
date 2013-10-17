@@ -5,6 +5,7 @@
  * the BSD license, see the LICENSE file for details.
  */
 package bluejelly.bjc.ast
+package pat;
 
 import scala.annotation.tailrec
 import scala.text.Document.{group,text}
@@ -33,14 +34,14 @@ case class RecPat(val con:Name, val bs:List[PBind]) extends Pat {
 case class InfixPat(val p0:Pat, val op:Name, val p1:Pat) extends Pat {
   def ppr = {
     val d0 = p0 match {
-      case InfixPat(_,_,_) => par(p0.ppr)
+      case TySigPat(_,_) => par(p0.ppr)
       case _ => p0.ppr
     }
     val d1 = p1 match {
-      case InfixPat(_,_,_) => par(p1.ppr)
+      case TySigPat(_,_) => par(p1.ppr)
       case _ => p1.ppr
     }
-    gnest(d0 :/: op.ppr :/: d1) 
+    gnest(d0 :/: Name.asOp(op).ppr :/: d1) 
   }
 }
 
@@ -104,7 +105,10 @@ object Pat {
     case _ => (p,args)
   }
   
-  def needsPar(p:Pat) = p match {
+  def appPat(con:Pat,ps:List[Pat]) = ps.foldLeft(con)(AppPat(_,_))
+  def tuplePat(ps:List[Pat]) = appPat(ConPat(TupleCon(ps.length)), ps)
+  
+  private[pat] def needsPar(p:Pat) = p match {
     case ListPat(_)|ConPat(_)|VarPat(_)|LitPat(_)|WildPat => false
     case a@AppPat(_,_) if a.isTuple || a.isList => false
     case _ => true

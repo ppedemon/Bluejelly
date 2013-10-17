@@ -8,9 +8,10 @@ package bluejelly.bjc.parser
 
 import scala.util.parsing.combinator.Parsers
 import scala.util.parsing.input.Positional
-
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.PprUtils.{pprMany}
+import bluejelly.bjc.ast.TupleCon
+import bluejelly.bjc.ast.ArrowCon
 
 /**
  * Bluejelly parser.
@@ -21,9 +22,10 @@ object BluejellyParser extends Parsers {
   import Lexer._
   import bluejelly.bjc.common.Name._
   import bluejelly.bjc.ast
-  import bluejelly.bjc.ast.types
+  import bluejelly.bjc.ast.types._
   import bluejelly.bjc.ast.decls._
   import bluejelly.bjc.ast.module._
+  import bluejelly.bjc.ast.pat._
   import bluejelly.bjc.ast.NameConstants._  
   
   type Elem = Token
@@ -148,6 +150,13 @@ object BluejellyParser extends Parsers {
   private def QCONOP = elem("constructor",_.isInstanceOf[QConSym]) ^^
     { case QConSym(op) => qualOp(op.qual.get,op.name)}
   
+  // Literals
+  private def lit = 
+    (elem(_.isInstanceOf[IntLit])    ^^ {case IntLit(i) => ast.IntLit(i)}
+    |elem(_.isInstanceOf[FloatLit])  ^^ {case FloatLit(d) => ast.FloatLit(d)}
+    |elem(_.isInstanceOf[CharLit])   ^^ {case CharLit(c) => ast.CharLit(c)}
+    |elem(_.isInstanceOf[StringLit]) ^^ {case StringLit(s) => ast.StringLit(s)})    
+  
   // Keywords
   private def as       = elem(kwd("as"), _.isInstanceOf[TAs])
   private def data     = elem(kwd("data"), _.isInstanceOf[TData])
@@ -184,6 +193,8 @@ object BluejellyParser extends Parsers {
   private def under   = elem(_.isInstanceOf[TUnder])
   private def eq      = elem(_.isInstanceOf[TEq])
   private def bar     = elem(_.isInstanceOf[TBar])
+  private def tilde   = elem(_.isInstanceOf[TTilde])
+  private def at      = elem(_.isInstanceOf[TAt])
   
   // Special
   private def lpar    = elem(_.isInstanceOf[TLParen])
@@ -256,6 +267,12 @@ object BluejellyParser extends Parsers {
   
   private def commaVars = rep1sep(vars,comma)
   
+  private def gcon = 
+    ( qcon ^^ {ast.Con(_)}
+    | lpar ~ rpar ^^^ ast.UnitCon
+    | lbrack ~ rbrack ^^^ ast.ListCon
+    | lpar ~> commas <~ rpar ^^ {TupleCon(_)})
+  
   // ---------------------------------------------------------------------
   // Exports
   // ---------------------------------------------------------------------
@@ -305,21 +322,21 @@ object BluejellyParser extends Parsers {
   // Types
   // ---------------------------------------------------------------------
   
-  private def topType:Parser[types.Type] = $(polyType | qtype)
+  private def topType:Parser[Type] = $(polyType | qtype)
   
-  private def polyType:Parser[types.Type] = 
+  private def polyType:Parser[Type] = 
     (forall ~> (vars+)) ~ (dot ~> qtype) ^^ {
-      case xs~ty => types.PolyType(xs,ty)
+      case xs~ty => PolyType(xs,ty)
     }   
 
   private def qtype = ((context <~ implies)?) ~ `type` ^^ {
     case None~ty => ty 
-    case Some(preds)~ty => types.QualType(preds,ty)
+    case Some(preds)~ty => QualType(preds,ty)
   }
   
   private def `type` = rep(ltype <~ rarr) ~ (btype1|btype2) ^^ {
     case Nil~ty => ty
-    case tys~ty => types.Type.mkFun(tys,ty)
+    case tys~ty => Type.mkFun(tys,ty)
   }
   
   private def ltype = bpoly | btype1 | btype2
@@ -330,33 +347,74 @@ object BluejellyParser extends Parsers {
     lpar ~> repsep(pred,comma) <~ rpar
   
   private def pred = 
-    btype2 ^? (types.Type.mkPred, "invalid predicate: %s" format _)  
+    btype2 ^? (Type.mkPred, "invalid predicate: %s" format _)  
     
   private def btype1 = atype1 ~ (atype*) ^^ {
-    case ty~args => types.Type.mkApp(ty, args) 
+    case ty~args => Type.mkApp(ty, args) 
   }
   
   private def btype2 = qconid ~ (atype*) ^^ {
-    case n~args => types.Type.mkApp(types.Type.tyCon(n), args)
+    case n~args => Type.mkApp(Type.tyCon(n), args)
   }
   
-  private def atype = atype1 | qconid ^^ {types.Type.tyCon(_)}
+  private def atype = atype1 | qconid ^^ {Type.tyCon(_)}
   
-  private def atype1:Parser[types.Type] = 
-    ( varid ^^ {types.TyVar(_)}
-    | lpar ~ rarr ~ rpar ^^^ types.Type.arrowCon
-    | lpar ~> commas <~ rpar ^^ {types.Type.tupleCon(_)}
+  private def atype1:Parser[Type] = 
+    ( varid ^^ {TyVar(_)}
+    | lpar ~ rarr ~ rpar ^^^ Type.arrowCon
+    | lpar ~> commas <~ rpar ^^ {Type.tupleCon(_)}
     | lpar ~> repsep(`type`,comma) <~ rpar ^^ {
-        case Nil => types.Type.unitCon
+        case Nil => Type.unitCon
         case List(ty) => ty
-        case tys => types.Type.mkApp(types.Type.tupleCon(tys.length), tys)
+        case tys => Type.mkApp(Type.tupleCon(tys.length), tys)
       }
     | lbrack ~> (`type`?) <~ rbrack ^^ {
-        case None => types.Type.listCon
-        case Some(ty) => types.AppType(types.Type.listCon,ty)
+        case None => Type.listCon
+        case Some(ty) => AppType(Type.listCon,ty)
       }
-    | under ^^^ types.AnonTyVar())
+    | under ^^^ AnonTyVar())
 
+  // ---------------------------------------------------------------------
+  // Patterns
+  // ---------------------------------------------------------------------
+
+  private def pat = 
+    ( infixPat ~ (coco ~> `type`) ^^ {case p~ty => TySigPat(p,ty)}
+    | infixPat )
+  
+  private def infixPat = pat10 ~ rep(qconop ~ pat10) ^^ {
+    case p~xs => xs.foldLeft(p)((p,q) => InfixPat(p,q._1,q._2))
+  }
+    
+  private def pat10 = (minus?) ~ (fpat|apat) ^^ {
+    case Some(_)~p => NegPat(p)
+    case None~p=> p
+  }
+  
+  private def fpat = gcon ~ rep1(apat) ^^ {
+    case con~args => Pat.appPat(ConPat(con), args) 
+  }
+  
+  private def apat:Parser[Pat] = 
+    ( (vars <~ at) ~ pat ^^ {case v~p => AsPat(v,p)}
+    | lit ^^ {LitPat(_)}
+    | under ^^^ WildPat
+    | vars ^^ {VarPat(_)}
+    | tilde ~> apat ^^ {LazyPat(_)} 
+    | lbrack ~> rep1sep(pat,comma) <~ rbrack ^^ {ListPat(_)}
+    | lpar ~> rep1(pat) <~ rpar ^^ {
+      case List(p) => p 
+      case ps => Pat.tuplePat(ps)
+    }
+    | qcon ~ (lcurly ~> repsep(recBind,comma) <~ rcurly) ^^ {
+      case con~binds => RecPat(con,binds)  
+    }
+    | gcon ^^ {ConPat(_)})
+
+    private def recBind = 
+      ( (qvar <~ eq) ~ pat ^^ { case v~p => AsgPBind(v,p) }
+      | vars ^^ {VarPBind(_)})
+    
   // ---------------------------------------------------------------------
   // Type constructors, type synonyms, new types
   // ---------------------------------------------------------------------
@@ -379,7 +437,7 @@ object BluejellyParser extends Parsers {
   private def conopArg = 
     (bpoly ^^ {new DConArg(_,false)} 
     |mbang ~ (atype+) ^^ {
-      case strict~(ty::tys) => new DConArg(types.Type.mkApp(ty, tys),strict)
+      case strict~(ty::tys) => new DConArg(Type.mkApp(ty, tys),strict)
       case _ => sys.error("impossible")
     })
   
@@ -447,7 +505,8 @@ object BluejellyParser extends Parsers {
       tysig     |
       tysynDecl |
       dataDecl  |
-      newtyDecl )
+      newtyDecl |
+      pat ^^ {p => println("Pat = " + p); new TySigDecl(Nil,TyCon(ArrowCon))})
   
   private def tysig = (commaVars <~ coco) ~ topType ^^ 
     { case vars~ty => new TySigDecl(vars, ty) }

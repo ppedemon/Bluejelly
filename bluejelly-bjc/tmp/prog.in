@@ -33,3 +33,25 @@ newtype T a = T a
 data () => Abstract a
 data Num a => Complex a = !a :+ !a
 data Num a => Cmplx a = (:+) (forall a . a) !a
+
+x
+C 1 2
+v@(C _ x)
+1
+1.2
+'\\'
+'"'
+'\''
+"a\
+\\"\''a\u4f60"
+x :+ y
+[]
+x:xs
+w:x:y:z:xs
+x:(y:zs)
+(,) 1 2 :+ -(C (-x) ~(Z x y))
+(1 :+ 2) :+ b
+[x,1,z@(1 :+ i)]
+a `x.M.X` ((b `Z` c) :: a -> a -> Z a)
+Point {x,y,z=Point 0 0 0}
+

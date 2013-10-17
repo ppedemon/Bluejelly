@@ -24,7 +24,6 @@ object Lexer extends RegexParsers with Tokens {
   override val whiteSpace = "".r
   private def any = elem("",_ => true)
 
-  // Produce nicer error messages (default messages kind of suck)
   private def printChar(c:Char) = c match {
     case '\n'   => "\\n"
     case '\r'   => "\\r"
@@ -33,14 +32,12 @@ object Lexer extends RegexParsers with Tokens {
     case '\b'   => "\\b"
     case '\07'  => "\\a"
     case '\013' => "\\v"
-    case '\''   => "'"
-    case '"'    => "\""
-    case '\\'   => "\\"
     case _ if c.isControl || c.isSpaceChar => 
-      "\\%s" format (Integer.toString(c,8))
+      "\\u%s" format (Integer.toHexString(c))
     case _ => "%c" format c
   }  
 
+  
   // ---------------------------------------------------------------------
   // Basic definitions
   // ---------------------------------------------------------------------

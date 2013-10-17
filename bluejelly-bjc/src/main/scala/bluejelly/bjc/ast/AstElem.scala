@@ -13,6 +13,7 @@ import scala.util.parsing.input.Positional
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.Name._
 import bluejelly.bjc.common.PrettyPrintable
+import bluejelly.bjc.common.PprUtils.{pprChrLit,pprStrLit}
 
 
 // Some useful name constants
@@ -39,8 +40,8 @@ trait AstElem extends Positional with PrettyPrintable
 trait Lit extends AstElem;
 case class IntLit(val x:BigInt) extends Lit { def ppr = text(x.toString) }
 case class FloatLit(val x:Double) extends Lit { def ppr = text(x.toString) }
-case class CharLit(val x:Char) extends Lit { def ppr = text(x.toString) }
-case class StringLit(val x:String) extends Lit { def ppr = text(x) }
+case class CharLit(val x:Char) extends Lit { def ppr = pprChrLit(x) }
+case class StringLit(val x:String) extends Lit { def ppr = pprStrLit(x) }
 
 /*
  * Modeling generic Type/Data constructor types.
