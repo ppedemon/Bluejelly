@@ -11,7 +11,7 @@ import scala.annotation.tailrec
 import scala.text.Document.{group,text}
 
 import bluejelly.bjc.common.Name
-import bluejelly.bjc.common.PprUtils.{between,par,gnest,pprMany,pprTuple}
+import bluejelly.bjc.common.PprUtils._
 
 /**
  * Abstract trait for patterns.
@@ -20,7 +20,7 @@ import bluejelly.bjc.common.PprUtils.{between,par,gnest,pprMany,pprTuple}
 trait Pat extends AstElem;
 
 case class TySigPat(val p:Pat, val ty:types.Type) extends Pat {
-  def ppr = p.ppr :/: "::" :/: ty.ppr
+  def ppr = gnest(Pat.pprPar(p) :/: "::" :/: ty.ppr)
 }
 
 case class ListPat(val ps:List[Pat]) extends Pat {
@@ -41,7 +41,7 @@ case class InfixPat(val p0:Pat, val op:Name, val p1:Pat) extends Pat {
       case TySigPat(_,_) => par(p1.ppr)
       case _ => p1.ppr
     }
-    gnest(d0 :/: Name.asOp(op).ppr :/: d1) 
+    gnest(d0 :/: Name.asOp(op).ppr :/: d1)
   }
 }
 
@@ -52,31 +52,32 @@ case class AppPat(val p:Pat, val arg:Pat) extends Pat {
     case ConPat(TupleCon(_)) => true
     case _ => false
   }
-  def isList = head match {
-    case ConPat(ListCon) => true
-    case _ => false
-  }
   
   def ppr = 
-    if (isTuple) pprTuple(allArgs) else
-    if (isList) group(between("[",arg.ppr,"]")) else
-    arg match {
-      case a@AppPat(_,_) if !a.isTuple => group(p.ppr :/: par(arg.ppr))
-      case InfixPat(_,_,_)|RecPat(_,_) => group(p.ppr :/: par(arg.ppr))
-      case _ => group(p.ppr :/: arg.ppr) 
-    } 
+    if (isTuple) pprTuple(allArgs) else {
+      val as = allArgs map Pat.pprPar
+      head match {
+        case ConPat(Con(n)) => cat(Name.asId(n).ppr :: as)
+        case VarPat(n) => cat(Name.asId(n).ppr :: as)
+        case _ => cat(head.ppr :: as)
+      }
+    }
 }
 
 case class NegPat(val p:Pat) extends Pat {
-  def ppr = group("-" :: (if (Pat.needsPar(p)) par(p.ppr) else p.ppr))
+  def ppr = group("-" :: Pat.pprPar(p))
 }
 
 case class AsPat(val v:Name,val p:Pat) extends Pat {
-  def ppr = group(v.ppr :: "@" :: (if (Pat.needsPar(p)) par(p.ppr) else p.ppr))
+  def ppr = group(v.ppr :: "@" :: Pat.pprPar(p))
 }
 
 case class LazyPat(val p:Pat) extends Pat {
-  def ppr = group("~" :: (if (Pat.needsPar(p)) par(p.ppr) else p.ppr))
+  def ppr = group("~" :: Pat.pprPar(p))
+}
+
+case class ParPat(val p:Pat) extends Pat {
+  def ppr = par(p.ppr)
 }
 
 case class ConPat(val con:GCon) extends Pat {
@@ -108,9 +109,13 @@ object Pat {
   def appPat(con:Pat,ps:List[Pat]) = ps.foldLeft(con)(AppPat(_,_))
   def tuplePat(ps:List[Pat]) = appPat(ConPat(TupleCon(ps.length)), ps)
   
+  private[pat] def pprPar(p:Pat) = 
+    if (needsPar(p)) group(par(p.ppr)) else p.ppr
+  
   private[pat] def needsPar(p:Pat) = p match {
-    case ListPat(_)|ConPat(_)|VarPat(_)|LitPat(_)|WildPat => false
-    case a@AppPat(_,_) if a.isTuple || a.isList => false
+    case ParPat(_)|ListPat(_)|ConPat(_)|VarPat(_)|LitPat(_)|WildPat => false
+    case AsPat(_,_)|LazyPat(_) => false
+    case a@AppPat(_,_) if a.isTuple => false
     case _ => true
   }
 }

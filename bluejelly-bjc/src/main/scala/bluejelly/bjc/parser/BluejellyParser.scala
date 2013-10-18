@@ -403,7 +403,7 @@ object BluejellyParser extends Parsers {
     | tilde ~> apat ^^ {LazyPat(_)} 
     | lbrack ~> rep1sep(pat,comma) <~ rbrack ^^ {ListPat(_)}
     | lpar ~> rep1(pat) <~ rpar ^^ {
-      case List(p) => p 
+      case List(p) => ParPat(p) 
       case ps => Pat.tuplePat(ps)
     }
     | qcon ~ (lcurly ~> repsep(recBind,comma) <~ rcurly) ^^ {

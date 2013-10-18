@@ -54,4 +54,6 @@ x:(y:zs)
 [x,1,z@(1 :+ i)]
 a `x.M.X` ((b `Z` c) :: a -> a -> Z a)
 Point {x,y,z=Point 0 0 0}
+(:+) 3 4
+
 

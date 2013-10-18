@@ -15,20 +15,6 @@ import bluejelly.bjc.common.PrettyPrintable
 
 import scala.text.Document.{empty,group,text}
 
-/**
- * Common trait for top-level module declarations.
- * @author ppedemon
- */
-trait TopDecl extends AstElem
-
-/**
- * Common trait for declarations that can be local (e.g., they can
- * appear inside a "where" or a "let"). This is a refinement of
- * trait [[TopLevelDecl]].
- * @author ppedemon
- */
-trait Decl extends TopDecl
-
 // -----------------------------------------------------------------------
 // Type signatures
 // -----------------------------------------------------------------------
