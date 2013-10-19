@@ -149,6 +149,8 @@ object Exp {
     case _ => (e,args)
   }
   
+  def appExp(es:List[Exp]) = es.reduceLeft((app,e) => AppExp(app,e))
+  
   private[exp] def needsPar(e:Exp) = e match {
     case ParExp(_)|LeftSectExp(_,_)|RightSectExp(_,_) => false
     case ListExp(_)|EnumFromExp(_)|EnumFromToExp(_,_) => false
@@ -160,8 +162,7 @@ object Exp {
   
   private[exp] def pprPar(e:Exp) = 
     if (needsPar(e)) group(par(e.ppr)) else e.ppr
-    
-    
+      
   private[exp] def pprOperand(e:Exp) = e match {
     case TySigExp(_,_) => pprPar(e)
     case _ => e.ppr
@@ -172,16 +173,16 @@ object Exp {
 // Auxiliary definitions: guards, case alternatives, statements
 // -----------------------------------------------------------------------
 
-class Guarded[T <: AstElem](val guard:Exp,val x:T) extends AstElem {
-  def ppr = gnest(group("|" :/: guard.ppr) :/: "=" :/: x.ppr)
+class Guarded(val guard:Exp,val e:Exp) {
+  def ppr(s:String) = gnest(group("|" :/: guard.ppr) :/: s :/: e.ppr)
 }
 
 trait AltRhs extends AstElem;
 case class ExpAltRhs(val e:Exp) extends AltRhs { 
   def ppr = e.ppr
 }
-case class GrdAltRhs(val gs:List[Guarded[Exp]]) extends AltRhs {
-  def ppr = group(vppr(gs))
+case class GrdAltRhs(val gs:List[Guarded]) extends AltRhs {
+  def ppr = group(cat(gs map (_.ppr("->"))))
 }
 class Alt(val p:pat.Pat, val rhs:AltRhs, val ds:List[Decl]) extends AstElem {
   def ppr = {

@@ -34,6 +34,7 @@ data () => Abstract a
 data Num a => Complex a = !a :+ !a
 data Num a => Cmplx a = (:+) (forall a . a) !a
 
+{-
 x
 C 1 2
 v@(C _ x)
@@ -55,5 +56,4 @@ x:(y:zs)
 a `x.M.X` ((b `Z` c) :: a -> a -> Z a)
 Point {x,y,z=Point 0 0 0}
 (:+) 3 4
-
-
+-}

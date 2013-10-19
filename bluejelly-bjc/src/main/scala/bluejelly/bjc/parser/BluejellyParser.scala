@@ -8,10 +8,9 @@ package bluejelly.bjc.parser
 
 import scala.util.parsing.combinator.Parsers
 import scala.util.parsing.input.Positional
+
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.PprUtils.{pprMany}
-import bluejelly.bjc.ast.TupleCon
-import bluejelly.bjc.ast.ArrowCon
 
 /**
  * Bluejelly parser.
@@ -20,13 +19,21 @@ import bluejelly.bjc.ast.ArrowCon
 object BluejellyParser extends Parsers {
   
   import Lexer._
-  import bluejelly.bjc.common.Name._
+
+  import bluejelly.bjc.ast.TupleCon
+  import bluejelly.bjc.ast.ArrowCon
+  import bluejelly.bjc.ast.NameConstants._
+
   import bluejelly.bjc.ast
+  import bluejelly.bjc.ast.Decl
   import bluejelly.bjc.ast.types._
   import bluejelly.bjc.ast.decls._
   import bluejelly.bjc.ast.module._
   import bluejelly.bjc.ast.pat._
-  import bluejelly.bjc.ast.NameConstants._  
+  import bluejelly.bjc.ast.exp._  
+  
+  import bluejelly.bjc.common.Name._
+
   
   type Elem = Token
     
@@ -159,16 +166,23 @@ object BluejellyParser extends Parsers {
   
   // Keywords
   private def as       = elem(kwd("as"), _.isInstanceOf[TAs])
+  private def `case`   = elem(kwd("case"), _.isInstanceOf[TCase])
   private def data     = elem(kwd("data"), _.isInstanceOf[TData])
   private def deriving = elem(kwd("deriving"), _.isInstanceOf[TDeriving])
+  private def `do`     = elem(kwd("do"), _.isInstanceOf[TDo])
+  private def `else`   = elem(kwd("else"), _.isInstanceOf[TElse])
+  private def mdo      = elem(kwd("mdo"), _.isInstanceOf[TMDo])
   private def forall   = elem(kwd("forall"), _.isInstanceOf[TForall])
   private def hiding   = elem(kwd("hiding"), _.isInstanceOf[THiding])
+  private def `if`     = elem(kwd("if"), _.isInstanceOf[TIf])
   private def `import` = elem(kwd("import"),_.isInstanceOf[TImport])
   private def in       = elem(kwd("in"), _.isInstanceOf[TIn])
   private def let      = elem(kwd("let"), _.isInstanceOf[TLet])
   private def module   = elem(kwd("module"), _.isInstanceOf[TModule])
   private def newtype  = elem(kwd("newtype"), _.isInstanceOf[TNewtype])
+  private def of       = elem(kwd("of"), _.isInstanceOf[TOf])
   private def qual     = elem(kwd("qualified"), _.isInstanceOf[TQualified])
+  private def then     = elem(kwd("then"), _.isInstanceOf[TThen])
   private def ty       = elem(kwd("type"), _.isInstanceOf[TType])
   private def where    = elem(kwd("where"), _.isInstanceOf[TWhere])
     
@@ -190,11 +204,13 @@ object BluejellyParser extends Parsers {
   private def coco    = elem(_.isInstanceOf[TCoCo])
   private def implies = elem(_.isInstanceOf[TImplies])
   private def rarr    = elem(_.isInstanceOf[TRArr])
+  private def from    = elem(_.isInstanceOf[TLArr])
   private def under   = elem(_.isInstanceOf[TUnder])
   private def eq      = elem(_.isInstanceOf[TEq])
   private def bar     = elem(_.isInstanceOf[TBar])
   private def tilde   = elem(_.isInstanceOf[TTilde])
   private def at      = elem(_.isInstanceOf[TAt])
+  private def lambda  = elem(_.isInstanceOf[TLam])
   
   // Special
   private def lpar    = elem(_.isInstanceOf[TLParen])
@@ -378,9 +394,9 @@ object BluejellyParser extends Parsers {
   // Patterns
   // ---------------------------------------------------------------------
 
-  private def pat = 
+  private def pat = $(
     ( infixPat ~ (coco ~> `type`) ^^ {case p~ty => TySigPat(p,ty)}
-    | infixPat )
+    | infixPat ))
   
   private def infixPat = pat10 ~ rep(qconop ~ pat10) ^^ {
     case p~xs => xs.foldLeft(p)((p,q) => InfixPat(p,q._1,q._2))
@@ -415,6 +431,59 @@ object BluejellyParser extends Parsers {
       ( (qvar <~ eq) ~ pat ^^ { case v~p => AsgPBind(v,p) }
       | vars ^^ {VarPBind(_)})
     
+  // ---------------------------------------------------------------------
+  // Expressions
+  // ---------------------------------------------------------------------
+      
+  private def exp:Parser[Exp] = 
+    ((exp0a <~ coco) ~ qtype ^^ {case e~ty => TySigExp(e,ty)}
+    |exp0)
+  
+  private def exp0:Parser[Exp]  = exp0a|exp0b 
+  private def exp0a:Parser[Exp] = genInfix(exp10a)
+  private def exp0b:Parser[Exp] = genInfix(exp10b)
+  
+  private def mneg(p:Parser[Exp]) = (minus?) ~ p ^^ {
+    case None~e => e 
+    case _~e => NegExp(e)
+  }
+  private def genInfix(p:Parser[Exp]) = mneg(p) ~ rep(qop ~ mneg(p)) ^^ {
+    case e~ops => ops.foldLeft(e){(e,op) => InfixExp(e,op._1,op._2)}
+  }
+  
+  private def exp10a = 
+    ((`case` ~> exp <~ of) ~ block(alts) ^^ {case e~alts => CaseExp(e,alts)}
+    |`do` ~> block(stmts) ^^ {DoExp(_)}
+    | mdo ~> block(stmts) ^^ {MDoExp(_)}
+    | (aexp+) ^^ {Exp.appExp(_)})
+    
+  private def exp10b = 
+    ((lambda ~> rep(apat)) ~ (rarr ~> exp) ^^ {case ps~e => LambdaExp(ps,e)}
+    |(let ~> decls) ~ (in ~> exp) ^^ {case decls~e => LetExp(decls,e)}
+    |(`if` ~> exp) ~ (then ~> exp) ~ (`else` ~> exp) ^^ {
+      case c~t~e => IfExp(c,t,e)
+    })
+ 
+  private def aexp:Parser[Exp] = success(null)   
+    
+  // Case alternatives
+  private def alts = (semi*) ~> rep1sep(alt,semi+) <~ (semi*)
+  private def alt = pat ~ altRhs ~ wherePart ^^ {
+    case p~rhs~ds => new Alt(p,rhs,ds)
+  }
+  private def altRhs = 
+    (grdAlt+) ^^ {GrdAltRhs(_)} | rarr ~> exp ^^ {ExpAltRhs(_)}
+  private def grdAlt = (bar ~> exp0) ~ (rarr ~> exp) ^^ {
+    case g~e => new Guarded(g,e)
+  }
+  
+  // Statements
+  private def stmts = (semi*) ~> rep1sep(stmt,semi+) <~ (semi*)
+  private def stmt = 
+    ((pat <~ from) ~ exp ^^ {case p~e => FromStmt(p,e)}
+    |let ~> decls ^^ {LetStmt(_)}
+    |exp ^^ {ExpStmt(_)})
+  
   // ---------------------------------------------------------------------
   // Type constructors, type synonyms, new types
   // ---------------------------------------------------------------------
@@ -505,11 +574,13 @@ object BluejellyParser extends Parsers {
       tysig     |
       tysynDecl |
       dataDecl  |
-      newtyDecl |
-      pat ^^ {p => println("Pat = " + p); new TySigDecl(Nil,TyCon(ArrowCon))})
-  
+      newtyDecl )    
+      
   private def tysig = (commaVars <~ coco) ~ topType ^^ 
     { case vars~ty => new TySigDecl(vars, ty) }
+  
+  private def wherePart = where ~> decls | success(Nil)
+  private def decls:Parser[List[Decl]] = success(Nil)
   
   // ---------------------------------------------------------------------
   // Blocks, with implicit or explicit layout
