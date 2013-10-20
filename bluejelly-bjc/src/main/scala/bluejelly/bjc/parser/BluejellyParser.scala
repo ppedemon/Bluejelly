@@ -34,7 +34,6 @@ object BluejellyParser extends Parsers {
   
   import bluejelly.bjc.common.Name._
 
-  
   type Elem = Token
     
   // ---------------------------------------------------------------------
@@ -448,7 +447,7 @@ object BluejellyParser extends Parsers {
     case _~e => NegExp(e)
   }
   private def genInfix(p:Parser[Exp]) = mneg(p) ~ rep(qop ~ mneg(p)) ^^ {
-    case e~ops => ops.foldLeft(e){(e,op) => InfixExp(e,op._1,op._2)}
+    case e~ops => ops.foldLeft(e)((e,op) => InfixExp(e,op._1,op._2))
   }
   
   private def exp10a = 
@@ -464,8 +463,38 @@ object BluejellyParser extends Parsers {
       case c~t~e => IfExp(c,t,e)
     })
  
-  private def aexp:Parser[Exp] = success(null)   
-    
+  private def aexp:Parser[Exp] = aexp0 ~ (fbinds*) ^^ {
+    case e~Nil => e
+    case e~bss => bss.foldLeft(e)(RecUpdExp(_,_)) 
+  }
+  
+  private def aexp0:Parser[Exp] = 
+    ( lit ^^ {LitExp(_)}
+    | qcon ~ fbinds ^^ {case c~bs => RecConExp(c,bs)}
+    | gcon ^^ {ConExp(_)}
+    | vars ^^ {VarExp(_)}
+    | lpar ~> rep1sep(exp,comma) <~ rpar ^^ {
+      case List(e) => ParExp(e)
+      case es => Exp.tupleExp(es)
+    }
+    | lpar ~> (exp10a ~ qop) <~ rpar ^^ {case e~op => LeftSectExp(e,op)}
+    | lpar ~> (qvaropNoMinus ~ exp0) <~ rpar ^^ {case op~e => RightSectExp(op,e)}
+    | lpar ~> (qconop ~ exp0) <~ rpar ^^ {case op~e => RightSectExp(op,e)}
+    | lbrack ~> listExp <~ rbrack)
+  
+  // List expressions
+  private def listExp = 
+    ( rep1sep(exp,comma) ^^ {ListExp(_)}
+    | (exp <~ bar) ~ rep1sep(stmt,comma) ^^ {case e~qs => ListComp(e,qs)}
+    | (exp <~ dotdot) ~ (exp?) ^^ {
+      case from~None => EnumFromExp(from)
+      case from~Some(to) => EnumFromToExp(from,to)
+    }
+    | (exp <~ comma) ~ (exp <~ dotdot) ~ (exp?) ^^ {
+      case from~then~None => EnumFromThenExp(from,then)
+      case from~then~Some(to) => EnumFromThenToExp(from,then,to)
+    })
+
   // Case alternatives
   private def alts = (semi*) ~> rep1sep(alt,semi+) <~ (semi*)
   private def alt = pat ~ altRhs ~ wherePart ^^ {
@@ -484,6 +513,11 @@ object BluejellyParser extends Parsers {
     |let ~> decls ^^ {LetStmt(_)}
     |exp ^^ {ExpStmt(_)})
   
+  // Record bindings
+  private def fbinds = lcurly ~> repsep(fbind,comma) <~ rcurly
+  private def fbind = 
+    (qvar <~ eq) ~ exp ^^ {case v~e => UpdBind(v,e)} | vars ^^ {VarBind(_)}
+    
   // ---------------------------------------------------------------------
   // Type constructors, type synonyms, new types
   // ---------------------------------------------------------------------
@@ -506,8 +540,7 @@ object BluejellyParser extends Parsers {
   private def conopArg = 
     (bpoly ^^ {new DConArg(_,false)} 
     |mbang ~ (atype+) ^^ {
-      case strict~(ty::tys) => new DConArg(Type.mkApp(ty, tys),strict)
-      case _ => sys.error("impossible")
+      case strict~tys => new DConArg(Type.mkApp(tys.head, tys.tail),strict)
     })
   
   private def conidArg = 

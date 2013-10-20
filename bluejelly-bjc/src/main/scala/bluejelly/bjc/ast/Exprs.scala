@@ -150,6 +150,7 @@ object Exp {
   }
   
   def appExp(es:List[Exp]) = es.reduceLeft((app,e) => AppExp(app,e))
+  def tupleExp(es:List[Exp]) = appExp(ConExp(TupleCon(es.length))::es) 
   
   private[exp] def needsPar(e:Exp) = e match {
     case ParExp(_)|LeftSectExp(_,_)|RightSectExp(_,_) => false
@@ -170,7 +171,7 @@ object Exp {
 }
 
 // -----------------------------------------------------------------------
-// Auxiliary definitions: guards, case alternatives, statements
+// Auxiliary definitions: guards, case alternatives, statements, rec binds
 // -----------------------------------------------------------------------
 
 class Guarded(val guard:Exp,val e:Exp) {
