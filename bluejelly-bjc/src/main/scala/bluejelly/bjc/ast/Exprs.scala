@@ -47,7 +47,7 @@ case class ParExp(val e:Exp) extends Exp {
 }
 
 case class CaseExp(val e:Exp, val alts:List[Alt]) extends Exp {
-  def ppr = gnest("case" :/: e.ppr :/: "of" :/: group(vppr(alts)))
+  def ppr = gnest(group("case" :/: e.ppr :/: text("of")) :/: pprBlock(alts))
 }
 
 case class LetExp(val ds:List[Decl], e:Exp) extends Exp {
@@ -57,11 +57,11 @@ case class LetExp(val ds:List[Decl], e:Exp) extends Exp {
 }
 
 case class DoExp(val s:List[Stmt]) extends Exp {
-  def ppr = gnest("do" :/: group(vppr(s)))
+  def ppr = gnest("do" :/: pprBlock(s))
 }
 
 case class MDoExp(val s:List[Stmt]) extends Exp {
-  def ppr = gnest("mdo" :/: group(vppr(s)))
+  def ppr = gnest("mdo" :/: pprBlock(s))
 }
 
 case class LambdaExp(val ps:List[pat.Pat], e:Exp) extends Exp {
@@ -87,9 +87,9 @@ case class AppExp(val e:Exp, val arg:Exp) extends Exp {
     if (isTuple) pprTuple(args) else {
       val as = args map Exp.pprPar
       head match {
-        case ConExp(Con(n)) => cat(Name.asId(n).ppr :: as)
-        case VarExp(n) => cat(Name.asId(n).ppr :: as)
-        case _ => cat(head.ppr :: as)
+        case ConExp(Con(n)) => group(cat(Name.asId(n).ppr :: as))
+        case VarExp(n) => group(cat(Name.asId(n).ppr :: as))
+        case _ => group(cat(head.ppr :: as))
       }
     }
 }
@@ -188,13 +188,13 @@ case class GrdAltRhs(val gs:List[Guarded]) extends AltRhs {
 class Alt(val p:pat.Pat, val rhs:AltRhs, val ds:List[Decl]) extends AstElem {
   def ppr = {
     val w = if (ds.isEmpty) empty else gnest("where" :/: group(vppr(ds)))
-    cat(List(p.ppr, text("->"), rhs.ppr, w))
+    cat(gnest(group(p.ppr :/: text("->")) :/: rhs.ppr), w)
   }
 }
 
 trait Stmt extends AstElem;
 case class FromStmt(val p:pat.Pat, val e:Exp) extends Stmt {
-  def ppr = gnest(p.ppr :/: "<-" :/: e.ppr)
+  def ppr = gnest(group(p.ppr :/: text("<-")) :/: e.ppr)
 }
 case class LetStmt(val ds:List[Decl]) extends Stmt {
   def ppr = if (ds.isEmpty) empty else gnest("let" :/: group(vppr(ds)))

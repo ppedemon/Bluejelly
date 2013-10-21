@@ -57,9 +57,9 @@ case class AppPat(val p:Pat, val arg:Pat) extends Pat {
     if (isTuple) pprTuple(allArgs) else {
       val as = allArgs map Pat.pprPar
       head match {
-        case ConPat(Con(n)) => cat(Name.asId(n).ppr :: as)
-        case VarPat(n) => cat(Name.asId(n).ppr :: as)
-        case _ => cat(head.ppr :: as)
+        case ConPat(Con(n)) => group(cat(Name.asId(n).ppr :: as))
+        case VarPat(n) => group(cat(Name.asId(n).ppr :: as))
+        case _ => group(cat(head.ppr :: as))
       }
     }
 }

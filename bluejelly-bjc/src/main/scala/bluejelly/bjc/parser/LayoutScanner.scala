@@ -81,8 +81,10 @@ object LayoutScanner {
   private def inImplicitLayout(ctx:Stack[Int]) = 
     !ctx.isEmpty && ctx.top > 0
     
-  private def isHotToken(t:Token) = 
-    t == TWhere() || t == TLet() || t == TDo() || t == TOf()
+  private def isHotToken(t:Token) = t match {
+    case TWhere()|TLet()|TDo()|TMDo()|TOf() => true
+    case _ => false
+  }
   
   private def isIndent(t:Token, ctx:Stack[Int]) = 
     (ctx.isEmpty && t != EOI()) || (!ctx.isEmpty && t.pos.column > ctx.top)

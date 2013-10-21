@@ -484,8 +484,7 @@ object BluejellyParser extends Parsers {
   
   // List expressions
   private def listExp = 
-    ( rep1sep(exp,comma) ^^ {ListExp(_)}
-    | (exp <~ bar) ~ rep1sep(stmt,comma) ^^ {case e~qs => ListComp(e,qs)}
+    ( (exp <~ bar) ~ rep1sep(stmt,comma) ^^ {case e~qs => ListComp(e,qs)}
     | (exp <~ dotdot) ~ (exp?) ^^ {
       case from~None => EnumFromExp(from)
       case from~Some(to) => EnumFromToExp(from,to)
@@ -493,7 +492,8 @@ object BluejellyParser extends Parsers {
     | (exp <~ comma) ~ (exp <~ dotdot) ~ (exp?) ^^ {
       case from~then~None => EnumFromThenExp(from,then)
       case from~then~Some(to) => EnumFromThenToExp(from,then,to)
-    })
+    }
+    | rep1sep(exp,comma) ^^ {ListExp(_)})
 
   // Case alternatives
   private def alts = (semi*) ~> rep1sep(alt,semi+) <~ (semi*)
@@ -607,7 +607,8 @@ object BluejellyParser extends Parsers {
       tysig     |
       tysynDecl |
       dataDecl  |
-      newtyDecl )    
+      newtyDecl |
+      exp ^^ {e => println(e); TySigDecl(Nil,Type.arrowCon)})    
       
   private def tysig = (commaVars <~ coco) ~ topType ^^ 
     { case vars~ty => new TySigDecl(vars, ty) }

@@ -19,7 +19,7 @@ import scala.text.Document.{empty,group,text}
 // Type signatures
 // -----------------------------------------------------------------------
 case class TySigDecl(val vars:List[Name], val ty:types.Type) extends TopDecl {
-  def ppr = gnest(pprMany(vars map asId, ",") :/: "::" :/: ty.ppr)
+  def ppr = gnest(group(pprMany(vars map asId, ",") :/: text("::")) :/: ty.ppr)
 }
 
 // -----------------------------------------------------------------------

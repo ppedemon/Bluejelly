@@ -77,10 +77,16 @@ object PprUtils {
       case List(x) => x.ppr
       case x::xs => cat(x.ppr :: text(sep), pprMany(xs,sep))
     })
-    
+  
+  def pprBlock(xs:List[PrettyPrintable]) = between("{",
+    group(xs.foldRight[Document](empty) {
+      case (x,DocNil) => x.ppr
+      case (x,d) => group(x.ppr :: text(";")) :/: d      
+    }), "}")
+  
   def pprList(xs:List[PrettyPrintable])  = between("[",pprMany(xs,","),"]")
   def pprTuple(xs:List[PrettyPrintable]) = between("(",pprMany(xs,","),")")
-  
+      
   def vppr(xs:List[PrettyPrintable]) = 
     xs.foldRight[Document](empty) {
       case (x,DocNil) => x.ppr
@@ -103,6 +109,7 @@ object PprUtils {
     case '\''   => if (isStr) "'" else "\\'"
     case '"'    => if (isStr) "\\\"" else "\""
     case '\\'   => "\\\\"
+    case ' '    => " "
     case _ if c.isControl || c.isSpaceChar => 
       "\\u%s" format (Integer.toHexString(c))
     case _ => "%c" format c
