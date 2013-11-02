@@ -6,6 +6,7 @@ import B hiding()
 
 import qualified custom.B(a,b,c,Eq((==),(/=)))
 import qualified container.Set as S hiding(a,C(a,(+)),Z(..),)
+
 x::Int
 y::[Char]
 a,(+),(-):: forall a b . Prelude.Eq a => a -> a
@@ -34,44 +35,38 @@ data () => Abstract a
 data Num a => Complex a = !a :+ !a
 data Num a => Cmplx a = (:+) (forall a . a) !a
 
-case Just x of
-  Just z | z < 0 -> Nothing
-         | z == 0 -> error "zero!"
-         | otherwise -> Just $ sqrt(z)
-  _ -> Nothing
+id x = x
+1 = 2
+x + y = x + y
+(map f) xs = case xs of
+  [] -> []
+  x:xs -> f x : rest
+ where --rest = map f ys ;; ys = tail (x:xs)
 
-1+2+3+Complex {x=1,y=0}
-(case x of Just _ -> x; _ -> 0) + -(case z of 1 -> 20; 2 -> 40)
-x:xs :: (forall a. [a]) -> [a]
+(u ||| v) x y z@(Just z) = 
+  let 
+    Just x = u
+    A y = v 
+    b = if u == 0 then 1 else 2
+  in let in x + y
 
-case case x of Just x -> 1; Nothing -> 0 of 
-  0 -> Nothing
-  v@_ -> Just v
+(Just _, 1 :+ 2, T [1,2,3]) = (34,35)
+curry f (x,y) = f x y
+[x,y,z] = [1,2,3]
 
-infix 5 +,-,*,`a`
-infixl 5 +,-,*,`a`
-infixr +,-,*,`a`
+comp = [ (u,v) | 
+  x <- [1..], 
+  y <- [1,3..], 
+  let u = x + y
+      v = x - y,
+  v >= 0]
 
-{-
-x
-C 1 2
-v@(C _ x)
-1
-1.2
-'\\'
-'"'
-'\''
-"a\
-\\"\''a\u4f60"
-x :+ y
-[]
-x:xs
-w:x:y:z:xs
-x:(y:zs)
-(,) 1 2 :+ -(C (-x) ~(Z x y))
-(1 :+ 2) :+ b
-[x,1,z@(1 :+ i)]
-a `x.M.X` ((b `Z` c) :: a -> a -> Z a)
-Point {x,y,z=Point 0 0 0}
-(:+) 3 4
--}
+monadic f m = do {
+  ; x <- m
+  ; let z = 1
+        y = x + z
+  ; z <- f y
+  ; return $ x + z ;;;;
+}
+
+

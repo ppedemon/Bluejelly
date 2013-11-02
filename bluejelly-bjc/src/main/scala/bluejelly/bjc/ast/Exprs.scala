@@ -8,7 +8,7 @@ package bluejelly.bjc.ast
 package exp
 
 import scala.annotation.tailrec
-import scala.text.Document.{empty,group,text}
+import scala.text.Document.{empty,group,nest,text}
 
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.PprUtils._
@@ -52,7 +52,7 @@ case class CaseExp(val e:Exp, val alts:List[Alt]) extends Exp {
 
 case class LetExp(val ds:List[Decl], e:Exp) extends Exp {
   def ppr = gnest(
-      group("let" :/: group(vppr(ds))) :/: 
+      group("let" :/: gnest(pprBlock(ds))) :/: 
       group("in" :/: e.ppr))
 }
 
@@ -187,8 +187,12 @@ case class GrdAltRhs(val gs:List[Guarded]) extends AltRhs {
 }
 class Alt(val p:pat.Pat, val rhs:AltRhs, val ds:List[Decl]) extends AstElem {
   def ppr = {
-    val w = if (ds.isEmpty) empty else gnest("where" :/: group(vppr(ds)))
-    cat(gnest(group(p.ppr :/: text("->")) :/: rhs.ppr), w)
+    val w = if (ds.isEmpty) empty else gnest("where" :/: pprBlock(ds))
+    val d = rhs match {
+      case ExpAltRhs(_) => group(group(p.ppr :/: text("->")) :/: rhs.ppr)
+      case GrdAltRhs(_) => group(p.ppr :/: rhs.ppr)
+    }
+    gnest(cat(d, w))
   }
 }
 
@@ -197,7 +201,7 @@ case class FromStmt(val p:pat.Pat, val e:Exp) extends Stmt {
   def ppr = gnest(group(p.ppr :/: text("<-")) :/: e.ppr)
 }
 case class LetStmt(val ds:List[Decl]) extends Stmt {
-  def ppr = if (ds.isEmpty) empty else gnest("let" :/: group(vppr(ds)))
+  def ppr = if (ds.isEmpty) empty else gnest("let" :/: pprBlock(ds))
 }
 case class ExpStmt(val e:Exp) extends Stmt {
   def ppr = e.ppr

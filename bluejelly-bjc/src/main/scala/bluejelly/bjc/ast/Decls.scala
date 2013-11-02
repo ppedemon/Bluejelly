@@ -13,11 +13,19 @@ import bluejelly.bjc.common.Name.{asId,asOp}
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 
+import pat.Pat
+import exp.{Exp,Guarded}
+import dcons.DCon
+
 import scala.text.Document.{empty,group,text}
 
 // -----------------------------------------------------------------------
-// Fixity
+// Declarations (can appear inside a where, let or at the top level)
 // -----------------------------------------------------------------------
+
+/*
+ * Fixity
+ */
 sealed trait Assoc
 case object NoAssoc extends Assoc
 case object LeftAssoc extends Assoc
@@ -40,16 +48,68 @@ object FixityDecl {
   val defPrec = maxPrec
 }
 
-// -----------------------------------------------------------------------
-// Type signatures
-// -----------------------------------------------------------------------
+/*
+ * Type signatures
+ */
 case class TySigDecl(val vars:List[Name], val ty:types.Type) extends Decl {
   def ppr = gnest(group(pprMany(vars map asId, ",") :/: text("::")) :/: ty.ppr)
 }
 
+trait Rhs extends AstElem;
+case class FunRhs(val exp:Exp) extends Rhs {
+  def ppr = exp.ppr
+}
+case class GrdRhs(val gs:List[Guarded]) extends Rhs {
+  def ppr = group(cat(gs map (_.ppr("="))))
+}
+
+/*
+ * Function bindings
+ */
+case class FunBind(
+    val fun:Name, 
+    val args:List[pat.Pat], 
+    val rhs:Rhs,
+    val ds:List[Decl]) extends Decl {
+  def ppr = {
+    val w = if (ds.isEmpty) empty else gnest("where" :/: pprBlock(ds))
+    val lhs = (fun.nc,args) match {
+      case (Id,_) => pprMany(fun::args)
+      case (Op,List(a0,a1)) => a0.ppr :/: fun.ppr :/: a1.ppr
+      case (Op,a0::a1::as) if args.length > 2 =>
+        val d = a0.ppr :/: fun.ppr :/: a1.ppr
+        group(par(d) :/: pprMany(as))
+      case _ => empty // Impossible, just to avoid a compilation warning
+    }
+    val d = rhs match {
+      case FunRhs(_) => group(group(lhs :/: text("=")) :/: rhs.ppr)
+      case GrdRhs(_) => group(lhs :/: rhs.ppr)
+    }
+    gnest(cat(d, w))
+  }
+}
+
+/*
+ * Pattern bindings
+ */
+case class PatBind(val pat:Pat, val rhs:Rhs, val ds:List[Decl]) extends Decl {
+  def ppr = {
+    val w = if (ds.isEmpty) empty else gnest("where" :/: pprBlock(ds))
+    val d = rhs match {
+      case FunRhs(_) => group(group(pat.ppr :/: text("=")) :/: rhs.ppr)
+      case GrdRhs(_) => group(pat.ppr :/: rhs.ppr)
+    }
+    gnest(cat(d, w))
+  }
+}
+
 // -----------------------------------------------------------------------
-// Type synonyms, algebraic data types and new types
+// Top level declarations
 // -----------------------------------------------------------------------
+
+/*
+ * Type synonyms
+ */
 case class TySynDecl(
     val n:Name, 
     val vars:List[Name], 
@@ -60,6 +120,9 @@ case class TySynDecl(
       rhs.ppr)
 }
 
+/*
+ * Type constructors
+ */
 case class DataDecl(
     val n:Name, 
     val vars:List[Name], 
@@ -84,6 +147,9 @@ case class DataDecl(
   }
 }
 
+/*
+ * New types
+ */
 case class NewTyDecl(
     val n:Name, 
     val v:Name, 
@@ -105,52 +171,4 @@ case class NewTyDecl(
     }
     gnest(cat(List(dlhs, rhs.ppr, ders)))
   }
-}
-
-// -----------------------------------------------------------------------
-// Data constructors
-// -----------------------------------------------------------------------
-
-trait DCon extends AstElem;
-
-case class PolyDCon(val tyvars:List[Name], val dcon:DCon) extends DCon {
-  def ppr = gnest("forall" :/: pprMany(tyvars) :/: "." :/: dcon.ppr)
-}
-
-case class QualDCon(val ctx:List[types.Pred], val dcon:DCon) extends DCon {
-  def ppr = gnest(
-      (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: 
-      "=>" :/: dcon.ppr)
-}
-
-case class AlgDCon(val n:Name, args:List[DConArg]) extends DCon {
-  def ppr = n.nc match {
-    case Id => pprMany(n :: args)
-    case Op => pprMany(List(args(0), n, args(1)))
-  }
-}
-
-case class RecDCon(val n:Name, groups:List[LabelGroup]) extends DCon {
-  def ppr = gnest(n.ppr :/: between("{", pprMany(groups,","), "}"))
-}
-
-class DConArg(val ty:types.Type, val strict:Boolean) extends AstElem {
-  def ppr = {
-    val d = ty match {
-      case types.PolyType(_,_)|types.AppType(_,_) => par(ty.ppr)
-      case _ => ty.ppr
-    }
-    gnest(if (strict) "!"::d else d)
-  }
-}
-
-class LabelGroup(
-    val labels:List[Name], 
-    ty:types.Type, 
-    val strict:Boolean) extends AstElem {
-  def ppr = gnest(cat(List(
-      pprMany(labels, ","), 
-      text("::"), 
-      gnest(if (strict) "!"::ty.ppr else ty.ppr)
-    )))
 }

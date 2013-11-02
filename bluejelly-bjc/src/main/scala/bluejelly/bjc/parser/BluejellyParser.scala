@@ -20,20 +20,19 @@ object BluejellyParser extends Parsers {
   
   import Lexer._
 
-  import bluejelly.bjc.ast.TupleCon
-  import bluejelly.bjc.ast.ArrowCon
-  import bluejelly.bjc.ast.NameConstants._
-
+  import bluejelly.bjc.common.Name
+  import bluejelly.bjc.common.Name._
+  
   import bluejelly.bjc.ast
-  import bluejelly.bjc.ast.Decl
+  import bluejelly.bjc.ast.NameConstants._
+  import bluejelly.bjc.ast.{ArrowCon,TupleCon,Decl}
+  import bluejelly.bjc.ast.dcons._
   import bluejelly.bjc.ast.types._
-  import bluejelly.bjc.ast.decls._
-  import bluejelly.bjc.ast.module._
   import bluejelly.bjc.ast.pat._
   import bluejelly.bjc.ast.exp._  
+  import bluejelly.bjc.ast.decls._
+  import bluejelly.bjc.ast.module._
   
-  import bluejelly.bjc.common.Name._
-
   type Elem = Token
     
   // ---------------------------------------------------------------------
@@ -47,7 +46,7 @@ object BluejellyParser extends Parsers {
   }
 
   override def elem(kind: String, p: Elem => Boolean) = acceptIf(p)(t =>  
-    "unexpected " + t.unexpected + "(" + kind + ") expected")
+    "unexpected " + t.unexpected + " (" + kind + ") expected")
   
   def elem(p: Elem => Boolean) = acceptIf(p)(t =>
     "unexpected " + t.unexpected)
@@ -338,7 +337,7 @@ object BluejellyParser extends Parsers {
     | vars ^^ {VarPat(_)}
     | tilde ~> apat ^^ {LazyPat(_)} 
     | lbrack ~> rep1sep(pat,comma) <~ rbrack ^^ {ListPat(_)}
-    | lpar ~> rep1(pat) <~ rpar ^^ {
+    | lpar ~> rep1sep(pat,comma) <~ rpar ^^ {
       case List(p) => ParPat(p) 
       case ps => Pat.tuplePat(ps)
     }
@@ -493,7 +492,7 @@ object BluejellyParser extends Parsers {
   private def pconstrs = rep1sep(pconstr,bar)
   
   private def ntyLhs = tyLhs ^? ({
-    case lhs@(conid~List(v)) => (conid,v)
+    case conid~List(v) => (conid,v)
   },{
     case conid~vs => "invalid newtype constructor: " + new PrettyPrintable {
       def ppr = pprMany(conid::vs)
@@ -524,16 +523,13 @@ object BluejellyParser extends Parsers {
   // Declarations
   // ---------------------------------------------------------------------
      
-  private def topDecl = $(
-      tysynDecl |
-      dataDecl  |
-      newtyDecl |
-      decl      |
-      exp ^^ {e => println(e); TySigDecl(Nil,Type.arrowCon)})    
+  private def topDecl = $(tysynDecl|dataDecl|newtyDecl)|decl
       
+  // Type signatures
   private def tysig = (commaVars <~ coco) ~ topType ^^ 
     { case vars~ty => new TySigDecl(vars, ty) }
   
+  // Fixity declarations
   private def fixity =
     (infix ~> prec ~ rep1sep(op,comma) ^^ {
       case p ~ ops => FixityDecl(NoAssoc,p,ops)
@@ -551,10 +547,37 @@ object BluejellyParser extends Parsers {
     case IntLit(x) => "invalid operator precedence: " + x 
   }) | success(FixityDecl.defPrec)
   
-  private def decl = tysig|fixity
+  // Function and pattern binds
+  private def funlhs = funlhs0|funlhs1
+  private def funlhs0 = infixPat ~ varop ~ infixPat ^^ {
+    case p0 ~ op ~ p1 => (op,List(p0,p1))
+  }
+  private def base = 
+    ( (lpar ~> funlhs0 <~ rpar) ~ apat ^^ { case (f,args)~p1 => (f, args :+ p1) }
+    | vars ~ apat ^^ { case v~p => (v,List(p)) })
+  private def funlhs1:Parser[(Name,List[Pat])] = 
+    ( base ~ (apat*) ^^ { case (f,args)~ps => (f,args ++ ps) } 
+    | (lpar ~> funlhs1 <~ rpar) ~ (apat+) ^^ { 
+        case (f,args)~ps => (f,args ++ ps) 
+    })
+    
+  private def rhs = (grdrhs+) ^^ {GrdRhs(_)} | eq ~> exp ^^ {FunRhs(_)}
+  private def grdrhs = (bar ~> exp) ~ (eq ~> exp) ^^ {
+    case g~e => new Guarded(g,e)
+  }
+
+  private def funbind = funlhs ~ rhs ~ wherePart ^^ {
+    case (f,args) ~ rhs ~ w => FunBind(f,args,rhs,w)
+  }
+    
+  private def patbind = infixPat ~ rhs ~ wherePart ^^ {
+    case p ~ rhs ~ w => PatBind(p,rhs,w)
+  }
+
+  private def decl = $(tysig|fixity|funbind|patbind)
   
-  private def wherePart = where ~> decls | success(Nil)
-  private def decls:Parser[List[Decl]] = success(Nil)
+  private def wherePart:Parser[List[Decl]] = where ~> decls | success(Nil)
+  private def decls = block((semi*) ~> repsep(decl,(semi+)) <~ (semi*))
   
   // ---------------------------------------------------------------------
   // Blocks, with implicit or explicit layout
