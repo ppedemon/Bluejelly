@@ -30,7 +30,7 @@ object BluejellyCompiler {
   
   def main(args:Array[String]) {
     val start = System.currentTimeMillis()    
-    val in = new UnicodeFilter(new FileReader("tmp/prog.in"))
+    val in = new UnicodeFilter(new FileReader(args(0)))
     val result = BluejellyParser.phrase(BluejellyParser.program, in)
     printf("Parsing time: %d\n", System.currentTimeMillis()-start)
     

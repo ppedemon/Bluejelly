@@ -46,94 +46,12 @@ object BluejellyParser extends Parsers {
     }}
   }
 
-  override def elem(kind: String, p: Elem => Boolean) = acceptIf(p){
-    case ErrorToken(msg) => msg
-    case t => "unexpected %s (%s expected)" format (unexpected(t),kind)
-  }
+  override def elem(kind: String, p: Elem => Boolean) = acceptIf(p)(t =>  
+    "unexpected " + t.unexpected + "(" + kind + ") expected")
   
-  def elem(p: Elem => Boolean) = acceptIf(p){
-    case ErrorToken(msg) => msg
-    case t => "unexpected %s" format unexpected(t)
-  }
+  def elem(p: Elem => Boolean) = acceptIf(p)(t =>
+    "unexpected " + t.unexpected)
   
-  private def identifier(s:String) = "identifier `%s'" format s
-  private def operator(s:String) = "operator `%s'" format s
-  private def kwd(s:String) = "keyword `%s'" format s 
-  private def badLayout(s:String) = "%s, possibly due to bad layout" format s
-  
-  def unexpected(t:Token) = t match {
-    case VarId(n)     => identifier(n.toString)
-    case ConId(n)     => identifier(n.toString)
-    case QVarId(n)    => identifier(n.toString)
-    case QConId(n)    => identifier(n.toString)
-    case TAs()        => identifier("as")
-    case THiding()    => identifier("hiding")
-    case TQualified() => identifier("qualified")  
-
-    case VarSym(n)  => operator(n.toString)
-    case ConSym(n)  => operator(n.toString)
-    case QVarSym(n) => operator(n.toString)
-    case QConSym(n) => operator(n.toString)
-    
-    case FloatLit(x)  => "floating point literal"
-    case IntLit(x)    => "integer literal"
-    case CharLit(x)   => "character literal"
-    case StringLit(x) => "string literal"
-    
-    case TCase()     => kwd("case")
-    case TClass()    => kwd("class")
-    case TData()     => kwd("data")
-    case TDefault()  => kwd("default")
-    case TDeriving() => kwd("deriving")
-    case TDo()       => kwd("do")
-    case TElse()     => kwd("else")
-    case TForall()   => kwd("forall")
-    case TIf()       => kwd("if")
-    case TImport()   => kwd("import")
-    case TIn()       => kwd("in")
-    case TInfix()    => kwd("infix")
-    case TInfixl()   => kwd("infixl")
-    case TInfixr()   => kwd("infixr")
-    case TInstance() => kwd("instance")
-    case TLet()      => kwd("let")
-    case TMDo()      => kwd("mdo")
-    case TModule()   => kwd("module")
-    case TNewtype()  => kwd("newtype")
-    case TOf()       => kwd("of")
-    case TPrim()     => kwd("primitive")
-    case TThen()     => kwd("then")
-    case TType()     => kwd("type")
-    case TWhere()    => kwd("where")
-    
-    case TUnder()     => "`_'"      
-    case TLParen() => "`('"
-    case TRParen() => "`('"
-    case TLBrack() => "`['"
-    case TRBrack() => "`]'"
-    case TComma()  => "`,'"
-    case TBack()   => "backquote"
-
-    case  TDotDot()  => "`..'"
-    case  TCoCo()    => "`::'"
-    case  TEq()      => "`='"
-    case  TLam()     => """`\'"""
-    case  TBar()     => "`|'"
-    case  TLArr()    => "`<-'"
-    case  TRArr()    => "`->'"
-    case  TImplies() => "`=>'"
-    case  TAt()      => "`@'"
-    case  TTilde()   => "`~'"
-    case  TMinus()   => "`-'"
-
-    case TLCurly() => badLayout("`{'")
-    case TRCurly() => badLayout("`}'")
-    case TSemi()   => badLayout("`;'")
-    case VLCurly() => badLayout("opening brace")
-    case VRCurly() => badLayout("closing brace")
-    case EOI()     => "end of input"
-    case ErrorToken(msg) => msg
-  }
-
   // ---------------------------------------------------------------------
   // Basic parsers
   // ---------------------------------------------------------------------
@@ -176,6 +94,9 @@ object BluejellyParser extends Parsers {
   private def `if`     = elem(kwd("if"), _.isInstanceOf[TIf])
   private def `import` = elem(kwd("import"),_.isInstanceOf[TImport])
   private def in       = elem(kwd("in"), _.isInstanceOf[TIn])
+  private def infix    = elem(kwd("infix"), _.isInstanceOf[TInfix])
+  private def infixl   = elem(kwd("infixl"), _.isInstanceOf[TInfixl])
+  private def infixr   = elem(kwd("infixr"), _.isInstanceOf[TInfixr])
   private def let      = elem(kwd("let"), _.isInstanceOf[TLet])
   private def module   = elem(kwd("module"), _.isInstanceOf[TModule])
   private def newtype  = elem(kwd("newtype"), _.isInstanceOf[TNewtype])
@@ -604,14 +525,33 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
      
   private def topDecl = $(
-      tysig     |
       tysynDecl |
       dataDecl  |
       newtyDecl |
+      decl      |
       exp ^^ {e => println(e); TySigDecl(Nil,Type.arrowCon)})    
       
   private def tysig = (commaVars <~ coco) ~ topType ^^ 
     { case vars~ty => new TySigDecl(vars, ty) }
+  
+  private def fixity =
+    (infix ~> prec ~ rep1sep(op,comma) ^^ {
+      case p ~ ops => FixityDecl(NoAssoc,p,ops)
+    }
+    |infixl ~> prec ~ rep1sep(op,comma) ^^ {
+      case p ~ ops => FixityDecl(LeftAssoc,p,ops)
+    }
+    |infixr ~> prec ~ rep1sep(op,comma) ^^ {
+      case p ~ ops => FixityDecl(RightAssoc,p,ops)
+    })   
+    
+  private def prec = elem(_.isInstanceOf[IntLit]) ^? ({ 
+    case IntLit(i) if i > 0 && i <= FixityDecl.maxPrec => i.toInt
+  },{
+    case IntLit(x) => "invalid operator precedence: " + x 
+  }) | success(FixityDecl.defPrec)
+  
+  private def decl = tysig|fixity
   
   private def wherePart = where ~> decls | success(Nil)
   private def decls:Parser[List[Decl]] = success(Nil)

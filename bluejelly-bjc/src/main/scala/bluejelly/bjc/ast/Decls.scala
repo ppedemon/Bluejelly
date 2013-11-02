@@ -9,16 +9,41 @@ package decls
 
 import bluejelly.bjc.common.{Id,Op}
 import bluejelly.bjc.common.Name
-import bluejelly.bjc.common.Name.{asId}
+import bluejelly.bjc.common.Name.{asId,asOp}
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 
 import scala.text.Document.{empty,group,text}
 
 // -----------------------------------------------------------------------
+// Fixity
+// -----------------------------------------------------------------------
+sealed trait Assoc
+case object NoAssoc extends Assoc
+case object LeftAssoc extends Assoc
+case object RightAssoc extends Assoc
+
+case class FixityDecl(
+    val assoc:Assoc, 
+    val prec:Int, 
+    val ops:List[Name]) extends Decl{
+  def ppr =
+    gnest(text(assoc match {
+    case NoAssoc => "infix" 
+    case LeftAssoc => "infixl"
+    case RightAssoc => "infixr"
+  }) :/: prec.toString :/: pprMany(ops map asOp, ","))
+}
+
+object FixityDecl {
+  val maxPrec = 9
+  val defPrec = maxPrec
+}
+
+// -----------------------------------------------------------------------
 // Type signatures
 // -----------------------------------------------------------------------
-case class TySigDecl(val vars:List[Name], val ty:types.Type) extends TopDecl {
+case class TySigDecl(val vars:List[Name], val ty:types.Type) extends Decl {
   def ppr = gnest(group(pprMany(vars map asId, ",") :/: text("::")) :/: ty.ppr)
 }
 

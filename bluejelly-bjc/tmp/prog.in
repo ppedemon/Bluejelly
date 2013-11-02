@@ -44,6 +44,14 @@ case Just x of
 (case x of Just _ -> x; _ -> 0) + -(case z of 1 -> 20; 2 -> 40)
 x:xs :: (forall a. [a]) -> [a]
 
+case case x of Just x -> 1; Nothing -> 0 of 
+  0 -> Nothing
+  v@_ -> Just v
+
+infix 5 +,-,*,`a`
+infixl 5 +,-,*,`a`
+infixr +,-,*,`a`
+
 {-
 x
 C 1 2
