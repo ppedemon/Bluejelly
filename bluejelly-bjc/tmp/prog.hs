@@ -69,4 +69,6 @@ monadic f m = do {
   ; return $ x + z ;;;;
 }
 
+infix 5 +,-,`a`
+infixr *
 
