@@ -16,6 +16,7 @@ import bluejelly.bjc.common.PrettyPrintable
 import pat.Pat
 import exp.{Exp,Guarded}
 import dcons.DCon
+import types.Type
 
 import scala.text.Document.{empty,group,text}
 
@@ -69,11 +70,13 @@ case class GrdRhs(val gs:List[Guarded]) extends Rhs {
 case class FunBind(
     val fun:Name, 
     val args:List[pat.Pat], 
+    val ty:Option[Type],
     val rhs:Rhs,
     val ds:List[Decl]) extends Decl {
   def ppr = {
     val w = if (ds.isEmpty) empty else gnest("where" :/: pprBlock(ds))
-    val lhs = (fun.nc,args) match {
+    val t = if (ty.isEmpty) empty else gnest("::" :/: ty.get.ppr)
+    val f = (fun.nc,args) match {
       case (Id,_) => pprMany(fun::args)
       case (Op,List(a0,a1)) => a0.ppr :/: fun.ppr :/: a1.ppr
       case (Op,a0::a1::as) if args.length > 2 =>
@@ -81,6 +84,7 @@ case class FunBind(
         group(par(d) :/: pprMany(as))
       case _ => empty // Impossible, just to avoid a compilation warning
     }
+    val lhs = cat(f,t)
     val d = rhs match {
       case FunRhs(_) => group(group(lhs :/: text("=")) :/: rhs.ppr)
       case GrdRhs(_) => group(lhs :/: rhs.ppr)

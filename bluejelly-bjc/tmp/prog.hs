@@ -41,7 +41,8 @@ x + y = x + y
 (map f) xs = case xs of
   [] -> []
   x:xs -> f x : rest
- where --rest = map f ys ;; ys = tail (x:xs)
+   where rest = map f ys ;; 
+         ys = tail (x:xs)
 
 (u ||| v) x y z@(Just z) = 
   let 
@@ -68,6 +69,9 @@ monadic f m = do {
   ; z <- f y
   ; return $ x + z ;;;;
 }
+
+(f (Just (x))) z :: Maybe a -> b -> c = error "What!?"
+
 
 infix 5 +,-,`a`
 infixr *

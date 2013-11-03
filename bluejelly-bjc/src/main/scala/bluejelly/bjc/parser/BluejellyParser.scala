@@ -566,8 +566,8 @@ object BluejellyParser extends Parsers {
     case g~e => new Guarded(g,e)
   }
 
-  private def funbind = funlhs ~ rhs ~ wherePart ^^ {
-    case (f,args) ~ rhs ~ w => FunBind(f,args,rhs,w)
+  private def funbind = funlhs ~ opt(coco ~> `type`) ~ rhs ~ wherePart ^^ {
+    case (f,args) ~ ty ~ rhs ~ w => FunBind(f,args,ty,rhs,w)
   }
     
   private def patbind = infixPat ~ rhs ~ wherePart ^^ {
