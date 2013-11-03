@@ -346,9 +346,9 @@ object BluejellyParser extends Parsers {
     }
     | gcon ^^ {ConPat(_)})
 
-    private def recBind = 
-      ( (qvar <~ eq) ~ pat ^^ { case v~p => AsgPBind(v,p) }
-      | vars ^^ {VarPBind(_)})
+  private def recBind = 
+    ( (qvar <~ eq) ~ pat ^^ { case v~p => AsgPBind(v,p) }
+    | vars ^^ {VarPBind(_)})
     
   // ---------------------------------------------------------------------
   // Expressions
