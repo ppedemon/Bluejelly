@@ -25,8 +25,7 @@ case class TySigExp(val e:Exp, val ty:types.Type) extends Exp {
 
 case class InfixExp(val e0:Exp, val op:Name, val e1:Exp) extends Exp {
   def ppr = gnest(
-      Exp.pprOperand(e0) :/: 
-      Name.asOp(op).ppr  :/: 
+      group(Exp.pprOperand(e0) :/: Name.asOp(op).ppr)  :/: 
       Exp.pprOperand(e1))
 }
 
@@ -115,7 +114,9 @@ case class ListExp(val es:List[Exp]) extends Exp {
 }
 
 case class ListComp(val e:Exp, val qs:List[Stmt]) extends Exp {
-  def ppr = between("[",group(e.ppr :/: "|" :/: gnest(pprMany(qs,","))),"]")
+  def ppr = between("[", gnest(
+    group(e.ppr :/: text("|")) :/: 
+    gnest(pprMany(qs,","))),"]")
 }
 
 case class EnumFromExp(val from:Exp) extends Exp {

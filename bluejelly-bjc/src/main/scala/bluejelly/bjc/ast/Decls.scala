@@ -145,7 +145,7 @@ case class DataDecl(
     val drhs = pprMany(rhs," |")
     val ders = derivings match { 
       case Nil => empty 
-      case _ => group("deriving" :: pprTuple(derivings)) 
+      case _ => group("deriving" :/: pprTuple(derivings)) 
     }
     gnest(cat(List(dlhs, drhs, ders)))
   }

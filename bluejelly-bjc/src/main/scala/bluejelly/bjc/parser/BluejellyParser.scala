@@ -396,7 +396,7 @@ object BluejellyParser extends Parsers {
     ( lit ^^ {LitExp(_)}
     | qcon ~ fbinds ^^ {case c~bs => RecConExp(c,bs)}
     | gcon ^^ {ConExp(_)}
-    | vars ^^ {VarExp(_)}
+    | qvar ^^ {VarExp(_)}
     | lpar ~> rep1sep(exp,comma) <~ rpar ^^ {
       case List(e) => ParExp(e)
       case es => Exp.tupleExp(es)
@@ -450,7 +450,7 @@ object BluejellyParser extends Parsers {
   private def mbang = (bang?) ^^ {_.map(_=>true).getOrElse(false)}
   
   private def derivings = 
-    deriving ~> qconid ^^ {List(_)}
+    deriving ~> qconid ^^ {List(_)} |
     deriving ~> (lpar ~> repsep(qconid,comma) <~ rpar)
   
   private def labelGrp = 
