@@ -176,3 +176,65 @@ case class NewTyDecl(
     gnest(cat(List(dlhs, rhs.ppr, ders)))
   }
 }
+
+/*
+ * Type classes
+ */
+case class ClassDecl(
+    val ctx:Option[List[types.Pred]], 
+    val pred:types.Pred,
+    val fdeps:List[FunDep],
+    val ds:List[Decl]) extends TopDecl {
+  def ppr = {
+    val dctx = ctx.map(ctx => group(
+      (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>")))
+      .getOrElse(empty)
+    val rule = cat(dctx, pred.ppr)
+    val fds = if (fdeps.isEmpty) empty else gnest("|" :/: pprMany(fdeps,","))
+    val w = if (ds.isEmpty) empty else gnest("where" :/: pprBlock(ds))
+    gnest(cat(List(gnest("class" :/: rule), fds, w)))
+  }
+}
+
+class FunDep(val from:List[Name], val to:List[Name]) extends AstElem {
+  def ppr = gnest(pprMany(from) :/: "->" :/: pprMany(to))
+}
+
+/*
+ * Instance declarations
+ */
+case class InstDecl(
+    val ctx:Option[List[types.Pred]], 
+    val pred:types.Pred, 
+    val ds:List[Decl]) extends TopDecl {
+  def ppr = {
+    val dctx = ctx.map(ctx => group(
+      (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>")))
+      .getOrElse(empty)
+    val rule = cat(dctx, pred.ppr)
+    val w = if (ds.isEmpty) empty else gnest("where" :/: pprBlock(ds))
+    gnest(cat(gnest("instance" :/: rule), w))    
+  }
+}
+
+/*
+ * Default types
+ */
+case class DefaultDecl(val tys:List[types.Type]) extends TopDecl {
+  def ppr = gnest("default" :/: par(pprMany(tys,",")))
+}
+
+/*
+ * Primitive declarations
+ */
+case class PrimDecl(
+    val prims:List[(Name,String)], 
+    val ty:Type) extends TopDecl {
+  def ppr = {
+    val ps = prims map Function.tupled((n,s) => new PrettyPrintable {
+      def ppr = group(n.ppr :/: text(s)) 
+    })
+    gnest(group("primitive" :/: pprMany(ps,",") :/: text("::")) :/: ty.ppr)
+  }
+}
+

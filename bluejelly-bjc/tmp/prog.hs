@@ -76,3 +76,21 @@ monadic f m = do {
 infix 5 +,-,`a`
 infixr *
 
+class Eq a where 
+  (==) :: a -> a -> Bool
+  (/=) x y = not (x == y)
+
+class Eq a => Ord a where
+class C a
+
+class Container c e | c -> e where {;;;}
+
+instance (Eq a, Eq b) => Eq (a,b) where
+  (u,v) == (x,y) = u == x && v == y
+
+default(Int)
+
+primitive 
+  addInt "bluejelly.Int.add", 
+  subInt "bluejelly.Int.sub" :: Int -> Int -> Int
+

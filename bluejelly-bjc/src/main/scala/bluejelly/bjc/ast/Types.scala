@@ -8,10 +8,11 @@ package bluejelly.bjc.ast
 package types
 
 import scala.text.Document.{group,text}
+import scala.annotation.tailrec
+
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
-import scala.annotation.tailrec
 
 /*
  * Abstract syntax for types.

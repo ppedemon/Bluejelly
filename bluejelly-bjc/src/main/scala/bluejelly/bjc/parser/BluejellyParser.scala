@@ -83,7 +83,9 @@ object BluejellyParser extends Parsers {
   // Keywords
   private def as       = elem(kwd("as"), _.isInstanceOf[TAs])
   private def `case`   = elem(kwd("case"), _.isInstanceOf[TCase])
+  private def `class`  = elem(kwd("class"), _.isInstanceOf[TClass])
   private def data     = elem(kwd("data"), _.isInstanceOf[TData])
+  private def default  = elem(kwd("default"), _.isInstanceOf[TDefault])
   private def deriving = elem(kwd("deriving"), _.isInstanceOf[TDeriving])
   private def `do`     = elem(kwd("do"), _.isInstanceOf[TDo])
   private def `else`   = elem(kwd("else"), _.isInstanceOf[TElse])
@@ -91,7 +93,8 @@ object BluejellyParser extends Parsers {
   private def forall   = elem(kwd("forall"), _.isInstanceOf[TForall])
   private def hiding   = elem(kwd("hiding"), _.isInstanceOf[THiding])
   private def `if`     = elem(kwd("if"), _.isInstanceOf[TIf])
-  private def `import` = elem(kwd("import"),_.isInstanceOf[TImport])
+  private def `import` = elem(kwd("import"), _.isInstanceOf[TImport])
+  private def instance = elem(kwd("instance"), _.isInstanceOf[TInstance])
   private def in       = elem(kwd("in"), _.isInstanceOf[TIn])
   private def infix    = elem(kwd("infix"), _.isInstanceOf[TInfix])
   private def infixl   = elem(kwd("infixl"), _.isInstanceOf[TInfixl])
@@ -100,6 +103,7 @@ object BluejellyParser extends Parsers {
   private def module   = elem(kwd("module"), _.isInstanceOf[TModule])
   private def newtype  = elem(kwd("newtype"), _.isInstanceOf[TNewtype])
   private def of       = elem(kwd("of"), _.isInstanceOf[TOf])
+  private def prim     = elem(kwd("primitive"), _.isInstanceOf[TPrim])
   private def qual     = elem(kwd("qualified"), _.isInstanceOf[TQualified])
   private def then     = elem(kwd("then"), _.isInstanceOf[TThen])
   private def ty       = elem(kwd("type"), _.isInstanceOf[TType])
@@ -499,7 +503,7 @@ object BluejellyParser extends Parsers {
     }
   })
   
-  private def tysynDecl = $((ty ~> tyLhs) ~ (eq ~> `type`) ^^ {
+  private def synDecl = $((ty ~> tyLhs) ~ (eq ~> `type`) ^^ {
    case (conid~vs)~ty => new TySynDecl(conid,vs,ty)
   })
   
@@ -518,12 +522,57 @@ object BluejellyParser extends Parsers {
       case preds~p~dcon~ds => 
         new NewTyDecl(p._1,p._2,preds,dcon,ds.getOrElse(Nil))
     }))
+  
+  // ---------------------------------------------------------------------
+  // Class and instances
+  // ---------------------------------------------------------------------
+  
+  private def rule = 
+    (context <~ implies) ~ pred ^^ { case ctx ~ p => (Some(ctx),p) } |
+    pred ^^ {(None,_)}
+  
+  private def fundep = 
+    (rep(vars) <~ rarr) ~ rep(vars) ^^ { case from ~ to => new FunDep(from,to) }
+  
+  private def fds = bar ~> rep1sep(fundep,comma) | success(Nil)
+  
+  private def classDecl = (`class` ~> rule) ~ fds ~ wherePart ^^ {
+    case (ctx,p)~fdeps~ws => ClassDecl(ctx,p,fdeps,ws)
+  }
+  
+  private def instDecl = (instance ~> rule) ~ wherePart ^^ {
+    case (ctx,p)~ws => InstDecl(ctx,p,ws)
+  }
+
+  // ---------------------------------------------------------------------
+  // Primitive and default declarations
+  // ---------------------------------------------------------------------
+
+  // Default declarations
+  private def defaultDecl = 
+    default ~> lpar ~> repsep(`type`,comma) <~ rpar ^^ { DefaultDecl(_) }
+  
+  // Primitive declarations
+  private def primDefn = 
+    vars ~ elem(_.isInstanceOf[StringLit]) ^^ { case v~StringLit(s) => (v,s) }   
     
+  private def primDecl = 
+    (prim ~> rep1sep(primDefn,comma)) ~ (coco ~> topType) ^^ {
+      case ps~ty => PrimDecl(ps,ty) 
+    }
+
   // ---------------------------------------------------------------------
   // Declarations
   // ---------------------------------------------------------------------
      
-  private def topDecl = $(tysynDecl|dataDecl|newtyDecl)|decl
+  private def topDecl = $(
+      synDecl     |
+      dataDecl    |
+      newtyDecl   |
+      classDecl   |
+      instDecl    |
+      defaultDecl |
+      primDecl)   | decl
       
   // Type signatures
   private def tysig = (commaVars <~ coco) ~ topType ^^ 
