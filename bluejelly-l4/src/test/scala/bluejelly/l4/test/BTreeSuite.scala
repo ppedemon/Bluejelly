@@ -21,7 +21,7 @@ class BTreeSuite extends FunSuite with BeforeAndAfterEach with L4Runner {
   test("in order traversal of a BST must list elements in ascending order") {
     val xs = 0 to 9 mkString ("[",",","]")
     check("BTree.l4", Seq(
-      (":BTree.testInOrderR", xs),
+      (":BTree.testInOrderL", xs),
       (":BTree.testInOrderR", xs)
     ))
   }

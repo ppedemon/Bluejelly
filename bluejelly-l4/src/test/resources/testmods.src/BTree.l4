@@ -35,7 +35,7 @@ fun insert t x =
             | False -> Node n t1 (insert t2 x)
 
 fun inOrder t =
-  let t$ = t in
+  let! t$ = t in
   match t$ with
     | Empty -> List.Nil
     | Node n t1 t2 -> List.append (inOrder t1) (List.Cons n (inOrder t2))
