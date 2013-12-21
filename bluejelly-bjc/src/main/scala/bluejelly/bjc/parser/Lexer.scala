@@ -152,7 +152,7 @@ object Lexer extends RegexParsers with Tokens {
     def apply(s:String) = {
       val (q,n) = split(s)
       n match {
-        case _ if n.charAt(0).isLower => varId(q,n)
+        case _ if n.charAt(0).isLower || n.charAt(0) == '_' => varId(q,n)
         case _ if n.charAt(0).isUpper => conId(q,n)
         case _ if n.charAt(0) == ':'  => conSym(q,n)
         case _ => varSym(q,n)

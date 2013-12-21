@@ -6,6 +6,7 @@
  */
 package bluejelly.bjc.parser.test
 
+import java.io.File
 import java.io.InputStreamReader
 import scala.util.parsing.input.Reader
 import org.scalatest.FunSuite
@@ -20,14 +21,11 @@ import bluejelly.utils.{Name,UnicodeFilter}
  * 
  * @author ppedemon
  */
-class LexerSuite extends FunSuite {
+class LexerSuite extends FunSuite with TestResourceReader {
 
   import Lexer._
   
-  private def readerFor(fileName:String) = {
-    val s = classOf[LexerSuite].getResourceAsStream("/lexer.tests/" + fileName)
-    new UnicodeFilter(new InputStreamReader(s))
-  }
+  private val base = new File("/lexer.tests")
   
   private def checkLexerOutput(s:Reader[Token], expected:Seq[Token]) {
     s.first match {
@@ -46,12 +44,12 @@ class LexerSuite extends FunSuite {
   }
   
   private def testLayoutScanner(fileName:String, expected:Seq[Token]) {
-    val s = new LayoutScanner(readerFor(fileName))
+    val s = new LayoutScanner(readerFor(new File(base,fileName)))
     checkLexerOutput(s, expected)
   }
 
   private def testScanner(fileName:String, expected:Seq[Token]) {
-    val s = new Scanner(readerFor(fileName))
+    val s = new Scanner(readerFor(new File(base,fileName)))
     checkLexerOutput(s, expected)
   }
 

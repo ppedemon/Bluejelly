@@ -232,9 +232,9 @@ case class PrimDecl(
     val ty:Type) extends TopDecl {
   def ppr = {
     val ps = prims map Function.tupled((n,s) => new PrettyPrintable {
-      def ppr = group(n.ppr :/: text(s)) 
+      def ppr = group(n.ppr :/: pprStrLit(s)) 
     })
-    gnest(group("primitive" :/: pprMany(ps,",") :/: text("::")) :/: ty.ppr)
+    gnest(group("primitive" :/: pprMany(ps,",")) :/: group("::" :/: ty.ppr))
   }
 }
 

@@ -46,7 +46,7 @@ object BluejellyParser extends Parsers {
   }
 
   override def elem(kind: String, p: Elem => Boolean) = acceptIf(p)(t =>  
-    "unexpected " + t.unexpected + " (" + kind + ") expected")
+    "unexpected " + t.unexpected + " (" + kind + " expected)")
   
   def elem(p: Elem => Boolean) = acceptIf(p)(t =>
     "unexpected " + t.unexpected)
@@ -358,13 +358,18 @@ object BluejellyParser extends Parsers {
   // Expressions
   // ---------------------------------------------------------------------
       
-  private def exp:Parser[Exp] = 
-    ((exp0a <~ coco) ~ qtype ^^ {case e~ty => TySigExp(e,ty)}
-    |exp0)
+  //private def exp:Parser[Exp] = 
+  //  ((exp0a <~ coco) ~ qtype ^^ {case e~ty => TySigExp(e,ty)}
+  //  |exp0)
+    
+  private def exp:Parser[Exp] = exp0 ~ opt(coco ~> qtype) ^^ {
+    case e~None => e
+    case e~Some(ty) => TySigExp(e,ty)
+  }
   
-  private def exp0:Parser[Exp]  = exp0a|exp0b 
-  private def exp0a:Parser[Exp] = genInfix(exp10a)
-  private def exp0b:Parser[Exp] = genInfix(exp10b)
+  private def exp0:Parser[Exp]  = genInfix(exp10a|exp10b) 
+  //private def exp0a:Parser[Exp] = genInfix(exp10a)
+  //private def exp0b:Parser[Exp] = genInfix(exp10b)
   
   private def mneg(p:Parser[Exp]) = (minus?) ~ p ^^ {
     case None~e => e 
