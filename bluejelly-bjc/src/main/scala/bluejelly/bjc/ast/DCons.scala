@@ -7,7 +7,7 @@
 package bluejelly.bjc.ast
 package dcons
 
-import bluejelly.bjc.common.{Name,Id,Op}
+import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.PprUtils._
 
 import scala.text.Document.text
@@ -25,10 +25,8 @@ case class QualDCon(val ctx:List[types.Pred], val dcon:DCon) extends DCon {
 }
 
 case class AlgDCon(val n:Name, args:List[DConArg]) extends DCon {
-  def ppr = n.nc match {
-    case Id => pprMany(n :: args)
-    case Op => pprMany(List(args(0), n, args(1)))
-  }
+  def ppr = if (n.isId) pprMany(n :: args) else 
+    pprMany(List(args(0), n, args(1)))
 }
 
 case class RecDCon(val n:Name, groups:List[LabelGroup]) extends DCon {

@@ -57,21 +57,21 @@ object BluejellyParser extends Parsers {
 
   // Names
   private def VARID = elem("identifier",_.isInstanceOf[VarId]) ^^ 
-    { case VarId(id) => unqualId(id.name) }
+    { case VarId(id) => Name(id.name) }
   private def VAROP = elem("operator",_.isInstanceOf[VarSym]) ^^ 
-    { case VarSym(op) => unqualOp(op.name) }
+    { case VarSym(op) => Name(op.name) }
   private def QVARID = elem("identifier",_.isInstanceOf[QVarId]) ^^ 
-    { case QVarId(id) => qualId(id.qual.get,id.name) }
+    { case QVarId(id) => Name(id.qual.get,id.name) }
   private def QVAROP = elem("operator",_.isInstanceOf[QVarSym]) ^^ 
-    { case QVarSym(op) => qualOp(op.qual.get,op.name) }
+    { case QVarSym(op) => Name(op.qual.get,op.name) }
   private def CONID = elem("constructor",_.isInstanceOf[ConId]) ^^
-    { case ConId(id) => unqualId(id.name)}
+    { case ConId(id) => Name(id.name)}
   private def CONOP = elem("constructor",_.isInstanceOf[ConSym]) ^^
-    { case ConSym(op) => unqualOp(op.name)}
+    { case ConSym(op) => Name(op.name)}
   private def QCONID = elem("constructor",_.isInstanceOf[QConId]) ^^
-    { case QConId(id) => qualId(id.qual.get,id.name)}
+    { case QConId(id) => Name(id.qual.get,id.name)}
   private def QCONOP = elem("constructor",_.isInstanceOf[QConSym]) ^^
-    { case QConSym(op) => qualOp(op.qual.get,op.name)}
+    { case QConSym(op) => Name(op.qual.get,op.name)}
   
   // Literals
   private def lit = 
@@ -199,7 +199,7 @@ object BluejellyParser extends Parsers {
   
   private def modid = ((VARID <~ dot)*) ~ CONID ^^ {
     case qs~m => 
-      if (qs.isEmpty) m else qualId(Symbol(qs mkString ("",".","")), m.name)
+      if (qs.isEmpty) m else Name(Symbol(qs mkString ("",".","")), m.name)
   }
 
   private def commas = (comma+) ^^ {_.length+1}

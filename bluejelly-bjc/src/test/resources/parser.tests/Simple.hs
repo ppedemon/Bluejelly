@@ -16,3 +16,5 @@ fun x = if x == 1 then 1 else (2+) + f x + case x of {1 -> 2; _ -> -1}
 works x = S $ \s -> f s x
 monadic m f = m >>= \x -> f x
 
+ops x y = (+) (x `div` y) (x*y)
+ 

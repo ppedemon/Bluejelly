@@ -17,12 +17,12 @@ import bluejelly.bjc.common.PprUtils.{pprChrLit,pprStrLit}
 
 // Some useful name constants
 object NameConstants {
-  import bluejelly.bjc.common.Name.{unqualId,unqualOp}
-  val nmMinus     = unqualOp('-)
-  val nmAs        = unqualId('as)
-  val nmForall    = unqualId('forall)
-  val nmHiding    = unqualId('hiding)
-  val nmQualified = unqualId('qualified)
+  import bluejelly.bjc.common.Name
+  val nmMinus     = Name('-)
+  val nmAs        = Name('as)
+  val nmForall    = Name('forall)
+  val nmHiding    = Name('hiding)
+  val nmQualified = Name('qualified)
 }
 
 /**

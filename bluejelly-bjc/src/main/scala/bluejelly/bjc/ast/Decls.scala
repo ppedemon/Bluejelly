@@ -7,7 +7,6 @@
 package bluejelly.bjc.ast
 package decls
 
-import bluejelly.bjc.common.{Id,Op}
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.Name.{asId,asOp}
 import bluejelly.bjc.common.PprUtils._
@@ -76,10 +75,10 @@ case class FunBind(
   def ppr = {
     val w = if (ds.isEmpty) empty else gnest("where" :/: pprBlock(ds))
     val t = if (ty.isEmpty) empty else gnest("::" :/: ty.get.ppr)
-    val f = (fun.nc,args) match {
-      case (Id,_) => pprMany(fun::args)
-      case (Op,List(a0,a1)) => a0.ppr :/: fun.ppr :/: a1.ppr
-      case (Op,a0::a1::as) if args.length > 2 =>
+    val f = (fun.isId,args) match {
+      case (true,_) => pprMany(fun::args)
+      case (false,List(a0,a1)) => a0.ppr :/: fun.ppr :/: a1.ppr
+      case (false,a0::a1::as) if args.length > 2 =>
         val d = a0.ppr :/: fun.ppr :/: a1.ppr
         group(par(d) :/: pprMany(as))
       case _ => empty // Impossible, just to avoid a compilation warning

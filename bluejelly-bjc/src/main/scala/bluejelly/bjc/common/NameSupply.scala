@@ -24,14 +24,12 @@ case object TyVarNS extends SupplyNS
  * @author ppedemon
  */
 object NameSupply {
-  import Name.unqualId
-  
   val ns:Map[SupplyNS,Int] = Map()
   
   def freshName[T <: SupplyNS](t:T) = {
     val k = ns.getOrElseUpdate(t, 0)
     ns(t) = k+1
-    unqualId(Symbol(k.toString))
+    Name(Symbol(k.toString))
   }
   
   def freshTyVar = freshName(TyVarNS)

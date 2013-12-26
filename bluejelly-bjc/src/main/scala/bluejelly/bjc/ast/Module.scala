@@ -105,7 +105,7 @@ class Module(
 }
 
 object Module {
-  private def defaultName = unqualId('Main)
-  private def defaultExports = ExportSome(List(EVar(unqualId('main))))
+  private def defaultName = Name('Main)
+  private def defaultExports = ExportSome(List(EVar(Name('main))))
   def defaultModule = new Module(defaultName, defaultExports)
 }
