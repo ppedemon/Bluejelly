@@ -45,7 +45,7 @@ class DConArg(val ty:types.Type, val strict:Boolean) extends AstElem {
 
 class LabelGroup(
     val labels:List[Name], 
-    ty:types.Type, 
+    val ty:types.Type, 
     val strict:Boolean) extends AstElem {
   def ppr = gnest(cat(List(
       pprMany(labels, ","), 
