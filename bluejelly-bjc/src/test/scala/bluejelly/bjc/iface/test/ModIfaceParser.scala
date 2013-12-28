@@ -56,7 +56,7 @@ object ModIfaceParser {
   // Transform a syntactic functional dependency to an interface one
   private def mkFDep(fdep:decls.FunDep)= 
     new FDep(fdep.from, fdep.to)
-  
+    
   // Collect the type variables of a (syntactic) predicate
   private def predTvs(pred:types.Pred) = 
     pred.tys.foldRight[List[IfaceTyVar]](Nil)((ty,vs) => ty match {
@@ -71,6 +71,22 @@ object ModIfaceParser {
       ty:IfaceType) = {
     val qty = if (ctx.isEmpty) ty else IfaceQualTy(ctx,ty)
     if (tvs.isEmpty) qty else IfacePolyTy(tvs,qty)
+  }
+
+  // Generate a selector type
+  private def mkSelTy(
+      tvs:List[IfaceTyVar], 
+      ctx:List[IfacePred], 
+      ty:IfaceType, 
+      t:IfaceType):IfaceType = t match {
+    case IfacePolyTy(vs,IfaceQualTy(preds,tau)) => 
+      mkTy(tvs ++ vs, ctx ++ preds, IfaceType.mkFun(ty,tau))
+    case IfacePolyTy(vs,tau) =>
+      mkTy(tvs ++ vs, ctx, IfaceType.mkFun(ty,tau))
+    case IfaceQualTy(preds,tau) =>
+      mkTy(tvs, ctx ++ preds, IfaceType.mkFun(ty,tau))
+    case _ =>
+      mkTy(tvs, ctx, IfaceType.mkFun(ty,t))
   }
 
   // Create an interface class operation
@@ -129,8 +145,7 @@ object ModIfaceParser {
       val labels = lts map (_._1)
       val strict = lts map (_._3)
       val tys = lts map (Function.tupled((_,t,_) => convert(t)))
-      val ids = (labels,tys).zipped.map((l,t) => 
-        IfaceId(l,IfaceType.mkFun(List(ty,t))))
+      val ids = (labels,tys).zipped.map((l,t) => IfaceId(l,mkSelTy(tvs, ctx, ty, t)))
       val t = IfaceType.mkFun(tys :+ ty)
       (new IfaceDataCon(n, mkTy(tvs, ctx, t), labels, strict),ids)
   }
@@ -242,6 +257,5 @@ object ModIfaceParser {
       case err@BluejellyParser.NoSuccess(_,_) => Left(err.toString)
       case BluejellyParser.Success(m,_) => Right(convert(m))
     }
-  }
-  
+  }  
 }

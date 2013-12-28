@@ -23,7 +23,7 @@ case object IfaceKStar extends IfaceKind { def ppr = text("*") }
 case class IfaceKFun(val from:IfaceKind, val to:IfaceKind) extends IfaceKind {
   def ppr = from match {
     case IfaceKFun(_,_) => gnest(par(from.ppr) :/: "->" :/: to.ppr)
-    case _ => gnest(from.ppr:/: "->" :/: to.ppr)
+    case _ => gnest(from.ppr :/: "->" :/: to.ppr)
   }
 }
 
@@ -32,8 +32,10 @@ case class IfaceKFun(val from:IfaceKind, val to:IfaceKind) extends IfaceKind {
  * @author ppedemon
  */
 class IfaceTyVar(val name:Name, val kind:IfaceKind) extends PrettyPrintable {
-  //def ppr = gnest(name.ppr :/: ":::" :/: kind.ppr)
-  def ppr = name.ppr
+  def ppr = kind match {
+    case IfaceKStar => name.ppr
+    case _ => par(group(name.ppr :: "::" :: kind.ppr))
+  }
 }
 
 /**
@@ -109,6 +111,9 @@ object IfaceType {
   
   def mkApp(fun:IfaceType, args:List[IfaceType]) = 
     args.foldLeft(fun)(IfaceAppTy(_,_))
+  
+  def mkFun(from:IfaceType, to:IfaceType) = 
+    IfaceAppTy(IfaceAppTy(IfaceTcTy(ArrowCon),from),to)  
     
   def mkFun(tys:List[IfaceType]) = 
     tys.reduceRight((x,y) => IfaceAppTy(IfaceAppTy(IfaceTcTy(ArrowCon),x),y))

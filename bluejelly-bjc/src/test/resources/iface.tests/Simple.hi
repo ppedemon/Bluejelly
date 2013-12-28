@@ -5,4 +5,6 @@ f,g :: Int -> Int
 data Either a b = Left a | Right b
 
 data Person = Manager {name::String, org::String, people::[Person]} 
-            | Employee {name::String, manager::Person}
+            | Employee {name:: !String, manager::Person}
+
+data M m = M { x :: forall a. m a -> a }
