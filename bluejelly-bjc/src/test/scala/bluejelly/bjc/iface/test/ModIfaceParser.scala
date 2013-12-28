@@ -25,7 +25,7 @@ import java.io.Reader
  * 
  * NOTE: this parser is purely for testing purposes. Module interfaces
  * are stored in binary format as static byte arrays. This is simply my
- * cheap way to produce interfaces so I can test the module system.
+ * cheap way to produce interfaces so I can test the module system. 
  * 
  * @author ppedemon
  */
