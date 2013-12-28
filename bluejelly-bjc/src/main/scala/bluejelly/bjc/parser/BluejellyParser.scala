@@ -500,14 +500,6 @@ object BluejellyParser extends Parsers {
   
   private def pconstrs = rep1sep(pconstr,bar)
   
-  private def ntyLhs = tyLhs ^? ({
-    case conid~List(v) => (conid,v)
-  },{
-    case conid~vs => "invalid newtype constructor: " + new PrettyPrintable {
-      def ppr = pprMany(conid::vs)
-    }
-  })
-  
   private def synDecl = $((ty ~> tyLhs) ~ (eq ~> `type`) ^^ {
    case (conid~vs)~ty => new TySynDecl(conid,vs,ty)
   })
@@ -523,9 +515,9 @@ object BluejellyParser extends Parsers {
     }))
   
   private def newtyDecl = $(newtype ~> 
-    (((context <~ implies)?) ~ ntyLhs ~ (eq ~> pconstr) ~ (derivings?) ^^ {
-      case preds~p~dcon~ds => 
-        new NewTyDecl(p._1,p._2,preds,dcon,ds.getOrElse(Nil))
+    (((context <~ implies)?) ~ tyLhs ~ (eq ~> pconstr) ~ (derivings?) ^^ {
+      case preds~(conid~vs)~dcon~ds => 
+        new NewTyDecl(conid,vs,preds,dcon,ds.getOrElse(Nil))
     }))
   
   // ---------------------------------------------------------------------

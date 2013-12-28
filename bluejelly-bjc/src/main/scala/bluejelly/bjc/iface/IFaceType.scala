@@ -109,4 +109,7 @@ object IfaceType {
   
   def mkApp(fun:IfaceType, args:List[IfaceType]) = 
     args.foldLeft(fun)(IfaceAppTy(_,_))
+    
+  def mkFun(tys:List[IfaceType]) = 
+    tys.reduceRight((x,y) => IfaceAppTy(IfaceAppTy(IfaceTcTy(ArrowCon),x),y))
 }

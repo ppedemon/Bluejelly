@@ -2,8 +2,8 @@ package bluejelly.bjc.parser.test
 
 import java.io.File
 import org.scalatest.FunSuite
-
 import bluejelly.bjc.parser.BluejellyParser
+import bluejelly.bjc.TestResourceReader
 
 class ParserSuite extends FunSuite with TestResourceReader {
 

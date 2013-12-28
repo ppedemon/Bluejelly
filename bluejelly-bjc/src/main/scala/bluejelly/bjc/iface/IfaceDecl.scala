@@ -36,9 +36,9 @@ case class IfaceTyCon(
     val dlhs = gnest(cat(List(
       text("data"), 
       dctx, 
-      group(name.ppr :/: pprMany(vars)),
+      if (vars.isEmpty) name.ppr else group(name.ppr :/: pprMany(vars)),
       if (cons.isEmpty) empty else text("="))))
-    gnest(cat(dlhs, pprMany(cons, "|")))
+    gnest(cat(dlhs, pprMany(cons, " |")))
   } 
 }
 
@@ -83,12 +83,12 @@ class IfaceDataCon(
     fields:List[Name], 
     stricts:List[Boolean]) extends PrettyPrintable {
   def ppr = {
-    val xs = stricts map {if (_) text("!") else text("L")}
+    val xs = stricts map {if (_) text("!") else text("_")}
     val sd = if (!stricts.isEmpty) 
       gnest("Stricts:" :/: group(cat(xs))) else empty
     val fd = if (!fields.isEmpty) 
       gnest("Fields:" :/: pprMany(fields)) else empty
-    cat(List(group(name.ppr :/: text("::")), ty.ppr, sd, fd))
+    gnest(cat(List(group(name.ppr :/: text("::")), ty.ppr, sd, fd)))
   }
 }
 

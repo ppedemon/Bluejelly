@@ -119,7 +119,7 @@ case class TySynDecl(
     val rhs:types.Type) extends TopDecl {
   def ppr = gnest(
       "type" :/: 
-      group(n.ppr :/: pprMany(vars) :/: text("=")) :/: 
+      group(group(cat(n.ppr,pprMany(vars))) :/: text("=")) :/:
       rhs.ppr)
 }
 
@@ -139,7 +139,7 @@ case class DataDecl(
     val dlhs = gnest(cat(List(
         text("data"), 
         dctx, 
-        group(n.ppr :/: pprMany(vars)),
+        group(cat(n.ppr,pprMany(vars))),
         if (rhs.isEmpty) empty else text("="))))
     val drhs = pprMany(rhs," |")
     val ders = derivings match { 
@@ -155,7 +155,7 @@ case class DataDecl(
  */
 case class NewTyDecl(
     val n:Name, 
-    val v:Name, 
+    val vars:List[Name], 
     val ctx:Option[List[types.Pred]],
     val rhs:DCon,
     val derivings:List[Name]) extends TopDecl {
@@ -166,7 +166,7 @@ case class NewTyDecl(
     val dlhs = gnest(cat(List(
         text("newtype"), 
         dctx, 
-        group(n.ppr :/: v.ppr),
+        group(cat(n.ppr,pprMany(vars))),
         text("="))))
     val ders = derivings match { 
       case Nil => empty 

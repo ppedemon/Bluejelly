@@ -119,10 +119,13 @@ object ModIfaceParser {
     case dcons.QualDCon(preds,dcon) => 
       convert(tvs, ctx ++ (preds map mkPred), ty, dcon)
     case dcons.AlgDCon(n,args) => 
-      new IfaceDataCon(n, mkTy(tvs, ctx, ty), Nil, args map {_.strict})
+      val t = IfaceType.mkFun((args map {arg => convert(arg.ty)}) :+ ty)
+      new IfaceDataCon(n, mkTy(tvs, ctx, t), Nil, args map {_.strict})
     case dcons.RecDCon(n,lgrps) =>
+      val tys = lgrps.flatMap({grp => grp.labels.map {_ => convert(grp.ty)}})
+      val t = IfaceType.mkFun(tys :+ ty)
       val stricts = lgrps.flatMap({grp => grp.labels map {_ => grp.strict}})
-      new IfaceDataCon(n, mkTy(tvs, ctx, ty), lgrps.flatMap(_.labels), stricts)
+      new IfaceDataCon(n, mkTy(tvs, ctx, t), lgrps.flatMap(_.labels), stricts)
   }
 
   // Convert a type constructor declaration
@@ -136,7 +139,7 @@ object ModIfaceParser {
   
   // Convert a newtype declaration
   private def convert(nt:decls.NewTyDecl):IfaceTyCon = {
-    val tvs = List(mkTv(nt.v))
+    val tvs = nt.vars map mkTv
     val ctx = nt.ctx.map(_ map mkPred).getOrElse(Nil)
     val tcTy = IfaceType.mkApp(IfaceTcTy(Con(nt.n)),
         tvs map {tv => IfaceTvTy(tv.name)})

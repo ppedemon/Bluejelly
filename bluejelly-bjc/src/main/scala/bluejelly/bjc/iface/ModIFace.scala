@@ -25,7 +25,7 @@ case class ExportedId(override val name:Name) extends IfaceExport(name) {
 case class ExportedTc(
     override val name:Name, 
     val children:List[Name]) extends IfaceExport(name) {
-  def ppr = group(name.ppr :/: between("{",pprMany(children,","),"}"))
+  def ppr = group(name.ppr :: between("{",pprMany(children,","),"}"))
 }
 
 /**
@@ -55,13 +55,12 @@ class ModIface(
       def ppr = group(f.ppr :/: asOp(n).ppr)
     })
     val fd = if (fixities.isEmpty) empty else 
-      gnest("Fixities:" :/: pprMany(fds, ","))
+      nl::gnest("Fixities:" :/: pprMany(fds, ","))
     val ed = if (exports.isEmpty) empty else 
-      gnest("Exports:" :/: pprMany(exports))
+      nl::gnest("Exports:" :/: pprMany(exports))
     cat(List(
       group("module" :/: name.ppr :/: text("where")), 
-      nl :: ed, 
-      nl :: fd,       
+      ed, fd,       
       if (decls.isEmpty) empty else nl :: vppr(decls),
       if (insts.isEmpty) empty else nl :: vppr(insts)))
   }

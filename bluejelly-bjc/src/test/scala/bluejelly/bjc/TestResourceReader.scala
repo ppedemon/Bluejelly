@@ -4,7 +4,7 @@
  * This source code is distributed under the terms of 
  * the BSD license, see the LICENSE file for details.
  */
-package bluejelly.bjc.parser.test
+package bluejelly.bjc
 
 import bluejelly.utils.UnicodeFilter
 import java.io.InputStreamReader

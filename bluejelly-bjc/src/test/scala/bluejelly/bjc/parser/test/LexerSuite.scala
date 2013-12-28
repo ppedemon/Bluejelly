@@ -10,10 +10,9 @@ import java.io.File
 import java.io.InputStreamReader
 import scala.util.parsing.input.Reader
 import org.scalatest.FunSuite
-
 import bluejelly.bjc.parser.{Lexer,Scanner,LayoutScanner}
 import bluejelly.utils.{Name,UnicodeFilter}
-
+import bluejelly.bjc.TestResourceReader
 
 /**
  * Test suite for Bluejelly lexer. We test here the behavior of the
