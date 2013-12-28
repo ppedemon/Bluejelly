@@ -25,7 +25,10 @@ import java.io.Reader
  * 
  * NOTE: this parser is purely for testing purposes. Module interfaces
  * are stored in binary format as static byte arrays. This is simply my
- * cheap way to produce interfaces so I can test the module system. 
+ * cheap way to produce interfaces so I can test the module system. The
+ * code here has many limitations that I won't fix (e.g, it generates a 
+ * selector function for every label in a record instead of doing so 
+ * just for exported labels).
  * 
  * @author ppedemon
  */
@@ -113,37 +116,47 @@ object ModIfaceParser {
       tvs:List[IfaceTyVar],
       ctx:List[IfacePred] = Nil,
       ty:IfaceType, 
-      dcon:dcons.DCon):IfaceDataCon = dcon match {
+      dcon:dcons.DCon):(IfaceDataCon,List[IfaceId]) = dcon match {
     case dcons.PolyDCon(vars,dcon) => 
       convert(tvs ++ (vars map mkTv), ctx, ty, dcon)
     case dcons.QualDCon(preds,dcon) => 
       convert(tvs, ctx ++ (preds map mkPred), ty, dcon)
     case dcons.AlgDCon(n,args) => 
       val t = IfaceType.mkFun((args map {arg => convert(arg.ty)}) :+ ty)
-      new IfaceDataCon(n, mkTy(tvs, ctx, t), Nil, args map {_.strict})
-    case dcons.RecDCon(n,lgrps) =>
-      val tys = lgrps.flatMap({grp => grp.labels.map {_ => convert(grp.ty)}})
+      (new IfaceDataCon(n, mkTy(tvs, ctx, t), Nil, args map {_.strict}), Nil)
+    case r@dcons.RecDCon(n,lgrps) =>
+      val lts = r.flatten
+      val labels = lts map (_._1)
+      val strict = lts map (_._3)
+      val tys = lts map (Function.tupled((_,t,_) => convert(t)))
+      val ids = (labels,tys).zipped.map((l,t) => 
+        IfaceId(l,IfaceType.mkFun(List(ty,t))))
       val t = IfaceType.mkFun(tys :+ ty)
-      val stricts = lgrps.flatMap({grp => grp.labels map {_ => grp.strict}})
-      new IfaceDataCon(n, mkTy(tvs, ctx, t), lgrps.flatMap(_.labels), stricts)
+      (new IfaceDataCon(n, mkTy(tvs, ctx, t), labels, strict),ids)
   }
 
   // Convert a type constructor declaration
-  private def convert(tc:decls.DataDecl):IfaceTyCon = {
+  private def convert(tc:decls.DataDecl):(IfaceTyCon,List[IfaceId]) = {
     val tvs = tc.vars map mkTv
     val ctx = tc.ctx.map(_ map mkPred).getOrElse(Nil)
     val tcTy = IfaceType.mkApp(IfaceTcTy(Con(tc.n)), 
         tvs map {tv => IfaceTvTy(tv.name)})
-    IfaceTyCon(tc.n, ctx, tvs, tc.rhs map {dcon => convert(tvs, ctx, tcTy, dcon)})
+    val (dcons,ids) = tc.rhs.foldRight
+      [(List[IfaceDataCon],List[IfaceId])]((Nil,Nil))((dcon,p) => {
+        val (d,is) = convert(tvs, ctx, tcTy, dcon)
+        (p._1 :+ d, p._2 ++ is)
+      })
+    (IfaceTyCon(tc.n, ctx, tvs, dcons),ids)
   }
   
   // Convert a newtype declaration
-  private def convert(nt:decls.NewTyDecl):IfaceTyCon = {
+  private def convert(nt:decls.NewTyDecl):(IfaceTyCon,List[IfaceId]) = {
     val tvs = nt.vars map mkTv
     val ctx = nt.ctx.map(_ map mkPred).getOrElse(Nil)
     val tcTy = IfaceType.mkApp(IfaceTcTy(Con(nt.n)),
         tvs map {tv => IfaceTvTy(tv.name)})
-    IfaceTyCon(nt.n, ctx, tvs, List(convert(tvs, ctx, tcTy, nt.rhs)))
+    val (dcon,ids) = convert(tvs, ctx, tcTy, nt.rhs)
+    (IfaceTyCon(nt.n, ctx, tvs, List(dcon)),ids)
   }
   
   // Convert a type synonym declaration
@@ -190,11 +203,11 @@ object ModIfaceParser {
         val ids = convert(f)
         new ModIface(m.name, m.exports, m.fixities, m.decls ++ ids, m.insts)
       case t@decls.DataDecl(_,_,_,_,_) =>
-        val tc = convert(t)
-        new ModIface(m.name, m.exports, m.fixities, m.decls :+ tc, m.insts)
+        val (tc,ids) = convert(t)
+        new ModIface(m.name, m.exports, m.fixities, m.decls ++ (tc::ids), m.insts)
       case t@decls.NewTyDecl(_,_,_,_,_) =>
-        val tc = convert(t)
-        new ModIface(m.name, m.exports, m.fixities, m.decls :+ tc, m.insts)
+        val (tc,ids) = convert(t)
+        new ModIface(m.name, m.exports, m.fixities, m.decls ++ (tc::ids), m.insts)
       case t@decls.TySynDecl(_,_,_) =>
         val tysyn = convert(t)
         new ModIface(m.name, m.exports, m.fixities, m.decls :+ tysyn, m.insts)
@@ -211,7 +224,7 @@ object ModIfaceParser {
         m0.name, 
         m0.exports.sortBy(_.name.toString),
         m0.fixities.sortBy(Function.tupled((f,_) => f.toString)),
-        m0.decls.sortBy(_.name.toString),
+        m0.decls.distinct.sortBy(_.name.toString),
         m0.insts.sortBy(_.name.toString))
   }
   

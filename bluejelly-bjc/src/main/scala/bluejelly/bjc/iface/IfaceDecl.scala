@@ -22,6 +22,14 @@ abstract class IfaceDecl(val name:Name) extends PrettyPrintable
 case class IfaceId(
     override val name:Name, 
     val ty:IfaceType) extends IfaceDecl(name) {
+  
+  override def equals(o:Any) = o match {
+    case x:IfaceId => x.name == name
+    case _ => false
+  }
+  
+  override def hashCode = name.hashCode
+  
   def ppr = gnest(group(name.ppr :/: text("::")) :/: ty.ppr)
 }
 

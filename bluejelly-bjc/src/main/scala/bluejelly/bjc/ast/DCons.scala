@@ -31,6 +31,9 @@ case class AlgDCon(val n:Name, args:List[DConArg]) extends DCon {
 
 case class RecDCon(val n:Name, groups:List[LabelGroup]) extends DCon {
   def ppr = gnest(n.ppr :/: between("{", pprMany(groups,","), "}"))
+  
+  // Produce a list of pairs (label,type,strict)
+  def flatten = groups.flatMap(grp => grp.labels map ((_,grp.ty,grp.strict)))
 }
 
 class DConArg(val ty:types.Type, val strict:Boolean) extends AstElem {
@@ -46,7 +49,7 @@ class DConArg(val ty:types.Type, val strict:Boolean) extends AstElem {
 class LabelGroup(
     val labels:List[Name], 
     val ty:types.Type, 
-    val strict:Boolean) extends AstElem {
+    val strict:Boolean) extends AstElem {  
   def ppr = gnest(cat(List(
       pprMany(labels, ","), 
       text("::"), 
