@@ -17,17 +17,19 @@ import bluejelly.bjc.ast.decls.FunDep
  * Interface top-level declarations.
  * @author ppedemon
  */
-abstract class IfaceDecl extends PrettyPrintable
+abstract class IfaceDecl(val name:Name) extends PrettyPrintable
 
-case class IfaceId(val name:Name, val ty:IfaceType) extends IfaceDecl {
+case class IfaceId(
+    override val name:Name, 
+    val ty:IfaceType) extends IfaceDecl(name) {
   def ppr = gnest(group(name.ppr :/: text("::")) :/: ty.ppr)
 }
 
 case class IfaceTyCon(
-    val name:Name, 
+    override val name:Name, 
     val ctx:List[IfacePred],
     val vars:List[IfaceTyVar], 
-    val cons:List[IfaceDataCon]) extends IfaceDecl {
+    val cons:List[IfaceDataCon]) extends IfaceDecl(name) {
   def ppr = {
     val dctx = if (ctx.isEmpty) empty else group(
       (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
@@ -41,22 +43,27 @@ case class IfaceTyCon(
 }
 
 case class IfaceTySyn(
-    val name:Name, 
+    override val name:Name, 
     val vars:List[IfaceTyVar],
-    val ty:IfaceType) extends IfaceDecl {
+    val ty:IfaceType) extends IfaceDecl(name) {
   def ppr = gnest("type" :/: 
     group(name.ppr :/: pprMany(vars) :/: text("=")) :/: ty.ppr)
 }
 
 case class IfaceCls(
-    val name:Name, 
-    val ty:IfacePolyTy,
+    override val name:Name, 
+    val vars:List[IfaceTyVar],
+    val ctx:List[IfacePred],
+    val pred:IfacePred,
     val fdeps:List[FDep],
-    val ops:List[IfaceClsOp]) extends IfaceDecl {
+    val ops:List[IfaceClsOp]) extends IfaceDecl(name) {
   def ppr = {
+    val dctx = group(
+        (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
+    val rule = cat(dctx, pred.ppr)
     val fds = if (fdeps.isEmpty) empty else gnest("|" :/: pprMany(fdeps,","))
     val w = if (ops.isEmpty) empty else gnest("where" :/: pprBlock(ops))
-    gnest(cat(List(gnest("class" :/: name.ppr :/: ty.ty.ppr), fds, w)))
+    gnest(cat(List(gnest("class" :/: rule), fds, w)))
   }
 }
     
@@ -91,7 +98,7 @@ class IfaceDataCon(
  */
 class IfaceClsOp(
     val name:Name, 
-    val ty:IfacePolyTy, 
+    val ty:IfaceType, 
     val isDefault:Boolean) extends PrettyPrintable {
   def ppr = {
     val nd = if (isDefault) group(name.ppr :/: text("{D}")) else name.ppr
@@ -105,7 +112,6 @@ class IfaceClsOp(
  */
 class IfaceClsInst(
     val name:Name,
-    val ty:IfaceType,
     val dfunId:Name) extends PrettyPrintable {
-  def ppr = gnest(gnest("instance" :/: ty.ppr :/: text("=")) :/: dfunId.ppr)
+  def ppr = gnest(group("instance" :/: name.ppr :/: text("=")) :/: dfunId.ppr)
 }

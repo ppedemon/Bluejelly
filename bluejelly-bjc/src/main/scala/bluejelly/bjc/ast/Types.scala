@@ -71,14 +71,14 @@ case class TyCon(val tycon:GCon) extends Type { def ppr = tycon.ppr }
 
 case class AnonTyVar() extends Type {
   import bluejelly.bjc.common.NameSupply.freshTyVar
-  def name = freshTyVar
+  val name = freshTyVar
   def ppr = text("t%s" format name)
 }
 
 /*
  * Predicates: head representing constraint, plus arguments
  */
-class Pred(val head:Name, tys:List[Type]) extends PrettyPrintable {
+class Pred(val head:Name, val tys:List[Type]) extends PrettyPrintable {
   def ppr = group(head.ppr :/: pprMany(tys))
 }
 

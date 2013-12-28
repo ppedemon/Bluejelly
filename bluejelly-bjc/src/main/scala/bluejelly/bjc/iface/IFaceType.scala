@@ -31,7 +31,7 @@ case class IfaceKFun(val from:IfaceKind, val to:IfaceKind) extends IfaceKind {
  * An interface type variable.
  * @author ppedemon
  */
-class IfaceTyVar(val name:Unqual, val kind:IfaceKind) extends PrettyPrintable {
+class IfaceTyVar(val name:Name, val kind:IfaceKind) extends PrettyPrintable {
   //def ppr = gnest(name.ppr :/: ":::" :/: kind.ppr)
   def ppr = name.ppr
 }
@@ -92,7 +92,7 @@ case class IfaceAppTy(val fun:IfaceType, val arg:IfaceType) extends IfaceType {
 }
 
 case class IfaceTcTy(val con:GCon) extends IfaceType { def ppr = con.ppr }
-case class IfaceTvTy(val name:Unqual) extends IfaceType { def ppr = name.ppr }
+case class IfaceTvTy(val name:Name) extends IfaceType { def ppr = name.ppr }
 
 class IfacePred(val n:Name, tys:List[IfaceType]) extends PrettyPrintable {
   def ppr = group(n.ppr :/: pprMany(tys))
@@ -106,4 +106,7 @@ object IfaceType {
     case IfaceAppTy(fun,arg) => unwind(fun,arg::args)
     case _ => (ty,args)
   }
+  
+  def mkApp(fun:IfaceType, args:List[IfaceType]) = 
+    args.foldLeft(fun)(IfaceAppTy(_,_))
 }

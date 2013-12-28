@@ -18,11 +18,13 @@ import bluejelly.bjc.ast.decls.{Assoc,NoAssoc,LeftAssoc,RightAssoc}
  * Things exported by an interface file.
  * @author ppedemon
  */
-abstract class IfaceExport extends PrettyPrintable
-case class ExportedId(val name:Qual) extends IfaceExport { def ppr = name.ppr }
+abstract class IfaceExport(val name:Name) extends PrettyPrintable
+case class ExportedId(override val name:Name) extends IfaceExport(name) { 
+  def ppr = name.ppr 
+}
 case class ExportedTc(
-    val name:Qual, 
-    val children:List[Qual]) extends IfaceExport {
+    override val name:Name, 
+    val children:List[Name]) extends IfaceExport(name) {
   def ppr = group(name.ppr :/: between("{",pprMany(children,","),"}"))
 }
 
