@@ -130,13 +130,14 @@ object ModIfaceParser {
   // Convert data constructors
   private def convert(
       tvs:List[IfaceTyVar],
-      ctx:List[IfacePred] = Nil,
+      origCtx:List[IfacePred], // What ghc calls the "stupid theta context"
+      ctx:List[IfacePred],     // Cumulative contexts found in the data cons
       ty:IfaceType, 
       dcon:dcons.DCon):(IfaceDataCon,List[IfaceId]) = dcon match {
     case dcons.PolyDCon(vars,dcon) => 
-      convert(tvs ++ (vars map mkTv), ctx, ty, dcon)
+      convert(tvs ++ (vars map mkTv), origCtx, ctx, ty, dcon)
     case dcons.QualDCon(preds,dcon) => 
-      convert(tvs, ctx ++ (preds map mkPred), ty, dcon)
+      convert(tvs, origCtx, ctx ++ (preds map mkPred), ty, dcon)
     case dcons.AlgDCon(n,args) => 
       val t = IfaceType.mkFun((args map {arg => convert(arg.ty)}) :+ ty)
       (new IfaceDataCon(n, mkTy(tvs, ctx, t), Nil, args map {_.strict}), Nil)
@@ -145,7 +146,8 @@ object ModIfaceParser {
       val labels = lts map (_._1)
       val strict = lts map (_._3)
       val tys = lts map (Function.tupled((_,t,_) => convert(t)))
-      val ids = (labels,tys).zipped.map((l,t) => IfaceId(l,mkSelTy(tvs, ctx, ty, t)))
+      val ids = (labels,tys).zipped.map((l,t) => 
+        IfaceId(l,mkSelTy(tvs, origCtx, ty, t)))
       val t = IfaceType.mkFun(tys :+ ty)
       (new IfaceDataCon(n, mkTy(tvs, ctx, t), labels, strict),ids)
   }
@@ -158,8 +160,8 @@ object ModIfaceParser {
         tvs map {tv => IfaceTvTy(tv.name)})
     val (dcons,ids) = tc.rhs.foldRight
       [(List[IfaceDataCon],List[IfaceId])]((Nil,Nil))((dcon,p) => {
-        val (d,is) = convert(tvs, ctx, tcTy, dcon)
-        (p._1 :+ d, p._2 ++ is)
+        val (d,is) = convert(tvs, ctx, Nil, tcTy, dcon)
+        (d::p._1, is ++ p._2)
       })
     (IfaceTyCon(tc.n, ctx, tvs, dcons),ids)
   }
@@ -170,7 +172,7 @@ object ModIfaceParser {
     val ctx = nt.ctx.map(_ map mkPred).getOrElse(Nil)
     val tcTy = IfaceType.mkApp(IfaceTcTy(Con(nt.n)),
         tvs map {tv => IfaceTvTy(tv.name)})
-    val (dcon,ids) = convert(tvs, ctx, tcTy, nt.rhs)
+    val (dcon,ids) = convert(tvs, ctx, Nil, tcTy, nt.rhs)
     (IfaceTyCon(nt.n, ctx, tvs, List(dcon)),ids)
   }
   
