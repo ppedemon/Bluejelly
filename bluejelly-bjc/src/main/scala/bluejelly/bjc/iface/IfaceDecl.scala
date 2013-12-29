@@ -13,6 +13,13 @@ import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.ast.decls.FunDep
 
+trait IfaceIdDetails extends PrettyPrintable
+case object IfaceVanillaId extends IfaceIdDetails { def ppr = empty }
+case object IfaceDFund extends IfaceIdDetails { def ppr = text("(DFunId)")}
+case class IfaceRecSelId(val tycon:Name) extends IfaceIdDetails {
+  def ppr = group(par("RSel " :: tycon.ppr))
+}
+
 /**
  * Interface top-level declarations.
  * @author ppedemon
@@ -21,7 +28,8 @@ abstract class IfaceDecl(val name:Name) extends PrettyPrintable
 
 case class IfaceId(
     override val name:Name, 
-    val ty:IfaceType) extends IfaceDecl(name) {
+    val ty:IfaceType,
+    val details:IfaceIdDetails) extends IfaceDecl(name) {
   
   override def equals(o:Any) = o match {
     case x:IfaceId => x.name == name
@@ -30,7 +38,7 @@ case class IfaceId(
   
   override def hashCode = name.hashCode
   
-  def ppr = gnest(group(name.ppr :/: text("::")) :/: ty.ppr)
+  def ppr = gnest(cat(group(name.ppr :/: text("::")) :/: ty.ppr, details.ppr))
 }
 
 case class IfaceTyCon(

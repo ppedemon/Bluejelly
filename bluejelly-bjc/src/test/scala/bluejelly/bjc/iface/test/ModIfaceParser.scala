@@ -7,28 +7,29 @@
 package bluejelly.bjc.iface.test
 
 import bluejelly.bjc.common.{Name,Qual,Unqual}
-
 import bluejelly.bjc.ast.{Con,Decl}
 import bluejelly.bjc.ast.dcons
 import bluejelly.bjc.ast.decls
 import bluejelly.bjc.ast.module._
 import bluejelly.bjc.ast.types
-
 import bluejelly.bjc.iface._
 import bluejelly.bjc.parser.BluejellyParser
-
 import java.io.Reader
+import bluejelly.bjc.ast.Con
 
 /**
  * Simple parser for module interfaces. Reuses the Bluejelly parser,
  * but produces a {@link ModIface} instance rather than a {@link Module}.
  * 
- * NOTE: this parser is purely for testing purposes. Module interfaces
+ * NOTE 0: this parser is purely for testing purposes. Module interfaces
  * are stored in binary format as static byte arrays. This is simply my
  * cheap way to produce interfaces so I can test the module system. The
  * code here has many limitations that I won't fix (e.g, it generates a 
  * selector function for every label in a record instead of doing so 
  * just for exported labels).
+ * 
+ * NOTE 1: What was supposed to be a quick testing hack ended up taking a 
+ * whole weekend and ~300 lines of code! Not cool.
  * 
  * @author ppedemon
  */
@@ -42,11 +43,13 @@ object ModIfaceParser {
   private def mkPred(p:types.Pred):IfacePred = 
     new IfacePred(p.head, p.tys map convert)
   
+  // Transform a pred (C t1 ... tn) into an type constructor application
   private def predToIfaceType(p:types.Pred) = {
     val tc = IfaceTcTy(Con(p.head))
     p.tys.foldLeft[IfaceType](tc)((ty,arg) => IfaceAppTy(ty,convert(arg)))
   }
   
+  // Generate a dictionary name from the given pred
   private def genDictName(p:types.Pred) = {
     val ctor = p.head.name
     val (tc,_) = types.Type.unwind(p.tys.head)
@@ -64,6 +67,15 @@ object ModIfaceParser {
       case _ => vs
     }).distinct
   
+  // Assuming t is a constructor application, get an IfaceRecSelId
+  private def getRecSelId(t:IfaceType) = {
+    val (f,_) = IfaceType.unwind(t)
+    f match {
+      case IfaceTcTy(Con(n)) => IfaceRecSelId(n)
+      case _ => IfaceVanillaId // Shouldn't be reached
+    }
+  }  
+
   // Create an interface type from the given data
   private def mkTy(
       tvs:List[IfaceTyVar], 
@@ -147,7 +159,7 @@ object ModIfaceParser {
       val strict = lts map (_._3)
       val tys = lts map (Function.tupled((_,t,_) => convert(t)))
       val ids = (labels,tys).zipped.map((l,t) => 
-        IfaceId(l,mkSelTy(tvs, origCtx, ty, t)))
+        IfaceId(l,mkSelTy(tvs, origCtx, ty, t), getRecSelId(ty)))
       val t = IfaceType.mkFun(tys :+ ty)
       (new IfaceDataCon(n, mkTy(tvs, ctx, t), labels, strict),ids)
   }
@@ -182,7 +194,7 @@ object ModIfaceParser {
   
   // Convert type signature declarations
   private def convert(tysig:decls.TySigDecl):List[IfaceId] = 
-    tysig.vars map {v => IfaceId(v, convert(tysig.ty))}
+    tysig.vars map {v => IfaceId(v, convert(tysig.ty), IfaceVanillaId)}
   
   // Convert class declarations
   private def convert(cls:decls.ClassDecl):IfaceCls = {
@@ -203,7 +215,7 @@ object ModIfaceParser {
     val tvs = predTvs(inst.pred)
     val ctx = inst.ctx map (_ map mkPred) getOrElse Nil
     val ty = predToIfaceType(inst.pred)
-    val dfun = IfaceId(genDictName(inst.pred), mkTy(tvs, ctx, ty))
+    val dfun = IfaceId(genDictName(inst.pred), mkTy(tvs, ctx, ty), IfaceDFund)
     val clsInst = new IfaceClsInst(inst.pred.head, dfun.name)
     (clsInst,dfun)
   }
