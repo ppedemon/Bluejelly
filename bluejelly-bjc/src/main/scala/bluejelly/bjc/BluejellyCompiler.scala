@@ -8,11 +8,10 @@ package bluejelly.bjc
 
 import java.io.InputStreamReader
 import java.io.FileReader
-
 import scala.util.parsing.input.Reader
-
 import bluejelly.bjc.parser.{Scanner,LayoutScanner,BluejellyParser}
 import bluejelly.utils.UnicodeFilter
+import java.io.StringReader
 
 /**
  * Entry point for the Bluejelly compiler.
@@ -30,7 +29,14 @@ object BluejellyCompiler {
   
   def main(args:Array[String]) {
     val start = System.currentTimeMillis()    
-    val in = new UnicodeFilter(new FileReader(args(0)))
+    val in = new UnicodeFilter(
+        new StringReader(
+        """
+            data X a = X (Set [a])
+            class Eq a where 
+              (==),(/=) :: a -> a -> Bool
+              x /= y = not (x == y)
+        """))
     val result = BluejellyParser.phrase(BluejellyParser.program, in)
     printf("Parsing time: %d\n", System.currentTimeMillis()-start)
     

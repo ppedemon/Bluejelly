@@ -15,9 +15,9 @@ import bluejelly.bjc.ast.decls.FunDep
 
 trait IfaceIdDetails extends PrettyPrintable
 case object IfaceVanillaId extends IfaceIdDetails { def ppr = empty }
-case object IfaceDFund extends IfaceIdDetails { def ppr = text("(DFunId)")}
+case object IfaceDFund extends IfaceIdDetails { def ppr = text("{- DFunId -}")}
 case class IfaceRecSelId(val tycon:Name) extends IfaceIdDetails {
-  def ppr = group(par("RSel " :: tycon.ppr))
+  def ppr = group(between("{- ", "RSel " :: tycon.ppr, " -}"))
 }
 
 /**
@@ -32,7 +32,7 @@ case class IfaceId(
     val details:IfaceIdDetails) extends IfaceDecl(name) {
   
   override def equals(o:Any) = o match {
-    case x:IfaceId => x.name == name
+    case x:IfaceId => x.name equals name
     case _ => false
   }
   
@@ -63,7 +63,7 @@ case class IfaceTySyn(
     val vars:List[IfaceTyVar],
     val ty:IfaceType) extends IfaceDecl(name) {
   def ppr = gnest("type" :/: 
-    group(name.ppr :/: pprMany(vars) :/: text("=")) :/: ty.ppr)
+    group(cat(name.ppr,pprMany(vars)) :/: text("=")) :/: ty.ppr)
 }
 
 case class IfaceCls(
@@ -74,12 +74,12 @@ case class IfaceCls(
     val fdeps:List[FDep],
     val ops:List[IfaceClsOp]) extends IfaceDecl(name) {
   def ppr = {
-    val dctx = group(
+    val dctx = if (ctx.isEmpty) empty else group(
         (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
     val rule = cat(dctx, pred.ppr)
     val fds = if (fdeps.isEmpty) empty else gnest("|" :/: pprMany(fdeps,","))
     val w = if (ops.isEmpty) empty else gnest("where" :/: pprBlock(ops))
-    gnest(cat(List(gnest("class" :/: rule), fds, w)))
+    gnest(cat(gnest(cat(gnest("class" :/: rule), fds)), w))
   }
 }
     
@@ -117,7 +117,8 @@ class IfaceClsOp(
     val ty:IfaceType, 
     val isDefault:Boolean) extends PrettyPrintable {
   def ppr = {
-    val nd = if (isDefault) group(name.ppr :/: text("{D}")) else name.ppr
+    val id = Name.asId(name)
+    val nd = if (isDefault) group(id.ppr :/: text("{D}")) else id.ppr
     gnest(group(nd :/: text("::")) :/: ty.ppr)
   }
 }

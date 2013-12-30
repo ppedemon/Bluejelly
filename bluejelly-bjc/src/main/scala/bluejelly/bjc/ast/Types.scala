@@ -57,7 +57,7 @@ case class AppType(val fun:Type, val arg:Type) extends Type {
       group(left :/: "->" :/: right)
     } else
     arg match {
-      case a@AppType(_,_) if !a.isTuple => 
+      case a@AppType(_,_) if !a.isTuple && !a.isList => 
         group(fun.ppr :/: par(arg.ppr))
       case PolyType(_,_) =>
         group(fun.ppr :/: par(arg.ppr))

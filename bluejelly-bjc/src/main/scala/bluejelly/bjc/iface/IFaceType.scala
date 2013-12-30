@@ -25,6 +25,13 @@ case class IfaceKFun(val from:IfaceKind, val to:IfaceKind) extends IfaceKind {
     case IfaceKFun(_,_) => gnest(par(from.ppr) :/: "->" :/: to.ppr)
     case _ => gnest(from.ppr :/: "->" :/: to.ppr)
   }
+  
+  override def equals(other:Any) = other match {
+    case x:IfaceKFun => (x.from equals from) && (x.to equals to)
+    case _ => false
+  }
+  
+  override def hashCode = 17*from.hashCode + to.hashCode 
 }
 
 /**
@@ -36,6 +43,13 @@ class IfaceTyVar(val name:Name, val kind:IfaceKind) extends PrettyPrintable {
     case IfaceKStar => name.ppr
     case _ => par(group(name.ppr :: "::" :: kind.ppr))
   }
+  
+  override def equals(other:Any) = other match {
+    case x:IfaceTyVar => (x.name equals name) && (x.kind equals kind)
+    case _ => false
+  }
+  
+  override def hashCode = 17*name.hashCode + kind.hashCode
 }
 
 /**
@@ -84,7 +98,7 @@ case class IfaceAppTy(val fun:IfaceType, val arg:IfaceType) extends IfaceType {
       group(left :/: "->" :/: right)
     } else
     arg match {
-      case a@IfaceAppTy(_,_) if !a.isTuple => 
+      case a@IfaceAppTy(_,_) if !a.isTuple && !a.isList => 
         group(fun.ppr :/: par(arg.ppr))
       case IfacePolyTy(_,_) =>
         group(fun.ppr :/: par(arg.ppr))
