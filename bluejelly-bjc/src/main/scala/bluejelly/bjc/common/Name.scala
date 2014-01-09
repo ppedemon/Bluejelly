@@ -7,12 +7,15 @@
 package bluejelly.bjc.common
 
 import scala.text.Document.text
+import java.io.DataOutputStream
+import java.io.DataInputStream
+import java.io.DataInput
 
 /**
  * A <code>Name</code> is the common class for simple and qualified names.
  * @author ppedemon
  */
-sealed abstract class Name extends PrettyPrintable {
+sealed abstract class Name extends PrettyPrintable with Serializable {
   def name:Symbol
   def qualified:Boolean
   def qualifier:Option[Symbol]
@@ -34,6 +37,10 @@ case class Unqual(val name:Symbol) extends Name {
     case x:Unqual => x.name == name 
     case _ => false
   }
+  def serialize(out:DataOutputStream) {
+    out.writeByte(0)
+    out.writeUTF(toString)
+  }
 }
 
 /**
@@ -49,13 +56,18 @@ case class Qual(val modId:Symbol, val name:Symbol) extends Name {
     case x:Qual => x.modId == modId && x.name == name
     case _ => false
   }
+  def serialize(out:DataOutputStream) {
+    out.writeByte(1)
+    out.writeUTF(modId.toString.drop(1))
+    out.writeUTF(name.toString.drop(1))
+  }
 }
 
 /**
  * Factory object for names.
  * @author ppedemon
  */
-object Name {
+object Name extends Loadable[Name] {
   def apply(name:Symbol) = Unqual(name)
   def apply(modId:Symbol, name:Symbol) = Qual(modId, name)
     
@@ -64,4 +76,9 @@ object Name {
 
   def asOp(n:Name) = 
     if (n.isOp) n else new PrettyPrintable { def ppr = text("`%s`" format n) }
+  
+  def load(in:DataInputStream) = in.readByte match {
+    case 0 => Name(Symbol(in.readUTF()))
+    case 1 => Name(Symbol(in.readUTF()), Symbol(in.readUTF()))
+  }
 }

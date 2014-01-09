@@ -243,7 +243,7 @@ object ModIfaceParser {
     val tvs = predTvs(inst.pred).toList
     val ctx = inst.ctx map (_ map mkPred) getOrElse Nil
     val ty = predToIfaceType(inst.pred)
-    val dfun = IfaceId(genDictName(inst.pred), mkTy(tvs, ctx, ty), IfaceDFund)
+    val dfun = IfaceId(genDictName(inst.pred), mkTy(tvs, ctx, ty), IfaceDFunId)
     val clsInst = new IfaceClsInst(inst.pred.head, dfun.name)
     (clsInst,dfun)
   }
