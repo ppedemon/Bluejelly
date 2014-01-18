@@ -37,6 +37,7 @@ class IfaceTest extends FunSuite with TestResourceReader with BeforeAndAfter {
       val in = new DataInputStream(new FileInputStream(file))
       val loadedIface = ModIface.load(in)
       assert(iface.toString == loadedIface.toString)
+      //println(loadedIface)
     } finally {
       file.delete
     }

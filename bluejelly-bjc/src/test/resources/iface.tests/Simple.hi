@@ -1,9 +1,18 @@
 module Simple(Simple.f,Simple.Either(Simple.Left,Simple.Right)) where
 
+import bluejelly.Prelude
+import bluejelly.Types
+import bluejelly.List
+import bluejelly.Int
+
 infixl 5 ++,$$,**
 infixr 6 &&&,^^^
 
 f,g :: forall a. (Eq a, Ord a) => (a -> Int) -> ([String],Char) -> (Int,Int)
+
+data Int
+data Char
+data Double
 
 data Eq a => Either a b = forall a. Left a | Ord b => Right b
 

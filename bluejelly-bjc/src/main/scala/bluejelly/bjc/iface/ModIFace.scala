@@ -69,6 +69,7 @@ class Fixity(val assoc:Assoc, val prec:Int)
  */
 class ModIface(
     val name:Name,
+    val deps:List[Name],
     val exports:List[IfaceExport],
     val fixities:List[(Name,Fixity)],
     val decls:List[IfaceDecl],
@@ -81,15 +82,18 @@ class ModIface(
       nl::gnest("Fixities:" :/: pprMany(fds, ","))
     val ed = if (exports.isEmpty) empty else 
       nl::gnest("Exports:" :/: pprMany(exports))
+    val ds = if (deps.isEmpty) empty else
+      nl::gnest("Dependencies:" :/: pprMany(deps, ","))
     cat(List(
       group("module" :/: name.ppr :/: text("where")), 
-      ed, fd,       
+      ds, ed, fd,       
       if (decls.isEmpty) empty else nl :: vppr(decls),
       if (insts.isEmpty) empty else nl :: vppr(insts)))
   }
   
   def serialize(out:DataOutputStream) {
     name.serialize(out)
+    deps.serialize(out)
     exports.serialize(out)
     fixities.serialize(out)
     decls.serialize(out)
@@ -101,7 +105,8 @@ object ModIface extends Loadable[ModIface]{
   
   def load(in:DataInputStream) = 
     new ModIface(
-        Name.load(in), 
+        Name.load(in),
+        Binary.loadList(Name.load, in),
         Binary.loadList(loadExport, in),
         Binary.loadList(Binary.loadTuple(Name.load, loadFixity), in),
         Binary.loadList(IfaceDecl.load, in),

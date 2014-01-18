@@ -35,7 +35,7 @@ import bluejelly.bjc.ast.Con
  */
 object ModIfaceParser {
   
-  // kind arbitrarily set to *
+  // Kind arbitrarily set to *
   private def mkTv(n:Name) = 
     new IfaceTyVar(n,IfaceKStar)
 
@@ -141,6 +141,9 @@ object ModIfaceParser {
     })
     (ops,ids)
   }
+  
+  // Conver module imports
+  private def convert(is:List[ImpDecl]) = is map {_.modId}
   
   // Convert module exports
   private def convert(es:Exports):List[IfaceExport] = es match {
@@ -250,35 +253,43 @@ object ModIfaceParser {
   
   // Convert an entire module
   private def convert(mod:Module):ModIface = {
+    val is = convert(mod.impDecls)
     val es = convert(mod.exports)
-    val m = new ModIface(mod.name, es, Nil, Nil, Nil)
+    val m = new ModIface(mod.name, is, es, Nil, Nil, Nil)
     val m0 = mod.topDecls.foldLeft(m)((m,d) => d match {
       case f@decls.FixityDecl(_,_,_) =>
         val fs = convert(f)
-        new ModIface(m.name, m.exports, m.fixities ++ fs, m.decls, m.insts)
+        new ModIface(m.name, m.deps, m.exports, m.fixities ++ fs, 
+            m.decls, m.insts)
       case f@decls.TySigDecl(_,_) =>
         val ids = convert(f)
-        new ModIface(m.name, m.exports, m.fixities, m.decls ++ ids, m.insts)
+        new ModIface(m.name, m.deps, m.exports, m.fixities, 
+            m.decls ++ ids, m.insts)
       case t@decls.DataDecl(_,_,_,_,_) =>
         val (tc,ids) = convert(t)
-        new ModIface(m.name, m.exports, m.fixities, m.decls ++ (tc::ids), m.insts)
+        new ModIface(m.name, m.deps, m.exports, m.fixities, 
+            m.decls ++ (tc::ids), m.insts)
       case t@decls.NewTyDecl(_,_,_,_,_) =>
         val (tc,ids) = convert(t)
-        new ModIface(m.name, m.exports, m.fixities, m.decls ++ (tc::ids), m.insts)
+        new ModIface(m.name, m.deps, m.exports, m.fixities, 
+            m.decls ++ (tc::ids), m.insts)
       case t@decls.TySynDecl(_,_,_) =>
         val tysyn = convert(t)
-        new ModIface(m.name, m.exports, m.fixities, m.decls :+ tysyn, m.insts)
+        new ModIface(m.name, m.deps, m.exports, m.fixities, 
+            m.decls :+ tysyn, m.insts)
       case c@decls.ClassDecl(_,_,_,_) =>
         val (cls,ids) = convert(c)
-        new ModIface(m.name, m.exports, m.fixities, m.decls ++ (cls::ids), m.insts)
+        new ModIface(m.name, m.deps, m.exports, m.fixities, 
+            m.decls ++ (cls::ids), m.insts)
       case i@decls.InstDecl(_,_,_) =>
         val (inst,dfun) = convert(i)
-        new ModIface(m.name, m.exports, m.fixities, 
+        new ModIface(m.name, m.deps, m.exports, m.fixities, 
             m.decls :+ dfun, m.insts :+ inst)
       case _ => m
     })
     new ModIface(
-        m0.name, 
+        m0.name,
+        m0.deps,
         m0.exports.sortBy(_.name.toString),
         m0.fixities.sortBy(Function.tupled((f,_) => f.toString)),
         m0.decls.distinct.sortBy(_.name.toString),
