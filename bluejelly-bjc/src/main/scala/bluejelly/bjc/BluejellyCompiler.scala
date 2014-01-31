@@ -12,6 +12,7 @@ import scala.util.parsing.input.Reader
 import bluejelly.bjc.parser.{Scanner,LayoutScanner,BluejellyParser}
 import bluejelly.utils.UnicodeFilter
 import java.io.StringReader
+import bluejelly.bjc.iface.ModIFaceIO
 
 /**
  * Entry point for the Bluejelly compiler.
@@ -28,6 +29,9 @@ object BluejellyCompiler {
   }
   
   def main(args:Array[String]) {
+    val iface = ModIFaceIO.load(args(0))
+    println(iface)
+    /*
     val start = System.currentTimeMillis()    
     val in = new UnicodeFilter(
         new StringReader(
@@ -44,6 +48,7 @@ object BluejellyCompiler {
       case err@BluejellyParser.NoSuccess(_,_) => println(err)
       case BluejellyParser.Success(m,_) => println(m)
     }
+    */
     /*
     val start = System.currentTimeMillis
     val in = new UnicodeFilter(new FileReader("tmp/prog.in"))

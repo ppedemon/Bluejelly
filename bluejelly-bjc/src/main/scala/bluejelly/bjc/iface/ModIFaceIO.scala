@@ -6,17 +6,12 @@
  */
 package bluejelly.bjc.iface
 
-import org.objectweb.asm.ClassAdapter
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.FieldVisitor
-import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.MethodAdapter
-import org.objectweb.asm.Opcodes._
+import org.objectweb.asm.{ClassAdapter,ClassReader,ClassWriter}
+import org.objectweb.asm.{Attribute,ByteVector,Label}
+import org.objectweb.asm.commons.EmptyVisitor
 
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
-import java.io.InputStream
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.{DataInputStream,DataOutputStream,InputStream}
 
 /**
  * The object deals with saving and retrieving interfaces.
@@ -24,112 +19,73 @@ import java.io.InputStream
  */
 object ModIFaceIO {
 
-  def save(iface:ModIface, module:Array[Byte]):Array[Byte] = {
-    val r = new ClassReader(module)
+  def save(iface:ModIface, module:Array[Byte]):Array[Byte] =
+    save(iface, new ClassReader(module))
+  
+  def save(iface:ModIface, in:InputStream):Array[Byte] =
+    save(iface, new ClassReader(in))
+  
+  private def save(iface:ModIface, r:ClassReader) = {
     val w = new ClassWriter(r, 0)
     val a = new IfaceWriter(w, iface)
     r.accept(a, 0)
-    w.toByteArray()
+    w.toByteArray()    
   }
   
-  def save(iface:ModIface, in:InputStream):Array[Byte] = {
-    val r = new ClassReader(in)
-    val w = new ClassWriter(r, 0)
-    val a = new IfaceWriter(w, iface)
-    r.accept(a, 0)
-    w.toByteArray()
+  def load(in:InputStream):ModIface = load(new ClassReader(in))
+  
+  def load(modName:String):ModIface = load(new ClassReader(modName))
+  
+  private def load(r:ClassReader) = {
+    val ir = new IfaceReader
+    r.accept(ir, Array[Attribute](new IfaceAttr), 
+        ClassReader.SKIP_CODE|ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES)
+    ModIface.load(new DataInputStream(new ByteArrayInputStream(ir.bytes)))    
   }
 }
 
 /*
- * Write an interface as a static byte array to the class
- * proxied by the given ClassWriter. Like this:
- * 
- *   public static final byte[] $IFACE;
- *   static { $IFACE = {....} }
+ * Custom module interface attribute.
  */
+private object IfaceAttr { def JELLY_IFACE = "jelly.iface" }
+
+private class IfaceAttr(val bytes:Array[Byte]) 
+  extends Attribute(IfaceAttr.JELLY_IFACE) {
+  
+  def this() = this(Array.empty)
+  
+  override def isUnknown = false
+  
+  override def read(
+      cr:ClassReader,
+      off:Int,
+      len:Int,
+      buf:Array[Char],
+      codeOff:Int,
+      labels:Array[Label]) = {
+    val b = new Array[Byte](len)
+    Array.copy(cr.b, off, b, 0, len)
+    new IfaceAttr(b)
+  }
+  
+  override def write(
+      cw:ClassWriter, 
+      code:Array[Byte], 
+      len:Int, 
+      maxStack:Int, 
+      maxLocals:Int) = new ByteVector().putByteArray(bytes, 0, bytes.length)
+}
+
+// Add an interface to a class proxied by a class writer as a custom attribute
 private class IfaceWriter(
     cw:ClassWriter, 
     iface:ModIface) extends ClassAdapter(cw) {
 
-  private val ICONSTS = Map(
-    0 -> ICONST_0,
-    1 -> ICONST_1,
-    2 -> ICONST_2,
-    3 -> ICONST_3,
-    4 -> ICONST_4,
-    5 -> ICONST_5
-  )
-
-  private val clinit = "<clinit>";
-  private val fName = "$IFACE";
-    
   private val bytes = ifaceBytes(iface) 
-  private var hasStaticBlock = false
-  private var modName:String = null
-
-  // Generate initialization code in a <clinit> method
-  private class StaticBlockAdapter(mv:MethodVisitor) extends MethodAdapter(mv) {    
-    override def visitCode() {
-      super.visitCode()
-      pushInt(mv, bytes.length)
-      visitIntInsn(NEWARRAY, T_BYTE)
-      
-      var ix = 0
-      for (b <- bytes) {
-        visitInsn(DUP)
-        pushInt(mv, ix)
-        pushInt(mv, b)
-        visitInsn(BASTORE)
-        ix += 1
-      }
-      
-      visitFieldInsn(PUTSTATIC, modName, fName, "[B")
-    }
-
-    override def visitMaxs(maxStack:Int, maxLocals:Int) {
-      super.visitMaxs(scala.math.max(maxStack,4), maxLocals)
-    }
-  }
-  
-  // Create $IFACE field
-  override def visit(
-      version:Int, 
-      access:Int, 
-      name:String, 
-      signature:String, 
-      superName:String, 
-      interfaces:Array[String]) {
-    modName = name
-    super.visit(version, access, name, signature, superName, interfaces)    
-    super.visitField(ACC_PUBLIC + ACC_FINAL + ACC_STATIC, 
-      fName, "[B", null, null).visitEnd()
-  }
-  
-  override def visitMethod(
-      access:Int, 
-      name:String, 
-      desc:String, 
-      signature:String, 
-      exceptions:Array[String]):MethodVisitor = {
-    val mv = super.visitMethod(access, name, desc, signature, exceptions)
-    if (name.equals(clinit) && !hasStaticBlock) {
-      hasStaticBlock = true
-      new StaticBlockAdapter(mv)
-    } else {
-      mv
-    }
-  }
   
   override def visitEnd() {
-    if (!hasStaticBlock) {
-      val mv = new StaticBlockAdapter(
-          cv.visitMethod(ACC_STATIC, clinit, "()V", null, null))
-      mv.visitCode()
-      mv.visitInsn(RETURN)
-      mv.visitMaxs(4, 0)
-      mv.visitEnd()
-    }
+    val attr = new IfaceAttr(ifaceBytes(iface))
+    super.visitAttribute(attr)
     super.visitEnd()
   }
   
@@ -138,15 +94,12 @@ private class IfaceWriter(
     iface.serialize(new DataOutputStream(out))
     out.toByteArray()
   }
-  
-  private def pushInt(mv:MethodVisitor, x:Int) = x match {
-    case _ if ICONSTS.contains(x) => 
-      mv.visitInsn(ICONSTS(x))
-    case _ if x >= Byte.MinValue && x <= Byte.MaxValue => 
-      mv.visitIntInsn(BIPUSH, x)
-    case _ if x >= Short.MinValue && x <= Short.MaxValue =>
-      mv.visitIntInsn(SIPUSH, x)
-    case _ => 
-      mv.visitLdcInsn(x)
+}
+
+// Read custom interface attribute from a class
+private class IfaceReader extends EmptyVisitor {
+  var bytes:Array[Byte] = null
+  override def visitAttribute(attr:Attribute) = attr match {
+    case a:IfaceAttr => bytes = a.bytes
   }
 }
