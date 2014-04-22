@@ -18,6 +18,7 @@ object BluejellyBuild extends Build {
   override lazy val settings = super.settings ++ Seq(
     name := "bluejelly",
     version := "1.0",
+    scalaVersion := "2.9.3",
     scalacOptions ++= Seq("-deprecation","-unchecked")
   )
 
@@ -47,7 +48,7 @@ object BluejellyBuild extends Build {
       },
       test in assembly := {},
       assembleArtifact in packageScala := false,
-      jarName in assembly <<= (name,version) { (n,v) => "%s-%s.jar" format (n,v) },
+      jarName in assembly := "%s-%s.jar" format (name.value,version.value),
       distTask
     )
   )
@@ -75,12 +76,11 @@ object BluejellyBuild extends Build {
         Resources.genBrtProps(out, cd, cp.files)
         Seq(out)
       },
-      test <<= test dependsOn(compile in (runtime,Compile)),
       test in assembly := {},
-      jarName in assembly <<= (name,version) { (n,v) => "%s-%s.jar" format (n,v) },
+      jarName in assembly := "%s-%s.jar" format (name.value,version.value),
       distTask
     )
-  ) dependsOn(utils)
+  ) dependsOn(utils, runtime % "test->compile")
 
   lazy val l4 = Project(
     id = "bluejelly-l4",
@@ -100,12 +100,11 @@ object BluejellyBuild extends Build {
         Resources.genBrtProps(out, cd, cp.files)
         Seq(out)
       },
-      test <<= test dependsOn(compile in (runtime,Compile)),
       test in assembly := {},
-      jarName in assembly <<= (name,version) { (n,v) => "%s-%s.jar" format (n,v) },
+      jarName in assembly := "%s-%s.jar" format (name.value,version.value),
       distTask
     ) 
-  ) dependsOn(asm,utils)
+  ) dependsOn(asm, utils, runtime % "test->compile")
   
   lazy val bjc = Project(
     id = "bluejelly-bjc",
@@ -113,7 +112,7 @@ object BluejellyBuild extends Build {
     settings = Project.defaultSettings ++ assemblySettings ++ Seq(
       libraryDependencies += Deps.scalaTest,
       test in assembly := {},
-      jarName in assembly <<= (name,version) { (n,v) => "%s-%s.jar" format (n,v) },
+      jarName in assembly := "%s-%s.jar" format (name.value,version.value),
       distTask
     )
   ) dependsOn(l4,utils)
@@ -201,7 +200,7 @@ object BluejellyBuild extends Build {
     val distTask = dist <<= (
         assembly,sourceDirectory,name,version,target)  map { (f,d,n,v,t) =>
       val files:Seq[File] = IO.listFiles(d / "scripts") :+ f
-      val contents = files x Path.flat
+      val contents = files pair Path.flat
       val out = t / ("%s-%s.zip" format (n,v))
       IO.zip(contents map { case (f,p) => (f, "%s-%s/%s" format (n,v,p)) }, out)
     }
