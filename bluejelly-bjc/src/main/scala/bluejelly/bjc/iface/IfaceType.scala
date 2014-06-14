@@ -14,7 +14,7 @@ import scala.text.Document.{text,group}
 import bluejelly.bjc.common.Binary._
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
-import bluejelly.bjc.common.{Name,Unqual,Qual}
+import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.{Serializable,Loadable,Binary}
 import bluejelly.bjc.ast.{GCon,UnitCon,TupleCon,ArrowCon,ListCon,Con}
 import bluejelly.bjc.ast.TupleCon

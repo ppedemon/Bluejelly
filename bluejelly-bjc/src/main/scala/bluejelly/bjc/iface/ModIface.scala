@@ -11,7 +11,7 @@ import java.io.{DataInputStream,DataOutputStream}
 import scala.text.Document.{empty,group,text}
 
 import bluejelly.bjc.common.Name.asOp
-import bluejelly.bjc.common.{Name,Qual}
+import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.Binary._
 import bluejelly.bjc.common.{Loadable,Serializable,Binary}
 import bluejelly.bjc.common.PprUtils._

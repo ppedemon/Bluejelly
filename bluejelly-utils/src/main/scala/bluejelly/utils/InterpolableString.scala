@@ -22,9 +22,7 @@ object InterpolableString {
           case Regex.Groups(v) => m.getOrElse(v, "")
         })
     def fill(ps:Pair[String,String]*):String = {
-      val s = fill(Map(ps:_*))
-      println("*** " + s)
-      s
+      return fill(Map(ps:_*))
     }
   }
 }

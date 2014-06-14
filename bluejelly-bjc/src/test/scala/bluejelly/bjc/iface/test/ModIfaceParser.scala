@@ -6,7 +6,7 @@
  */
 package bluejelly.bjc.iface.test
 
-import bluejelly.bjc.common.{Name,Qual,Unqual}
+import bluejelly.bjc.common.Name
 import bluejelly.bjc.ast.{Con,Decl}
 import bluejelly.bjc.ast.dcons
 import bluejelly.bjc.ast.decls

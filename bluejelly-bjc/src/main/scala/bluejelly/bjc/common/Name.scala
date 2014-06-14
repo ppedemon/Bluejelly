@@ -11,55 +11,32 @@ import java.io.DataOutputStream
 import java.io.DataInputStream
 import java.io.DataInput
 
+import bluejelly.utils.{Name => N}
+
 /**
- * A <code>Name</code> is the common class for simple and qualified names.
+ * A bluejelly.utils name incorporating serialization and pretty printing
+ * capabilities.
  * @author ppedemon
  */
-sealed abstract class Name extends PrettyPrintable with Serializable {
-  def name:Symbol
-  def qualified:Boolean
-  def qualifier:Option[Symbol]
-  def isId = name.toString.substring(1).matches("""^[_\p{Ll}\p{Lu}\p{Lt}].*""")
+class Name(qual:Option[Symbol], name:Symbol) 
+    extends N(qual,name) with PrettyPrintable with Serializable {
+  
+  def qualified = isQual
+  def isId = name.toString.drop(1).matches("""^[_\p{Ll}\p{Lu}\p{Lt}].*""")
   def isOp = !isId
-  def ppr = text(toString)
-}
 
-/**
- * A <code>Name</code> can refer to a un-qualified name.
- * @author ppedemon
- */
-case class Unqual(val name:Symbol) extends Name {
-  override def qualified = false
-  override def qualifier = None
-  override def toString = name.toString.drop(1)
-  override def hashCode = name.hashCode
-  override def equals(other:Any) = other match {
-    case x:Unqual => x.name == name 
-    case _ => false
-  }
-  def serialize(out:DataOutputStream) {
-    out.writeByte(0)
-    out.writeUTF(toString)
-  }
-}
-
-/**
- * Alternatively, a <code>Name</code> may refer to a qualified name.
- * @author ppedemon
- */
-case class Qual(val modId:Symbol, val name:Symbol) extends Name {
-  override def qualified = true
-  override def qualifier = Some(modId)
-  override def toString = "%s.%s" format (modId.toString.drop(1), name.toString.drop(1))
-  override def hashCode = modId.hashCode*17 + name.hashCode
-  override def equals(other:Any) = other match {
-    case x:Qual => x.modId == modId && x.name == name
-    case _ => false
-  }
-  def serialize(out:DataOutputStream) {
-    out.writeByte(1)
-    out.writeUTF(modId.toString.drop(1))
-    out.writeUTF(name.toString.drop(1))
+  def ppr = if (qualified)
+    text("%s.%s" format (qual.get.toString.drop(1),name.toString.drop(1))) else
+    text(name.toString.drop(1))
+  
+  def serialize(out:DataOutputStream) = qual match {
+    case None => 
+      out.writeByte(0)
+      out.writeUTF(name.toString.drop(1))
+    case _ =>
+      out.writeByte(1)
+      out.writeUTF(qual.get.toString.drop(1))
+      out.writeUTF(name.toString.drop(1))
   }
 }
 
@@ -68,8 +45,8 @@ case class Qual(val modId:Symbol, val name:Symbol) extends Name {
  * @author ppedemon
  */
 object Name extends Loadable[Name] {
-  def apply(name:Symbol) = Unqual(name)
-  def apply(modId:Symbol, name:Symbol) = Qual(modId, name)
+  def apply(name:Symbol) = new Name(None, name)
+  def apply(modId:Symbol, name:Symbol) = new Name(Some(modId), name)
     
   def asId(n:Name) = 
     if (n.isId) n else new PrettyPrintable { def ppr = text("(%s)" format n) }

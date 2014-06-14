@@ -5,7 +5,7 @@
  * the BSD license, see the LICENSE file for details.
  */
 package bluejelly.bjc.ast
-package pat;
+package pat
 
 import scala.annotation.tailrec
 import scala.text.Document.{group,text}

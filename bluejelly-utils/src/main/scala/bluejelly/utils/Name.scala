@@ -10,7 +10,7 @@ package bluejelly.utils
  * A possibly qualified name.
  * @author ppedemon
  */
-class Name private (val qual:Option[Symbol], val name:Symbol) {
+class Name(val qual:Option[Symbol], val name:Symbol) {
   def isQual = !(qual isEmpty)
 
   def qualEquals(s:Symbol) = isQual && qual.get == s
