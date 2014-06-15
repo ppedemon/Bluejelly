@@ -61,7 +61,7 @@ object Binary {
     (in:DataInputStream) = (f(in),g(in))
 
   // Pimp lists of serializable stuff
-  class SerializableList[T <% Serializable](xs:List[T]) {
+  class SerializableList[T <% Serializable](xs:List[T]) extends Serializable {
     def serialize(out:DataOutputStream) {
       out.writeInt(xs.length)
       for (x <- xs) x.serialize(out)      
@@ -75,5 +75,23 @@ object Binary {
     @tailrec def read(n:Int,xs:List[T]):List[T] = 
       if (n == 0) xs.reverse else read(n-1,f(in)::xs)
     read(in.readInt,Nil)
-  }  
+  }
+  
+  class SerializableOption[T <% Serializable](x:Option[T]) extends Serializable {
+    def serialize(out:DataOutputStream) = x match {
+      case None => out.writeByte(0)
+      case Some(x) => 
+        out.writeByte(1)
+        x.serialize(out)
+    }
+  }
+  
+  implicit def optionToSerializableOption[T <% Serializable](x:Option[T]) = 
+    new SerializableOption(x)
+  
+  def loadOption[T](f:DataInputStream => T, in:DataInputStream):Option[T] = 
+    in.readByte match {
+      case 0 => None
+      case 1 => Some(f(in))
+    }
 }

@@ -17,8 +17,6 @@ import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.{Serializable,Loadable,Binary}
 import bluejelly.bjc.ast.{GCon,UnitCon,TupleCon,ArrowCon,ListCon,Con}
-import bluejelly.bjc.ast.TupleCon
-
 
 /**
  * Interface kinds.
@@ -218,7 +216,7 @@ object IfaceType extends Loadable[IfaceType] {
   private[iface] def loadPred(in:DataInputStream) = 
     new IfacePred(Name.load(in), Binary.loadList(load, in))
 
-  private def loadGCon(in:DataInputStream) = in.readByte match {
+  private[iface] def loadGCon(in:DataInputStream) = in.readByte match {
     case 0 => ListCon
     case 1 => ArrowCon
     case 2 => UnitCon

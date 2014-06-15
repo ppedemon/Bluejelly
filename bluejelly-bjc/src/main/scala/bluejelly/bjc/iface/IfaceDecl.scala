@@ -7,15 +7,16 @@
 package bluejelly.bjc.iface
 
 import java.io.{DataInputStream,DataOutputStream}
-
 import scala.text.Document.{empty,group,text}
 
+import bluejelly.bjc.ast.GCon
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.Binary._
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.{Binary,Loadable,Serializable}
 import bluejelly.bjc.ast.decls.FunDep
+import bluejelly.bjc.common.PrettyPrintable
 
 /**
  * Description for a IfaceId.
@@ -200,12 +201,22 @@ class IfaceClsOp(
  */
 class IfaceClsInst(
     val name:Name,
+    val tys:List[Option[GCon]],
     val dfunId:Name) extends PrettyPrintable with Serializable {
   
-  def ppr = gnest(group("instance" :/: name.ppr :/: text("=")) :/: dfunId.ppr)
+  def ppr = {
+    val args = tys map {
+      case Some(n) => n
+      case None => new PrettyPrintable { def ppr = text(".")}
+    }
+    gnest(group("instance" :/: name.ppr :/: pprList(args) :/: text("=")) :/: dfunId.ppr)
+  }
   
   def serialize(out:DataOutputStream) { 
-    name.serialize(out) 
+    name.serialize(out)
+    (tys map (_ map(con => new Serializable {
+      def serialize(out:DataOutputStream) = IfaceType.serializeGCon(con, out)
+    }))).serialize(out)
     dfunId.serialize(out) 
   }
 }
@@ -261,5 +272,8 @@ object IfaceDecl extends Loadable[IfaceDecl] {
     new IfaceClsOp(Name.load(in), IfaceType.load(in), Binary.loadBoolean(in))
   
   private[iface] def loadIfaceClsInst(in:DataInputStream) = 
-    new IfaceClsInst(Name.load(in), Name.load(in))
+    new IfaceClsInst(
+        Name.load(in),
+        Binary.loadList(in => Binary.loadOption(IfaceType.loadGCon, in), in), 
+        Name.load(in))
 }

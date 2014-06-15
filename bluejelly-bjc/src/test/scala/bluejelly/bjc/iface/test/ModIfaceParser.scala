@@ -7,15 +7,15 @@
 package bluejelly.bjc.iface.test
 
 import bluejelly.bjc.common.Name
-import bluejelly.bjc.ast.{Con,Decl}
+import bluejelly.bjc.ast.{GCon,Con,Decl}
 import bluejelly.bjc.ast.dcons
 import bluejelly.bjc.ast.decls
 import bluejelly.bjc.ast.module._
 import bluejelly.bjc.ast.types
 import bluejelly.bjc.iface._
 import bluejelly.bjc.parser.BluejellyParser
+
 import java.io.Reader
-import bluejelly.bjc.ast.Con
 
 /**
  * Simple parser for module interfaces. Reuses the Bluejelly parser,
@@ -52,8 +52,8 @@ object ModIfaceParser {
   // Generate a dictionary name from the given pred
   private def genDictName(p:types.Pred) = {
     val ctor = p.head
-    val (tc,_) = types.Type.unwind(p.tys.head)
-    Name(Symbol("$f" + ctor + tc))
+    val tcs = p.tys.map(types.Type.unwind(_)._1)
+    Name(Symbol("$f" + ctor + tcs.mkString))
   }
   
   // Transform a syntactic functional dependency to an interface one
@@ -140,6 +140,14 @@ object ModIfaceParser {
       case _ => ids
     })
     (ops,ids)
+  }
+  
+  private def mkClsInstArgs(pred:types.Pred):List[Option[GCon]] = {
+    val tys = pred.tys map (types.Type.unwind(_)._1)
+    tys map {
+      case types.TyCon(gcon) => Some(gcon)
+      case _ => None
+    }
   }
   
   // Conver module imports
@@ -247,7 +255,7 @@ object ModIfaceParser {
     val ctx = inst.ctx map (_ map mkPred) getOrElse Nil
     val ty = predToIfaceType(inst.pred)
     val dfun = IfaceId(genDictName(inst.pred), mkTy(tvs, ctx, ty), IfaceDFunId)
-    val clsInst = new IfaceClsInst(inst.pred.head, dfun.name)
+    val clsInst = new IfaceClsInst(inst.pred.head, mkClsInstArgs(inst.pred), dfun.name)
     (clsInst,dfun)
   }
   

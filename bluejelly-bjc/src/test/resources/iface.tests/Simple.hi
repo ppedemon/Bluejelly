@@ -49,5 +49,8 @@ instance (Eq a,Eq b) => Eq (a,b) where
 
 instance (Eq a, Eq [a]) => Eq [a]
 
+instance (Eq a,Eq b) => Eq (a->b)
+
+instance MultiParam a Int [b]
 
 data X a = X [a]
