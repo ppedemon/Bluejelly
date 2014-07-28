@@ -56,5 +56,4 @@ class ParserSuite extends FunSuite with TestResourceReader {
   test("Parser must handle Graph.hs (graph data type and algorithms)") {
     testParser("Graph.hs", "container.Graph")
   }
-
 }

@@ -9,6 +9,7 @@ package bluejelly.utils
 import java.io.File
 import java.io.FilenameFilter
 
+import scala.language.postfixOps
 import scala.sys.process.stringSeqToProcess
 
 /**
@@ -33,7 +34,7 @@ class BrtRunner(private val cp:String) {
     case _ => Seq(cmd)
   }
   
-  private def fmtOut(s:String) = s trim
+  private def fmtOut(s:String) = s.trim
   
   def runBrt(modulePath:File, cmd:String):String = {
     val fullCp = "%s%s%s" format (cp, sep, modulePath.toString)

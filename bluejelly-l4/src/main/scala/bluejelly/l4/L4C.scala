@@ -124,7 +124,7 @@ class L4C {
     
   // Save assembler source, used if we are compiling with -S
   private def saveAsm(cfg:Config, m:bluejelly.asm.Module) {
-    val full = new File(cfg.outDir, m.name.replaceAll("""\.""","/") + ".jas") toString
+    val full = new File(cfg.outDir, m.name.replaceAll("""\.""","/") + ".jas").toString
     val ix = full lastIndexOf '/'
     val path = full take ix
     new File(path).mkdirs()

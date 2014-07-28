@@ -113,6 +113,7 @@ object Type {
     }
     def apply(ty:Type) = unwind(ty) match {
       case (TyCon(Con(name)),args) => new Pred(name,args)
+      case _ => ???
     }
   }  
 }

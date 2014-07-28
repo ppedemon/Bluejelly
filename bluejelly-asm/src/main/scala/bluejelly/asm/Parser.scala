@@ -7,10 +7,11 @@
 
 package bluejelly.asm
 
+import scala.annotation.tailrec
+import scala.language.postfixOps
 import scala.util.control.Exception.catching
 import scala.util.parsing.combinator.JavaTokenParsers
 import scala.util.parsing.input.Positional
-import scala.annotation.tailrec
 
 /**
   * Parse an assembler module.

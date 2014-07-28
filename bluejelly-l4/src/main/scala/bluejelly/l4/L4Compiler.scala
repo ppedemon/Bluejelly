@@ -64,7 +64,7 @@ private class FunCompiler {
     def compile(env:Env,fun:FunDecl):Function = {
       currName = fun.n
       currId = 1
-      val params = (fun.args reverse) map {Param(_)}
+      val params = (fun.args.reverse) map {Param(_)}
       val instrs = compileExpr(env addLocals(fun.args))(fun.body)
       val block = Block(Atom(params ::: instrs),Enter)
       new Function(fun.n.n.toString, fun.args.length, false, block)
@@ -130,8 +130,8 @@ private class FunCompiler {
     
     // Get "normal" alternatives and default one, if present
     def partition(alts:List[Alt]):(List[Alt],Option[Alt]) = {
-      val (defs,rest) = alts partition(_ isVarAlt)
-      (rest, if (defs isEmpty) None else Some(defs.head))
+      val (defs,rest) = alts partition(_.isVarAlt)
+      (rest, if (defs.isEmpty) None else Some(defs.head))
     }
 
     // Get variable of default alternative
@@ -148,7 +148,7 @@ private class FunCompiler {
     def compileAlt[T](env:Env)(
         v:T, e:Expr, 
         params:List[Var]=Nil):bluejelly.asm.Alt[T] = {
-      val prev = params reverse
+      val prev = params.reverse
       val extEnv = env addLocals params
       val b = Block(Atom((prev map {Param(_)}) ::: compileExpr(extEnv)(e)))
       new bluejelly.asm.Alt(v, b)
@@ -192,7 +192,7 @@ private class FunCompiler {
       val is = decls map {
         case (v,e) => compileInit(env,v,e)
       }
-      (as ::: is) flatten
+      (as ::: is).flatten
     }
 
     // Compile atom allocation for mutually recursive declarations
@@ -264,7 +264,7 @@ private class FunCompiler {
     }
 
     def compileArgs(env:Env,args:List[Expr]):List[Instr] = 
-      (args reverse) map compileAtom(env) flatten
+      ((args.reverse) map compileAtom(env)).flatten
     
     def compileVar(env:Env, v:Var):Instr = 
       if (env isLocal v) PushSym(v) else PushCode(v.n.toString)
@@ -292,7 +292,7 @@ private class FunCompiler {
     def fresh(env:Env):String = {
       val s = Name(currName + "$" + currId)
       currId += 1
-      if (env hasFun (new Var(s))) fresh(env) else s toString
+      if (env hasFun (new Var(s))) fresh(env) else s.toString
     }
     
     def l4Panic(s:String) = {
@@ -304,7 +304,7 @@ private class FunCompiler {
       val s = new StringWriter
       d.format(75, s)
       s flush ()
-      s toString
+      s.toString
     }
 
     private def printExpr(e:Expr) = {

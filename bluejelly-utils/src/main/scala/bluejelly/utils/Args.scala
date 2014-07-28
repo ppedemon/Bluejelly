@@ -179,7 +179,7 @@ class Args(optInfo:List[(String,Opt)], anon:String => Unit, usage:String) {
    */
   def parse(argv:Array[String]):Boolean = {
     handling(classOf[ArgException]).by({e => 
-      System.err.println(errMsg(e getMessage)); 
+      System.err.println(errMsg(e.getMessage)); 
       false
     }){
       parse(argv.toList, false); 

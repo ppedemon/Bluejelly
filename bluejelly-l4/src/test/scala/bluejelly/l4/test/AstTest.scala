@@ -27,7 +27,7 @@ trait AstTest {
   protected def parseMod(r:Reader):Module = {
     val result = Parser.parseAll(Parser.module, r)
     result match {
-      case f@Parser.Failure(_,_) => throw new IllegalArgumentException(f toString)
+      case f@Parser.NoSuccess(_,_) => throw new IllegalArgumentException(f.toString)
       case Parser.Success(m,_) => m
     }
   }
@@ -39,7 +39,7 @@ trait AstTest {
   protected  def parseFun(r:Reader):FunDecl = {
     val result = Parser.parseAll(Parser.funDecl, r)
     result match {
-      case f@Parser.Failure(_,_) => throw new IllegalArgumentException(f toString)
+      case f@Parser.NoSuccess(_,_) => throw new IllegalArgumentException(f.toString)
       case Parser.Success(f,_) => f
     }
   }

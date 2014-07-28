@@ -127,16 +127,16 @@ case class EnumFromToExp(val from:Exp, val to:Exp) extends Exp {
   def ppr = between("[",group(from.ppr :: ".." :: to.ppr),"]")
 }
 
-case class EnumFromThenExp(val from:Exp, val then:Exp) extends Exp {
-  def ppr = between("[",group(from.ppr :: "," :: then.ppr :: text("..")),"]")
+case class EnumFromThenExp(val from:Exp, val `then`:Exp) extends Exp {
+  def ppr = between("[",group(from.ppr :: "," :: `then`.ppr :: text("..")),"]")
 }
 
 case class EnumFromThenToExp(
     val from:Exp,
-    val then:Exp,
+    val `then`:Exp,
     val to:Exp) extends Exp {
   def ppr = 
-    between("[",group(from.ppr :: "," :: then.ppr :: ".." :: to.ppr),"]")
+    between("[",group(from.ppr :: "," :: `then`.ppr :: ".." :: to.ppr),"]")
 }
 
 case class LitExp(val x:Lit) extends Exp {

@@ -184,7 +184,7 @@ class Flatten {
       f:(List[A[T]],Option[Block]) => Instr,
       alts:List[A[T]],
       mdef:Option[Block]):(Instr,List[Function]) = {
-    val (as,fss) = alts map accumAlt unzip
+    val (as,fss) = (alts map accumAlt).unzip
     val (mb,fs) = accumDef(mdef)
     (f(as,mb), fs ::: (fss.flatten))
   }
@@ -193,7 +193,7 @@ class Flatten {
       in:List[Instr],
       out:List[Instr]):(List[Instr],List[Function]) = in match {
     case Nil => 
-      (out reverse, Nil)
+      (out.reverse, Nil)
     case Reduce(n,m,b)::is => 
       val (ins,fs0) = accum(b.is, cont(n, b.is, out))
       val fs1 = accumFun(new Function(n, 0, m, Block(is)))

@@ -84,7 +84,7 @@ class BasicSuite extends FunSuite with L4Runner {
       ("^Test.testOdd","True"),
       ("^Test.testEvenFalse","False"),
       ("^Test.testOddFalse","False"),
-      ("Test.testFact", fact(100) toString)
+      ("Test.testFact", fact(100).toString)
     ))
   }
 }

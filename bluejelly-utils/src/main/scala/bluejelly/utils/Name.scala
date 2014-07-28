@@ -11,7 +11,7 @@ package bluejelly.utils
  * @author ppedemon
  */
 class Name(val qual:Option[Symbol], val name:Symbol) {
-  def isQual = !(qual isEmpty)
+  def isQual = !(qual.isEmpty)
 
   def qualEquals(s:Symbol) = isQual && qual.get == s
   
@@ -26,7 +26,7 @@ class Name(val qual:Option[Symbol], val name:Symbol) {
     case _ => false
   }
   
-  override def hashCode() = 31*((qual getOrElse 0) hashCode) + (name hashCode)
+  override def hashCode() = 31*((qual getOrElse 0).hashCode) + (name.hashCode)
 }
 
 object Name {

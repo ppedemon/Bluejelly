@@ -82,11 +82,11 @@ class BasicSuite extends FunSuite with AsmRunner {
   test("the assembler must also compile correctly floating point arithmetic") {
     val x = (3.14159 + 2.71828)*(0.110001+1.61803)
     check("Test.jas", Seq(
-      ("Test.addd", x toString),
-      ("Test.subd", (3.18 - 4.56) toString),
-      ("Test.divd", (2.28/4.56) toString),
-      ("Test.divinf", (4.56/0) toString),
-      ("Test.remd", -(x % 3.14159) toString)
+      ("Test.addd", x.toString),
+      ("Test.subd", (3.18 - 4.56).toString),
+      ("Test.divd", (2.28/4.56).toString),
+      ("Test.divinf", (4.56/0).toString),
+      ("Test.remd", (-(x % 3.14159)).toString)
     ))
   }
   

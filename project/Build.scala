@@ -18,8 +18,7 @@ object BluejellyBuild extends Build {
   override lazy val settings = super.settings ++ Seq(
     name := "bluejelly",
     version := "1.0",
-    scalaVersion := "2.9.3",
-    scalacOptions ++= Seq("-deprecation","-unchecked")
+    scalacOptions ++= Seq("-deprecation","-unchecked","-feature")
   )
 
   lazy val bluejelly = Project(
@@ -110,6 +109,7 @@ object BluejellyBuild extends Build {
     id = "bluejelly-bjc",
     base = file("bluejelly-bjc"),
     settings = Project.defaultSettings ++ assemblySettings ++ Seq(
+      initialize ~= { _ => sys.props("scalac.patmat.analysisBudget") = "off" },
       libraryDependencies += Deps.scalaTest,
       test in assembly := {},
       jarName in assembly := "%s-%s.jar" format (name.value,version.value),

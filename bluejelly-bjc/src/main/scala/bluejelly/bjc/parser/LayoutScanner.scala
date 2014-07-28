@@ -116,7 +116,7 @@ object LayoutScanner {
   private def error(p:Position, msg:String):(Token,LayoutScanner) =
     error(errorToken(p,msg))
   
-  private def error(t:ErrorToken):(Token,LayoutScanner) = 
+  private def error(t:ErrorToken):(Token,LayoutScanner) =
     (t, new LayoutScanner(new Scanner(""), normal(), Stack()))
 }
 

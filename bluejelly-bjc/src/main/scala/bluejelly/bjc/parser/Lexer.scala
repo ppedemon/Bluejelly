@@ -10,6 +10,7 @@ import java.math.BigInteger
 
 import scala.annotation.tailrec
 import scala.collection.mutable.StringBuilder
+import scala.language.implicitConversions
 import scala.util.parsing.input.{Positional}
 import scala.util.parsing.combinator.{RegexParsers}
 
@@ -87,7 +88,6 @@ object Lexer extends RegexParsers with Tokens {
   private val digit = """\p{Nd}"""
   private val white = """[\p{Zs}\n\r\t\f]"""
   private val sym   = """[\p{S}!#%&/<=>@~:\$\*\+\.\?\^\|\-\\]"""
-  private val eoi   = '\032'
   
   def isSymbol(c:Char) = 
     (("()[]{},;`" indexOf c) == -1) && 
@@ -96,7 +96,7 @@ object Lexer extends RegexParsers with Tokens {
 
   override implicit def accept(e: Elem): Parser[Elem] = 
     acceptIf(_ == e)(c => 
-      if (c == eoi)
+      if (c == PositionedReader.EofCh)
         "unexpected end of input (`%s' expected)" format e
       else
         "`%s' expected but `%s' found" format (printChar(e), printChar(c)))
@@ -301,13 +301,18 @@ object Lexer extends RegexParsers with Tokens {
   // ---------------------------------------------------------------------
   // Everything together
   // ---------------------------------------------------------------------
+  private def eoi:Parser[Token] = Parser[Token] { in =>
+    if (in.atEnd) Success(EOI(), in)
+    else Failure("End of Input expected", in)
+  } 
+
   def token:Parser[Token] = positioned(
-    special       |
-    ident         |
-    floating      |
-    integer       |
-    char          |
-    string        |
-    eoi ^^^ EOI() |
+    special  |
+    ident    |
+    floating |
+    integer  |
+    char     |
+    string   |
+    eoi      |
     any >> {c => err("invalid character: `%s'" format printChar(c))})
 }

@@ -6,11 +6,13 @@
  */
 package bluejelly.l4
 
-import scala.util.parsing.combinator.JavaTokenParsers
 import bluejelly.utils.Name
+
+import scala.annotation.tailrec
+import scala.language.postfixOps
+import scala.util.parsing.combinator.JavaTokenParsers
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.NoPosition
-import scala.annotation.tailrec
 
 /**
  * L4 parser.

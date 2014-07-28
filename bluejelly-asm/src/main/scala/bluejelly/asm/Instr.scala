@@ -22,7 +22,7 @@ trait PrettyPrintable {
   override def toString = {
     val sw = new StringWriter
     ppr(sw)
-    sw toString
+    sw.toString
   }
 }
 

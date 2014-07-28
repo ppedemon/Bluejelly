@@ -6,6 +6,7 @@
  */
 package bluejelly.bjc.parser
 
+import scala.language.postfixOps
 import scala.util.parsing.combinator.Parsers
 import scala.util.parsing.input.Positional
 
@@ -39,46 +40,60 @@ object BluejellyParser extends Parsers {
   // Some code to produce decent error messages
   // ---------------------------------------------------------------------
   
-  private def lexError = elem("", _.isInstanceOf[ErrorToken]) >> {
-    case ErrorToken(s) => Parser{ in => new Error(s,in) {
-      override def toString = "[%s] lexical error: %s" format (next.pos,msg)  
-    }}
+  override def acceptIf(p: Elem => Boolean)(err: Elem => String): Parser[Elem] = Parser { in =>
+    if (in.first.isInstanceOf[ErrorToken]) Failure(in.first.asInstanceOf[ErrorToken].msg, in)
+    else if (p(in.first)) Success(in.first, in.rest)
+    else if (in.atEnd) Failure("end of input", in)
+    else Failure(err(in.first), in)
   }
 
   override def elem(kind: String, p: Elem => Boolean) = acceptIf(p)(t =>  
     "unexpected " + t.unexpected + " (" + kind + " expected)")
-  
+
   def elem(p: Elem => Boolean) = acceptIf(p)(t =>
     "unexpected " + t.unexpected)
   
+  private def lexError = elem("lex error", _.isInstanceOf[ErrorToken]) >> {
+    case ErrorToken(s) => Parser{ in => 
+      new Error(s,in) {
+        override def toString = "[%s] lexical error: %s" format (next.pos,msg)
+      }
+    }
+    case _ => ???
+  }
+
   // ---------------------------------------------------------------------
   // Basic parsers
   // ---------------------------------------------------------------------
 
   // Names
-  private def VARID = elem("identifier",_.isInstanceOf[VarId]) ^^ 
-    { case VarId(id) => Name(id.name) }
-  private def VAROP = elem("operator",_.isInstanceOf[VarSym]) ^^ 
-    { case VarSym(op) => Name(op.name) }
-  private def QVARID = elem("identifier",_.isInstanceOf[QVarId]) ^^ 
-    { case QVarId(id) => Name(id.qual.get,id.name) }
-  private def QVAROP = elem("operator",_.isInstanceOf[QVarSym]) ^^ 
-    { case QVarSym(op) => Name(op.qual.get,op.name) }
-  private def CONID = elem("constructor",_.isInstanceOf[ConId]) ^^
-    { case ConId(id) => Name(id.name)}
-  private def CONOP = elem("constructor",_.isInstanceOf[ConSym]) ^^
-    { case ConSym(op) => Name(op.name)}
-  private def QCONID = elem("constructor",_.isInstanceOf[QConId]) ^^
-    { case QConId(id) => Name(id.qual.get,id.name)}
-  private def QCONOP = elem("constructor",_.isInstanceOf[QConSym]) ^^
-    { case QConSym(op) => Name(op.qual.get,op.name)}
+  private def _VARID = elem("identifier",_.isInstanceOf[VarId]) ^^ 
+    { case VarId(id) => Name(id.name); case _ => ??? }
+  private def _VAROP = elem("operator",_.isInstanceOf[VarSym]) ^^ 
+    { case VarSym(op) => Name(op.name); case _ => ??? }
+  private def _QVARID = elem("identifier",_.isInstanceOf[QVarId]) ^^ 
+    { case QVarId(id) => Name(id.qual.get,id.name); case _ => ??? }
+  private def _QVAROP = elem("operator",_.isInstanceOf[QVarSym]) ^^ 
+    { case QVarSym(op) => Name(op.qual.get,op.name); case _ => ??? }
+  private def _CONID = elem("constructor",_.isInstanceOf[ConId]) ^^
+    { case ConId(id) => Name(id.name); case _ => ??? }
+  private def _CONOP = elem("constructor",_.isInstanceOf[ConSym]) ^^
+    { case ConSym(op) => Name(op.name); case _ => ??? }
+  private def _QCONID = elem("constructor",_.isInstanceOf[QConId]) ^^
+    { case QConId(id) => Name(id.qual.get,id.name); case _ => ??? }
+  private def _QCONOP = elem("constructor",_.isInstanceOf[QConSym]) ^^
+    { case QConSym(op) => Name(op.qual.get,op.name); case _ => ??? }
   
   // Literals
   private def lit = 
-    (elem(_.isInstanceOf[IntLit])    ^^ {case IntLit(i) => ast.IntLit(i)}
-    |elem(_.isInstanceOf[FloatLit])  ^^ {case FloatLit(d) => ast.FloatLit(d)}
-    |elem(_.isInstanceOf[CharLit])   ^^ {case CharLit(c) => ast.CharLit(c)}
-    |elem(_.isInstanceOf[StringLit]) ^^ {case StringLit(s) => ast.StringLit(s)})    
+    (elem(_.isInstanceOf[IntLit]) ^^ 
+      { case IntLit(i) => ast.IntLit(i); case _ => ??? }
+    |elem(_.isInstanceOf[FloatLit]) ^^ 
+      { case FloatLit(d) => ast.FloatLit(d); case _ => ??? }
+    |elem(_.isInstanceOf[CharLit]) ^^ 
+      { case CharLit(c) => ast.CharLit(c); case _ => ??? }
+    |elem(_.isInstanceOf[StringLit]) ^^ 
+      { case StringLit(s) => ast.StringLit(s); case _ => ??? })    
   
   // Keywords
   private def as       = elem(kwd("as"), _.isInstanceOf[TAs])
@@ -105,7 +120,7 @@ object BluejellyParser extends Parsers {
   private def of       = elem(kwd("of"), _.isInstanceOf[TOf])
   private def prim     = elem(kwd("primitive"), _.isInstanceOf[TPrim])
   private def qual     = elem(kwd("qualified"), _.isInstanceOf[TQualified])
-  private def then     = elem(kwd("then"), _.isInstanceOf[TThen])
+  private def `then`   = elem(kwd("then"), _.isInstanceOf[TThen])
   private def ty       = elem(kwd("type"), _.isInstanceOf[TType])
   private def where    = elem(kwd("where"), _.isInstanceOf[TWhere])
     
@@ -145,9 +160,8 @@ object BluejellyParser extends Parsers {
   private def rcurly  = elem(_.isInstanceOf[TRCurly])
   private def vrcurly = elem(_.isInstanceOf[VRCurly])
   private def semi    = elem(_.isInstanceOf[TSemi])
-    
-  // EOI token
-  private def eoi = elem("end of input", _.isInstanceOf[EOI])
+  
+  private def eoi = elem("end of input",_.isInstanceOf[EOI])
 
   private def $[T <: Positional](p:Parser[T]) = positioned(p)
   
@@ -159,45 +173,45 @@ object BluejellyParser extends Parsers {
     | elem("identifier", _.isInstanceOf[TForall]) ^^^ nmForall
     | elem("identifier", _.isInstanceOf[THiding]) ^^^ nmHiding
     | elem("identifier", _.isInstanceOf[TQualified]) ^^^ nmQualified
-    | VARID)
+    | _VARID)
    
   private def vars = 
-    varid | lpar ~> VAROP <~ rpar | lpar ~> minus <~ rpar ^^^ nmMinus
+    varid | lpar ~> _VAROP <~ rpar | lpar ~> minus <~ rpar ^^^ nmMinus
   
   private def qvar = 
-    QVARID | lpar ~> QVAROP <~ rpar | vars
+    _QVARID | lpar ~> _QVAROP <~ rpar | vars
 
   private def varopNoMinus = 
-    VAROP | back ~> varid <~ back
+    _VAROP | back ~> varid <~ back
   
   private def varop = 
     varopNoMinus | minus ^^^ nmMinus
     
   private def qvaropNoMinus = 
-    QVAROP | back ~> QVARID <~ back | varopNoMinus
+    _QVAROP | back ~> _QVARID <~ back | varopNoMinus
     
   private def qvarop = 
     qvaropNoMinus | minus ^^^ nmMinus
     
   private def con = 
-    CONID  | lpar ~> CONOP  <~ rpar
+    _CONID | lpar ~> _CONOP  <~ rpar
   
   private def qcon = 
-    QCONID | lpar ~> QCONOP <~ rpar | con
+    _QCONID | lpar ~> _QCONOP <~ rpar | con
   
   private def conop = 
-    CONOP  | back ~> CONID  <~ back
+    _CONOP | back ~> _CONID  <~ back
   
   private def qconop = 
-    QCONOP | back ~> QCONID <~ back | conop
+    _QCONOP | back ~> _QCONID <~ back | conop
   
   private def qconid = 
-    QCONID | CONID  
+    _QCONID | _CONID  
 
   private def op = varop | conop
   private def qop = qvarop | qconop
   
-  private def modid = ((VARID <~ dot)*) ~ CONID ^^ {
+  private def modid = ((_VARID <~ dot)*) ~ _CONID ^^ {
     case qs~m => 
       if (qs.isEmpty) m else Name(Symbol(qs mkString ("",".","")), m.name)
   }
@@ -234,9 +248,9 @@ object BluejellyParser extends Parsers {
   private def inames = repsep(vars|con,comma) <~ (comma?)
 
   private def impSpec = 
-    ( CONID <~ (lpar ~ dotdot ~ rpar) ^^ {IAll(_)}
-    | CONID ~ (lpar ~> inames <~ rpar) ^^ {case i~is => ISome(i,is)}
-    | CONID ^^ {INone(_)}
+    ( _CONID <~ (lpar ~ dotdot ~ rpar) ^^ {IAll(_)}
+    | _CONID ~ (lpar ~> inames <~ rpar) ^^ {case i~is => ISome(i,is)}
+    | _CONID ^^ {INone(_)}
     | vars ^^ {IVar(_)})
    
   private def impSpecs = 
@@ -357,19 +371,13 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
   // Expressions
   // ---------------------------------------------------------------------
-      
-  //private def exp:Parser[Exp] = 
-  //  ((exp0a <~ coco) ~ qtype ^^ {case e~ty => TySigExp(e,ty)}
-  //  |exp0)
-    
+          
   private def exp:Parser[Exp] = exp0 ~ opt(coco ~> qtype) ^^ {
     case e~None => e
     case e~Some(ty) => TySigExp(e,ty)
   }
   
   private def exp0:Parser[Exp]  = genInfix(exp10a|exp10b) 
-  //private def exp0a:Parser[Exp] = genInfix(exp10a)
-  //private def exp0b:Parser[Exp] = genInfix(exp10b)
   
   private def mneg(p:Parser[Exp]) = (minus?) ~ p ^^ {
     case None~e => e 
@@ -388,7 +396,7 @@ object BluejellyParser extends Parsers {
   private def exp10b = 
     ((lambda ~> rep(apat)) ~ (rarr ~> exp) ^^ {case ps~e => LambdaExp(ps,e)}
     |(let ~> decls) ~ (in ~> exp) ^^ {case decls~e => LetExp(decls,e)}
-    |(`if` ~> exp) ~ (then ~> exp) ~ (`else` ~> exp) ^^ {
+    |(`if` ~> exp) ~ (`then` ~> exp) ~ (`else` ~> exp) ^^ {
       case c~t~e => IfExp(c,t,e)
     })
  
@@ -419,8 +427,8 @@ object BluejellyParser extends Parsers {
       case from~Some(to) => EnumFromToExp(from,to)
     }
     | (exp <~ comma) ~ (exp <~ dotdot) ~ (exp?) ^^ {
-      case from~then~None => EnumFromThenExp(from,then)
-      case from~then~Some(to) => EnumFromThenToExp(from,then,to)
+      case from~th~None => EnumFromThenExp(from,th)
+      case from~th~Some(to) => EnumFromThenToExp(from,th,to)
     }
     | rep1sep(exp,comma) ^^ {ListExp(_)})
 
@@ -451,7 +459,7 @@ object BluejellyParser extends Parsers {
   // Type constructors, type synonyms, new types
   // ---------------------------------------------------------------------
   
-  private def tyLhs = CONID ~ (varid*)
+  private def tyLhs = _CONID ~ (varid*)
   private def mbang = (bang?) ^^ {_.map(_=>true).getOrElse(false)}
   
   private def derivings = 
@@ -483,7 +491,7 @@ object BluejellyParser extends Parsers {
     |con ~ (lcurly ~> repsep(labelGrp,comma) <~ rcurly) ^^ {
       case n~grps => new RecDCon(n,grps)
     }
-    |(qconid|lpar ~> CONOP <~ rpar) ~ (conidArg*) ^^ {
+    |(qconid|lpar ~> _CONOP <~ rpar) ~ (conidArg*) ^^ {
       case n~tys => new AlgDCon(n, tys)
     })
   
@@ -569,7 +577,9 @@ object BluejellyParser extends Parsers {
       classDecl   |
       instDecl    |
       defaultDecl |
-      primDecl)   | decl
+      primDecl)   | 
+      decl        | 
+      lexError
       
   // Type signatures
   private def tysig = (commaVars <~ coco) ~ topType ^^ 
@@ -588,9 +598,11 @@ object BluejellyParser extends Parsers {
     })   
     
   private def prec = elem(_.isInstanceOf[IntLit]) ^? ({ 
-    case IntLit(i) if i > 0 && i <= FixityDecl.maxPrec => i.toInt
+    case IntLit(i) if i > 0 && i <= FixityDecl.maxPrec => i.toInt;
+    case _ => ???
   },{
-    case IntLit(x) => "invalid operator precedence: " + x 
+    case IntLit(x) => "invalid operator precedence: " + x;
+    case _ => ??? 
   }) | success(FixityDecl.defPrec)
   
   // Function and pattern binds
@@ -652,7 +664,7 @@ object BluejellyParser extends Parsers {
     | block(modDecls) ^^ 
         { _.foldRight(Module.defaultModule)((f,m) => f(m)) }
     | lexError)
-  
+
   private def modDecls =
     rep(semi) ~> 
       ( (impDecls <~ (semi+)) ~ topDecls ^^ {case is~ds => is++ds}
@@ -664,8 +676,8 @@ object BluejellyParser extends Parsers {
     (_ map (d => (m:Module) => m.addTopDecl(d)))
   
   // Parser entry points
-  def phrase[T](p:Parser[T], in:String) = 
-    super.phrase(p <~ eoi)(new LayoutScanner(in))
+  def phrase[T](p:Parser[T], in:String) =
+    (p <~ eoi)(new LayoutScanner(in))
   def phrase[T](p:Parser[T], in:java.io.Reader) = 
-    super.phrase(p <~ eoi)(new LayoutScanner(in))
+    (p <~ eoi)(new LayoutScanner(in))
 }

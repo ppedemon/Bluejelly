@@ -51,14 +51,14 @@ object OccAnalysis {
     }
     case LetRec(decls,e) => {
       val (e1,m1) = occExpr(e)
-      val (ids,es) = decls unzip
-      val (es1,ms) = es map occExpr unzip
+      val (ids,es) = decls.unzip
+      val (es1,ms) = (es map occExpr).unzip
       val m = union(m1::ms)
       val decls1 = (ids,es1).zipped map {case (id,e) => (id, Note(getOcc(m,id),e))}
       (LetRec(decls1,e1), m -- ids)
     }
     case Match(v,alts) => {
-      val (alts1,m) = alts map occAlt unzip;
+      val (alts1,m) = (alts map occAlt).unzip;
       (Match(v,alts1), addOcc(union(m),v))
     }
   }

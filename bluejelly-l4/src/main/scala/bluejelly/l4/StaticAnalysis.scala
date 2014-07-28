@@ -27,8 +27,8 @@ private class L4Errors extends Errors(false) {
   private def ppr(d:Document):String = {
     val s = new StringWriter
     d.format(75, s)
-    s flush ()
-    s toString
+    s.flush()
+    s.toString
   }
   
   private def gnest(d:Document):Document = group(nest(2,d))
@@ -189,7 +189,7 @@ class StaticAnalysis(m:Module) {
   /**
    * Answer if we found validation errors.
    */
-  def hasErrors = err hasErrors
+  def hasErrors = err.hasErrors
 
   /**
    * Analyze the module passed in the class constructor.
@@ -210,7 +210,7 @@ class StaticAnalysis(m:Module) {
 
   // Get repeated elements in the given list. 
   // If every element is unique, return Nil.
-  private def repeated[T](xs:List[T]):List[T] = xs diff (xs distinct)
+  private def repeated[T](xs:List[T]):List[T] = xs diff (xs.distinct)
   
   // Is the given expression a literal?
   private def isLit(expr:Expr):Boolean = expr match {
@@ -344,7 +344,7 @@ class StaticAnalysis(m:Module) {
   private def reachableOk(f:FunDecl, expr:Expr, alts:List[Alt]):Boolean = alts match {
     case Nil => true
     case List(a) => true
-    case a::_ if a isVarAlt => err unreachableAlts (f, expr, a); false
+    case a::_ if a.isVarAlt => err unreachableAlts (f, expr, a); false
     case _::as => reachableOk(f, expr, as)
   }
   
@@ -390,7 +390,7 @@ class StaticAnalysis(m:Module) {
       analyzeExpr(env addLocal v, f)(b)
     }
     case LetRec(decls,b) => {
-      val (vs,es) = (decls unzip)
+      val (vs,es) = (decls.unzip)
       if (!uniqueRecDecls(f,expr,vs)) return
       if (!allAtoms(f,expr,es)) return
       if (!allRec(f,expr,es)) return
@@ -411,7 +411,7 @@ class StaticAnalysis(m:Module) {
   // Validate a function
   private def analyzeFun(env:Env)(f:FunDecl) {
     val rep = repeated(f.args)
-    if (!(rep isEmpty)) err nonLinearParams (f,rep)
+    if (!rep.isEmpty) err nonLinearParams (f,rep)
     analyzeExpr(env addLocals(f.args), f)(f.body)
   }   
 }

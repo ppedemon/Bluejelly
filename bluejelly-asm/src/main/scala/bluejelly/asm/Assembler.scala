@@ -83,7 +83,7 @@ class Assembler(cfg:AsmConfig, m:Module) {
     v.visitEnd
     
     // Generate code for functions
-    for (f <- m funcs) assemble(w, f)
+    for (f <- m.funcs) assemble(w, f)
     w.visitEnd
 
     // Return byte array for generated class
@@ -95,7 +95,7 @@ class Assembler(cfg:AsmConfig, m:Module) {
     val desc = "(Lbluejelly/runtime/ExecutionContext;)V"
     val start = new Label
     val end = new Label
-    val v = w.visitMethod(ACC_PUBLIC  + ACC_FINAL, f name, desc, null, null)
+    val v = w.visitMethod(ACC_PUBLIC  + ACC_FINAL, f.name, desc, null, null)
     annotate(v, f)
     v.visitCode    
     if (cfg.debugInfo) {
@@ -503,8 +503,8 @@ object Assembler {
     val path = fullName.take(ix)
     new File(path).mkdirs()
     val out = new FileOutputStream(fullName)
-    out write bytes
-    out close
+    out.write(bytes)
+    out.close
   }
 
   // Assemble a file, errors are dumped to the string. This is

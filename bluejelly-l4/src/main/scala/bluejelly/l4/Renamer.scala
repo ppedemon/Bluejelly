@@ -105,7 +105,7 @@ class Renamer {
     
     // Each declaration in a let rec might have to be renamed
     case LetRec(decls,e) =>
-      val (vs,es) = decls unzip
+      val (vs,es) = decls.unzip
       val extEnv = (vs foldLeft env) {
         case (e,v) if e isDefinedAt v => e + (v -> fresh(v))
         case (e,v) => e + (v->v)

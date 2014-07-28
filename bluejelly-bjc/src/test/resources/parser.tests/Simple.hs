@@ -17,4 +17,3 @@ works x = S $ \s -> f s x
 monadic m f = m >>= \x -> f x
 
 ops x y = (+) (x `div` y) (x*y)
- 

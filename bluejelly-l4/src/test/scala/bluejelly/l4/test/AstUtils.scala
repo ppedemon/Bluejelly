@@ -131,8 +131,8 @@ class AstUtils {
     if (e isDefinedAt u) (e,e(u) == v) else (e + (u->v),true) 
     
   private def isoDecls(e:E)(xs:List[(Var,Expr)], ys:List[(Var,Expr)]) = {
-    val (ds0,es0) = xs unzip
-    val (ds1,es1) = ys unzip
+    val (ds0,es0) = xs.unzip
+    val (ds1,es1) = ys.unzip
     val extEnv = (ds0,ds1).zipped.foldLeft(e){case (e,(u,v)) => e + (u->v)}
     (extEnv, es0.length == es1.length && isoList(extEnv)(es0,es1))
   }

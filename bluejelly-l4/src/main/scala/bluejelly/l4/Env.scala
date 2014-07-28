@@ -21,18 +21,18 @@ class Env(
   
   // Is the given Id referring to the current module?
   def isLocalId(id:Id) = 
-    !(id.n isQual) || (id.n qualEquals mname.name)
+    !(id.n.isQual) || (id.n qualEquals mname.name)
   
   // Unqualify a local data constructor reference (if necessary)
   private def unqualLocal(c:ConRef) = {
     assert(isLocalId(c))
-    if (c.n isQual) new ConRef(Name(c.n.name)) else c
+    if (c.n.isQual) new ConRef(Name(c.n.name)) else c
   }
   
   // Qualify a local data constructor reference (if necessary)
   private def qualLocal(c:ConRef) = {
     assert(isLocalId(c))
-    if (c.n isQual) c else new ConRef(Name(mname.name, c.n.name))
+    if (c.n.isQual) c else new ConRef(Name(mname.name, c.n.name))
   }
   
   // Add a data declaration to the environment under two locations:

@@ -25,8 +25,8 @@ trait Positionable extends Positional {
 class ConDef(val tag:Int, val arity:Int)
 
 sealed abstract class Id(val n:Name) {
-  override def toString = n toString
-  override def hashCode = n hashCode
+  override def toString = n.toString
+  override def hashCode = n.hashCode
 }
 
 class Var(n:Name) extends Id(n) {
@@ -134,7 +134,7 @@ object PrettyPrinter {
     case IntLit(i) => text(i.toString)
     case DblLit(d) => text(d.toString)
     case ChrLit(c) => text("'%s'" format c.toString)
-    case StrLit(s) => text(""""%s"""" format s)
+    case StrLit(s) => text("\"%s\"" format s)
   }
 
   def ppr(p:Pat):Document = p match {

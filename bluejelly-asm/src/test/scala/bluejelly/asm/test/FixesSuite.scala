@@ -20,10 +20,10 @@ class FixesSuite extends FunSuite with AsmRunner with BeforeAndAfterEach {
   }
 
   test("the assembler must handle evaluation of NApp code like functions") {
-    check("Fixes.jas", "Fixes.idEval", 1 toString)
+    check("Fixes.jas", "Fixes.idEval", 1.toString)
   }
 
   test("the assembler must handle evaluation of NApp code like partial apps") {
-    check("Fixes.jas", "Fixes.funEval", 1 toString)
+    check("Fixes.jas", "Fixes.funEval", 1.toString)
   }
 }

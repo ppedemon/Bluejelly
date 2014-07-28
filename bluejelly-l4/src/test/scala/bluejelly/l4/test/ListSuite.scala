@@ -62,6 +62,6 @@ class ListSuite extends FunSuite with L4Runner {
   }
 
   test("L4 must compile correctly the reverse function on lists using fold and flip") {
-    check("List.l4", ":List.testReverse", (1 to 20 reverse) mkString ("[",",","]"))
+    check("List.l4", ":List.testReverse", (1 to 20).reverse mkString ("[",",","]"))
   }
 }

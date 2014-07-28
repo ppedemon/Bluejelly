@@ -37,7 +37,7 @@ class ExtrasSuite extends FunSuite with AsmRunner {
   }
   
   test("the assembler must generate correct code for nested evaluations") {
-    check("Nest.jas", "Nest.main", 7 toString)
+    check("Nest.jas", "Nest.main", 7.toString)
   }
   
   test("it must handle slightlier complex cases, such as list functions") {

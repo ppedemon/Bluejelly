@@ -179,7 +179,7 @@ class Resolver {
     d0 <- depth()
     is <- resolve(instrs)
     d1 <- depth()
-    val m = d1 - d0 - n
+    m = d1 - d0 - n
     _ <- pop(m)
   } yield is ::: List(Slide(n,m))
   

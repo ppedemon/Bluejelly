@@ -7,6 +7,7 @@
 package bluejelly.bjc.common
 
 import scala.annotation.tailrec
+import scala.language.implicitConversions
 
 import java.io.DataInputStream
 import java.io.DataOutputStream

@@ -27,8 +27,8 @@ class AsmErrors extends Errors(false) {
   private def ppr(d:Document):String = {
     val s = new StringWriter
     d.format(75, s)
-    s flush ()
-    s toString
+    s.flush()
+    s.toString
   }
   
   private def gnest(d:Document):Document = group(nest(2,d))
