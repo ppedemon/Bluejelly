@@ -101,11 +101,11 @@ case class ConExp(val con:GCon) extends Exp {
   def ppr = con.ppr
 }
 
-case class RecConExp(val con:Name, val binds:List[FieldBind]) extends Exp {
+case class RecConExp(val con:Name, val binds:List[FBind]) extends Exp {
   def ppr = gnest(con.ppr :/: between("{",pprMany(binds,","),"}"))
 }
 
-case class RecUpdExp(val e:Exp, val binds:List[FieldBind]) extends Exp {
+case class RecUpdExp(val e:Exp, val binds:List[FBind]) extends Exp {
   def ppr = gnest(e.ppr :/: between("{",pprMany(binds,","),"}"))
 }
 
@@ -208,11 +208,6 @@ case class ExpStmt(val e:Exp) extends Stmt {
   def ppr = e.ppr
 }
 
-
-trait FieldBind extends AstElem;
-case class VarBind(val v:Name) extends FieldBind {
-  def ppr = v.ppr
-}
-case class UpdBind(val v:Name, val e:Exp) extends FieldBind {
+case class FBind(val v:Name, val e:Exp) extends AstElem {
   def ppr = group(v.ppr :/: "=" :/: e.ppr)
 }

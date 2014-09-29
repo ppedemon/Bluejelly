@@ -15,7 +15,6 @@ import bluejelly.bjc.common.Binary._
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.{Binary,Loadable,Serializable}
-import bluejelly.bjc.ast.decls.FunDep
 import bluejelly.bjc.common.PrettyPrintable
 
 /**
@@ -114,15 +113,13 @@ case class IfaceCls(
     val vars:List[IfaceTyVar],
     val ctx:List[IfacePred],
     val pred:IfacePred,
-    val fdeps:List[FDep],
     val ops:List[IfaceClsOp]) extends IfaceDecl(name) {
   def ppr = {
     val dctx = if (ctx.isEmpty) empty else group(
         (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
     val rule = cat(dctx, pred.ppr)
-    val fds = if (fdeps.isEmpty) empty else gnest("|" :/: pprMany(fdeps,","))
     val w = if (ops.isEmpty) empty else gnest("where" :/: pprBlock(ops))
-    gnest(cat(gnest(cat(gnest("class" :/: rule), fds)), w))
+    gnest(cat(gnest("class" :/: rule), w))
   }
   
   def serialize(out:DataOutputStream) {
@@ -131,20 +128,7 @@ case class IfaceCls(
     vars.serialize(out)
     ctx.serialize(out)
     pred.serialize(out)
-    fdeps.serialize(out)
     ops.serialize(out)
-  }
-}
-    
-/**
- * A functional dependency that can be dumped to a binary stream.
- * @author ppedemon
- */
-class FDep(from:List[Name], to:List[Name]) 
-    extends FunDep(from, to) with Serializable {
-  def serialize(out:DataOutputStream) {
-    from.serialize(out)
-    to.serialize(out)
   }
 }
 
@@ -247,7 +231,6 @@ object IfaceDecl extends Loadable[IfaceDecl] {
           Binary.loadList(IfaceType.loadTyVar, in), 
           Binary.loadList(IfaceType.loadPred, in), 
           IfaceType.loadPred(in),
-          Binary.loadList(loadFDep, in),
           Binary.loadList(loadIfaceClsOp, in))
   }
   
@@ -257,10 +240,7 @@ object IfaceDecl extends Loadable[IfaceDecl] {
       case 1 => IfaceDFunId
       case 2 => IfaceRecSelId(Name.load(in))
     }
-  
-  private def loadFDep(in:DataInputStream) =
-    new FDep(Binary.loadList(Name.load, in),Binary.loadList(Name.load, in))
-  
+    
   private def loadIfaceDataCon(in:DataInputStream) =
     new IfaceDataCon(
         Name.load(in), 

@@ -268,7 +268,7 @@ instance Monad (SetM s) where
     return x     = SetM $ const (return x)
     SetM v >>= f = SetM $ \ s -> do { x <- v s; runSetM (f x) s }
 
-run          :: Bounds -> (forall s. SetM s a) -> a
+--run          :: Bounds -> (forall s. SetM s a) -> a
 run bnds act  = runST (newArray bnds False >>= runSetM act)
 
 contains     :: Vertex -> SetM s Bool

@@ -95,9 +95,6 @@ trait Tokens {
   case class TElse() extends Token { 
     val unexpected = kwd("else") 
   }
-  case class TForall() extends Token { 
-    val unexpected = kwd("forall") 
-  }
   case class THiding() extends Token { 
     val unexpected = identifier("hiding") 
   }
@@ -124,9 +121,6 @@ trait Tokens {
   }
   case class TLet() extends Token { 
     val unexpected = kwd("let") 
-  }
-  case class TMDo() extends Token { 
-    val unexpected = kwd("mdo") 
   }
   case class TModule() extends Token { 
     val unexpected = kwd("module") 

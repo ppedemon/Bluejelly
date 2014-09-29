@@ -19,10 +19,6 @@ import bluejelly.bjc.common.PrettyPrintable
  */
 trait Type extends AstElem
 
-case class PolyType(val tyvars:List[Name],ty:Type) extends Type {
-  def ppr = gnest("forall" :/: pprMany(tyvars) :/: text(".") :/: ty.ppr)
-}
-
 case class QualType(val ctx:List[Pred], ty:Type) extends Type {
   def ppr = gnest(
     (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: "=>" :/: ty.ppr)
@@ -50,7 +46,6 @@ case class AppType(val fun:Type, val arg:Type) extends Type {
     if (isFun) {
       val (left,right) = allArgs match {
         case List(f@AppType(_,_),x) if f.isFun => (par(f.ppr),x.ppr)
-        case List(f@PolyType(_,_),x) => (par(f.ppr),x.ppr)
         case List(f,x) => (f.ppr,x.ppr)
         case _ => sys.error("Illegal function args: %s" format allArgs)
       }
@@ -59,8 +54,6 @@ case class AppType(val fun:Type, val arg:Type) extends Type {
     arg match {
       case a@AppType(_,_) if !a.isTuple && !a.isList => 
         group(fun.ppr :/: par(arg.ppr))
-      case PolyType(_,_) =>
-        group(fun.ppr :/: par(arg.ppr))
       case _ => 
         group(fun.ppr :/: arg.ppr) 
     } 
@@ -68,12 +61,6 @@ case class AppType(val fun:Type, val arg:Type) extends Type {
 
 case class TyVar(val name:Name) extends Type { def ppr = name.ppr }
 case class TyCon(val tycon:GCon) extends Type { def ppr = tycon.ppr }
-
-case class AnonTyVar() extends Type {
-  import bluejelly.bjc.common.NameSupply.freshTyVar
-  val name = freshTyVar
-  def ppr = text("t%s" format name)
-}
 
 /*
  * Predicates: head representing constraint, plus arguments

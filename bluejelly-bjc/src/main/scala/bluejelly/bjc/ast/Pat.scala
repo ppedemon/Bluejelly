@@ -19,10 +19,6 @@ import bluejelly.bjc.common.PprUtils._
  */
 trait Pat extends AstElem;
 
-case class TySigPat(val p:Pat, val ty:types.Type) extends Pat {
-  def ppr = gnest(Pat.pprPar(p) :/: "::" :/: ty.ppr)
-}
-
 case class ListPat(val ps:List[Pat]) extends Pat {
   def ppr = between("[",pprMany(ps, ","),"]")
 }
@@ -33,15 +29,7 @@ case class RecPat(val con:Name, val bs:List[PBind]) extends Pat {
 
 case class InfixPat(val p0:Pat, val op:Name, val p1:Pat) extends Pat {
   def ppr = {
-    val d0 = p0 match {
-      case TySigPat(_,_) => par(p0.ppr)
-      case _ => p0.ppr
-    }
-    val d1 = p1 match {
-      case TySigPat(_,_) => par(p1.ppr)
-      case _ => p1.ppr
-    }
-    gnest(d0 :/: Name.asOp(op).ppr :/: d1)
+    gnest(p0.ppr :/: Name.asOp(op).ppr :/: p1.ppr)
   }
 }
 
@@ -123,8 +111,6 @@ object Pat {
 /*
  * Record pattern bindings
  */
-trait PBind extends AstElem;
-case class VarPBind(val v:Name) extends PBind { def ppr = v.ppr }
-case class AsgPBind(val v:Name, val p:Pat) extends PBind {
+case class PBind(val v:Name, val p:Pat) extends AstElem {
   def ppr = group(v.ppr :/: "=" :/: p.ppr)
 }

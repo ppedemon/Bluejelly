@@ -45,6 +45,7 @@ class IfaceTest extends FunSuite with TestResourceReader {
     val in = new FileInputStream(outFile)
     val loadedIface = ModIFaceIO.load(in)
     assert(iface.toString == loadedIface.toString)
+    println(loadedIface)
   }
   
   private def parseIface(ifaceName:String) = {

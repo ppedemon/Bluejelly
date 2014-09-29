@@ -182,21 +182,15 @@ case class NewTyDecl(
 case class ClassDecl(
     val ctx:Option[List[types.Pred]], 
     val pred:types.Pred,
-    val fdeps:List[FunDep],
     val ds:List[Decl]) extends TopDecl {
   def ppr = {
     val dctx = ctx.map(ctx => group(
       (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>")))
       .getOrElse(empty)
     val rule = cat(dctx, pred.ppr)
-    val fds = if (fdeps.isEmpty) empty else gnest("|" :/: pprMany(fdeps,","))
     val w = if (ds.isEmpty) empty else gnest("where" :/: pprBlock(ds))
-    gnest(cat(List(gnest("class" :/: rule), fds, w)))
+    gnest(cat(List(gnest("class" :/: rule), w)))
   }
-}
-
-class FunDep(val from:List[Name], val to:List[Name]) extends AstElem {
-  def ppr = gnest(pprMany(from) :/: "->" :/: pprMany(to))
 }
 
 /*

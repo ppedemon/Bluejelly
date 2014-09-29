@@ -30,7 +30,7 @@ class ParserSuite extends FunSuite with TestResourceReader {
   }
 
   test("Parser must handle dead simple Haskell code") {
-    testParser("Simple.hs", "Main")
+    testParser("Simple.hs", "Main", true)
   }
 
   test("Parser must handle real Haskell code") {

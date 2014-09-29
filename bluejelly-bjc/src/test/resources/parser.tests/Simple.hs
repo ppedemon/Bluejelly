@@ -17,3 +17,8 @@ works x = S $ \s -> f s x
 monadic m f = m >>= \x -> f x
 
 ops x y = (+) (x `div` y) (x*y)
+
+compose0 f g = f.g
+compose1 f g x = f (g x)
+compose2 f g = h where h x = f (g x)
+compose3 f g = let h = f.g in h

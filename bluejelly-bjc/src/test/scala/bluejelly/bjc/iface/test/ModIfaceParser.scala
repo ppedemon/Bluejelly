@@ -55,23 +55,17 @@ object ModIfaceParser {
     val tcs = p.tys.map(types.Type.unwind(_)._1)
     Name(Symbol("$f" + ctor + tcs.mkString))
   }
-  
-  // Transform a syntactic functional dependency to an interface one
-  private def mkFDep(fdep:decls.FunDep)= 
-    new FDep(fdep.from, fdep.to)
-    
+      
   // Collect the type variables of a (syntactic) predicate
   private def predTvs(pred:types.Pred) = 
     pred.tys.foldRight[Set[IfaceTyVar]](Set.empty)((ty,vs) => 
       tyVarsIn(ty) ++ vs)
   
   private def tyVarsIn(ty:types.Type):Set[IfaceTyVar] = ty match {
-    case types.PolyType(_,ty) => tyVarsIn(ty)
     case types.QualType(_,ty) => tyVarsIn(ty)
     case types.AppType(f,x) => tyVarsIn(f) ++ tyVarsIn(x)
     case types.TyCon(_) => Set.empty
     case types.TyVar(n) => Set(mkTv(n))
-    case tv@types.AnonTyVar() => Set(mkTv(tv.name))
   }  
     
   // Assuming t is a constructor application, get an IfaceRecSelId
@@ -97,16 +91,7 @@ object ModIfaceParser {
       tvs:List[IfaceTyVar], 
       ctx:List[IfacePred], 
       ty:IfaceType, 
-      t:IfaceType):IfaceType = t match {
-    case IfacePolyTy(vs,IfaceQualTy(preds,tau)) => 
-      mkTy(tvs ++ vs, ctx ++ preds, IfaceType.mkFun(ty,tau))
-    case IfacePolyTy(vs,tau) =>
-      mkTy(tvs ++ vs, ctx, IfaceType.mkFun(ty,tau))
-    case IfaceQualTy(preds,tau) =>
-      mkTy(tvs, ctx ++ preds, IfaceType.mkFun(ty,tau))
-    case _ =>
-      mkTy(tvs, ctx, IfaceType.mkFun(ty,t))
-  }
+      t:IfaceType):IfaceType = mkTy(tvs, ctx, IfaceType.mkFun(ty,t)) 
 
   // Generate ids for class operations with defaults
   private def mkDefIds(
@@ -150,7 +135,7 @@ object ModIfaceParser {
     }
   }
   
-  // Conver module imports
+  // Convert module imports
   private def convert(is:List[ImpDecl]) = is map {_.modId}
   
   // Convert module exports
@@ -167,28 +152,21 @@ object ModIfaceParser {
   // Convert fixity declarations
   private def convert(f:decls.FixityDecl):List[(Name,Fixity)] = 
     f.ops map {(_,new Fixity(f.assoc,f.prec))}
-  
-  // Convert types
+
+  // Convert type signatures
   private def convert(ty:types.Type):IfaceType = ty match {
-    case types.PolyType(tvs,ty) => IfacePolyTy(tvs map mkTv, convert(ty))
     case types.QualType(ctx,ty) => IfaceQualTy(ctx map mkPred, convert(ty))
     case types.AppType(f,x) => IfaceAppTy(convert(f),convert(x))
     case types.TyVar(n) => IfaceTvTy(n)
     case types.TyCon(tc) => IfaceTcTy(tc)
-    case tv@types.AnonTyVar() => IfaceTvTy(tv.name)
   }
-  
+
   // Convert data constructors
   private def convert(
       tvs:List[IfaceTyVar],
-      origCtx:List[IfacePred], // What ghc calls the "stupid theta context"
       ctx:List[IfacePred],     // Cumulative contexts found in the data cons
       ty:IfaceType, 
       dcon:dcons.DCon):(IfaceDataCon,List[IfaceId]) = dcon match {
-    case dcons.PolyDCon(vars,dcon) => 
-      convert(tvs ++ (vars map mkTv), origCtx, ctx, ty, dcon)
-    case dcons.QualDCon(preds,dcon) => 
-      convert(tvs, origCtx, ctx ++ (preds map mkPred), ty, dcon)
     case dcons.AlgDCon(n,args) => 
       val t = IfaceType.mkFun((args map {arg => convert(arg.ty)}) :+ ty)
       (new IfaceDataCon(n, mkTy(tvs, ctx, t), Nil, args map {_.strict}), Nil)
@@ -198,7 +176,7 @@ object ModIfaceParser {
       val strict = lts map (_._3)
       val tys = lts map (Function.tupled((_,t,_) => convert(t)))
       val ids = (labels,tys).zipped.map((l,t) => 
-        IfaceId(l,mkSelTy(tvs, origCtx, ty, t), getRecSelId(ty)))
+        IfaceId(l,mkSelTy(tvs, ctx, ty, t), getRecSelId(ty)))
       val t = IfaceType.mkFun(tys :+ ty)
       (new IfaceDataCon(n, mkTy(tvs, ctx, t), labels, strict),ids)
   }
@@ -211,7 +189,7 @@ object ModIfaceParser {
         tvs map {tv => IfaceTvTy(tv.name)})
     val (dcons,ids) = tc.rhs.foldRight
       [(List[IfaceDataCon],List[IfaceId])]((Nil,Nil))((dcon,p) => {
-        val (d,is) = convert(tvs, ctx, Nil, tcTy, dcon)
+        val (d,is) = convert(tvs, ctx, tcTy, dcon)
         (d::p._1, is ++ p._2)
       })
     (IfaceTyCon(tc.n, ctx, tvs, dcons),ids)
@@ -223,7 +201,7 @@ object ModIfaceParser {
     val ctx = nt.ctx.map(_ map mkPred).getOrElse(Nil)
     val tcTy = IfaceType.mkApp(IfaceTcTy(Con(nt.n)),
         tvs map {tv => IfaceTvTy(tv.name)})
-    val (dcon,ids) = convert(tvs, ctx, Nil, tcTy, nt.rhs)
+    val (dcon,ids) = convert(tvs, ctx, tcTy, nt.rhs)
     (IfaceTyCon(nt.n, ctx, tvs, List(dcon)),ids)
   }
   
@@ -232,21 +210,22 @@ object ModIfaceParser {
     IfaceTySyn(tysyn.n, tysyn.vars map mkTv, convert(tysyn.rhs))
   
   // Convert type signature declarations
-  private def convert(tysig:decls.TySigDecl):List[IfaceId] = 
-    tysig.vars map {v => IfaceId(v, convert(tysig.ty), IfaceVanillaId)}
+  private def convert(tysig:decls.TySigDecl):List[IfaceId] = {
+    val tvs = tyVarsIn(tysig.ty).toList
+    tysig.vars map {v => IfaceId(v, mkTy(tvs, Nil, convert(tysig.ty)), IfaceVanillaId)}
+  }
   
   // Convert class declarations
   private def convert(cls:decls.ClassDecl):(IfaceCls,List[IfaceId]) = {
     val tvs = predTvs(cls.pred).toList
     val ctx = cls.ctx map (_ map mkPred) getOrElse Nil
     val pred = mkPred(cls.pred)
-    val fdeps = cls.fdeps map mkFDep
     val defs = cls.ds.foldRight[List[Name]](Nil)((d,ds) => d match {
       case f@decls.FunBind(n,_,_,_,_) => n::ds 
       case _ => ds
     })
     val (ops,ids) = mkClsOps(defs, tvs, pred, cls.ds)
-    (IfaceCls(cls.pred.head, tvs, ctx, pred, fdeps, ops),ids)
+    (IfaceCls(cls.pred.head, tvs, ctx, pred, ops),ids)
   }
   
   // Convert instance declarations
@@ -285,7 +264,7 @@ object ModIfaceParser {
         val tysyn = convert(t)
         new ModIface(m.name, m.deps, m.exports, m.fixities, 
             m.decls :+ tysyn, m.insts)
-      case c@decls.ClassDecl(_,_,_,_) =>
+      case c@decls.ClassDecl(_,_,_) =>
         val (cls,ids) = convert(c)
         new ModIface(m.name, m.deps, m.exports, m.fixities, 
             m.decls ++ (cls::ids), m.insts)

@@ -20,7 +20,6 @@ object NameConstants {
   import bluejelly.bjc.common.Name
   val nmMinus     = Name('-)
   val nmAs        = Name('as)
-  val nmForall    = Name('forall)
   val nmHiding    = Name('hiding)
   val nmQualified = Name('qualified)
 }

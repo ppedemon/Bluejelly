@@ -8,19 +8,15 @@ import bluejelly.Int
 infixl 5 ++,$$,**
 infixr 6 &&&,^^^
 
-f,g :: forall a. (Eq a, Ord a) => (a -> Int) -> ([String],Char) -> (Int,Int)
+f,g :: (Eq a, Ord a) => (a -> b -> Int) -> ([String],Char) -> (Int,Int)
 
-data Int
-data Char
-data Double
-
-data Eq a => Either a b = forall a. Left a | Ord b => Right b
+data Eq a => Either a b = Left a | Right b
 
 data Person = Manager {name::String, org::String, people::[Person]} 
             | Employee {name:: !String, manager::Person}
 
 -- Wtf?
-data Monad m => M m = Functor m => M { x :: forall a. Eq a => m a -> a }
+data Monad m => M m = M { x :: m a -> a }
 
 class Functor m where
   map :: (a -> b) -> m a -> m b
@@ -33,11 +29,6 @@ class Eq a where
   (==),(/=) :: a -> a -> Bool
   x /= y = not (x == y)
 
-class Container c a | c -> a where
-  empty :: c
-  insert :: a -> c -> c
-  contains :: a -> c -> Bool
-
 type Set a = [a]
 type Point = (Int,Int)
  
@@ -47,10 +38,12 @@ instance Eq Int where
 instance (Eq a,Eq b) => Eq (a,b) where 
   (u,v) == (x,y) = u == x && v == y
 
-instance (Eq a, Eq [a]) => Eq [a]
+instance Eq a => Eq [a] where
+  [] == [] = True
+  (x:xs) == (y:ys) = x == y && xs == ys
+  _ == _ = False
 
-instance (Eq a,Eq b) => Eq (a->b)
-
-instance MultiParam a Int [b]
+instance (Eq a,Eq b) => Eq (a->b) where
+  f == g = True
 
 data X a = X [a]

@@ -82,7 +82,7 @@ object LayoutScanner {
     !ctx.isEmpty && ctx.top > 0
     
   private def isHotToken(t:Token) = t match {
-    case TWhere()|TLet()|TDo()|TMDo()|TOf() => true
+    case TWhere()|TLet()|TDo()|TOf() => true
     case _ => false
   }
   
