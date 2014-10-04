@@ -106,8 +106,9 @@ class Module(val n:Name, val decls:List[Decl])
 // -----------------------------------------------------------------------
 
 object PrettyPrinter {
-  import scala.text._
-  import scala.text.Document._
+  import bluejelly.utils.Document
+  import bluejelly.utils.DocNil
+  import bluejelly.utils.Document._
   
   def cat(d0:Document, d1:Document):Document = d0 match {
     case DocNil => d1

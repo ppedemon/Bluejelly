@@ -7,7 +7,6 @@
 package bluejelly.bjc.iface
 
 import java.io.{DataInputStream,DataOutputStream}
-import scala.text.Document.{empty,group,text}
 
 import bluejelly.bjc.ast.GCon
 import bluejelly.bjc.common.Name
@@ -16,6 +15,8 @@ import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.{Binary,Loadable,Serializable}
 import bluejelly.bjc.common.PrettyPrintable
+
+import bluejelly.utils.Document.{empty,group,text}
 
 /**
  * Description for a IfaceId.

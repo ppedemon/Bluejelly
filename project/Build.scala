@@ -18,6 +18,7 @@ object BluejellyBuild extends Build {
   override lazy val settings = super.settings ++ Seq(
     name := "bluejelly",
     version := "1.0",
+    scalaVersion := "2.11.2",
     scalacOptions ++= Seq("-deprecation","-unchecked","-feature")
   )
 
@@ -54,14 +55,17 @@ object BluejellyBuild extends Build {
 
   lazy val utils = Project(
     id = "bluejelly-utils",
-    base = file("bluejelly-utils")
+    base = file("bluejelly-utils"),
+    settings = Project.defaultSettings ++ Seq(
+      libraryDependencies += Deps.scalaParsing
+    )
   )
 
   lazy val asm = Project(
     id = "bluejelly-asm",
     base = file("bluejelly-asm"),
     settings = Project.defaultSettings ++ assemblySettings ++ Seq(
-      libraryDependencies ++= Seq(Deps.asmWeb,Deps.scalaTest),
+      libraryDependencies ++= Seq(Deps.scalaParsing,Deps.asmWeb,Deps.scalaTest),
       resourceGenerators in Compile <+= (
           resourceManaged in Compile, version) map { (dir,v) =>
         Resources.genCfg(dir, "bas-cfg.properties", "bas.version=%s" format(v))
@@ -85,7 +89,7 @@ object BluejellyBuild extends Build {
     id = "bluejelly-l4",
     base = file("bluejelly-l4"),
     settings = Project.defaultSettings ++ assemblySettings ++ Seq(
-      libraryDependencies += Deps.scalaTest,
+      libraryDependencies ++= Seq(Deps.scalaParsing,Deps.scalaTest),
       resourceGenerators in Compile <+= (
           resourceManaged in Compile, version) map { (dir,v) =>
         Resources.genCfg(dir, "l4c-cfg.properties", "l4c.version=%s" format(v))
@@ -110,7 +114,7 @@ object BluejellyBuild extends Build {
     base = file("bluejelly-bjc"),
     settings = Project.defaultSettings ++ assemblySettings ++ Seq(
       initialize ~= { _ => sys.props("scalac.patmat.analysisBudget") = "off" },
-      libraryDependencies += Deps.scalaTest,
+      libraryDependencies ++= Seq(Deps.scalaParsing,Deps.scalaTest),
       test in assembly := {},
       jarName in assembly := "%s-%s.jar" format (name.value,version.value),
       distTask
@@ -123,7 +127,9 @@ object BluejellyBuild extends Build {
   private object Deps {
     val asmWeb    = "asm" % "asm-all" % "3.2"
     val junit     = "com.novocode" % "junit-interface" % "0.10-M1" % "test"
-    val scalaTest = "org.scalatest" %% "scalatest" % "1.9.1" % "test"
+    //val scalaTest = "org.scalatest" %% "scalatest" % "1.9.1" % "test"
+    val scalaTest = "org.scalatest" % "scalatest_2.11" % "2.2.1" % "test"
+    val scalaParsing =  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2"
   }
 
   /**

@@ -229,7 +229,7 @@ class Resolver {
     case MkTyCon(_,n) => for {_ <- pop(n); _ <- push(1)} yield ()
     case AllocTyCon(_) => push(1)
     
-    case _ => assert(false, "Unexpected instruction: " + i); ret()
+    case _ => assert(false, "Unexpected instruction: " + i); ret(())
   }
 }
 

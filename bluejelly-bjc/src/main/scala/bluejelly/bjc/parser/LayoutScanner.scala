@@ -6,7 +6,7 @@
  */
 package bluejelly.bjc.parser
 
-import scala.collection.immutable.Stack
+import scala.collection.immutable.List
 import scala.util.parsing.input.{Reader,Position}
 import Lexer._
 
@@ -26,7 +26,7 @@ object LayoutScanner {
     case TModule() | TLCurly() =>
       normal()(s)
     case t =>
-      val ctx1 = s.ctx.push(t.pos.column)
+      val ctx1 = t.pos.column :: s.ctx
       (vlcurly(t), new LayoutScanner(s.in, normal(true), ctx1))
   } 
     
@@ -36,17 +36,17 @@ object LayoutScanner {
     case t if !noSemi && isSame(t, s.ctx) =>
       (semi(t), new LayoutScanner(s.in, normal(true), s.ctx))
     case t if !noSemi && isDedent(t, s.ctx) =>
-      (vrcurly(t), new LayoutScanner(s.in, normal(), s.ctx.pop))
+      (vrcurly(t), new LayoutScanner(s.in, normal(), s.ctx.tail))
     case t if isHotToken(t) =>
       (t, new LayoutScanner(rest(s), maybeNewCtx, s.ctx))
     case t@TLCurly() =>
-      (t, new LayoutScanner(rest(s), normal(true), s.ctx.push(0)))
+      (t, new LayoutScanner(rest(s), normal(true), 0 :: s.ctx))
     case t@TRCurly() if inExplicitLayout(s.ctx) =>
-      (t, new LayoutScanner(rest(s), normal(), s.ctx.pop))
+      (t, new LayoutScanner(rest(s), normal(), s.ctx.tail))
     case t@TRCurly() =>
       error(t.pos, "unexpected token: `}'")
     case t@EOI() if inImplicitLayout(s.ctx) =>
-      (vrcurly(t), new LayoutScanner(rest(s), normal(true), s.ctx.pop))
+      (vrcurly(t), new LayoutScanner(rest(s), normal(true), s.ctx.tail))
     case t@EOI() if !s.ctx.isEmpty =>
       error(t.pos, "parser error (possibly bad indentation)")
     case t => 
@@ -59,7 +59,7 @@ object LayoutScanner {
     case t@TLCurly() => 
       normal()(s)
     case t if isIndent(t, s.ctx) =>
-      val ctx1 = s.ctx.push(t.pos.column)
+      val ctx1 = t.pos.column :: s.ctx
       (vlcurly(t), new LayoutScanner(s.in, normal(true), ctx1))
     case t => 
       (vlcurly(t), new LayoutScanner(s.in, emptyCtx(t), s.ctx))
@@ -75,25 +75,25 @@ object LayoutScanner {
   private def first(s:LayoutScanner) = s.in.first
   private def rest(s:LayoutScanner) = s.in.rest
       
-  private def inExplicitLayout(ctx:Stack[Int]) = 
-    !ctx.isEmpty && ctx.top == 0
+  private def inExplicitLayout(ctx:List[Int]) = 
+    !ctx.isEmpty && ctx.head == 0
   
-  private def inImplicitLayout(ctx:Stack[Int]) = 
-    !ctx.isEmpty && ctx.top > 0
+  private def inImplicitLayout(ctx:List[Int]) = 
+    !ctx.isEmpty && ctx.head > 0
     
   private def isHotToken(t:Token) = t match {
     case TWhere()|TLet()|TDo()|TOf() => true
     case _ => false
   }
   
-  private def isIndent(t:Token, ctx:Stack[Int]) = 
-    (ctx.isEmpty && t != EOI()) || (!ctx.isEmpty && t.pos.column > ctx.top)
+  private def isIndent(t:Token, ctx:List[Int]) = 
+    (ctx.isEmpty && t != EOI()) || (!ctx.isEmpty && t.pos.column > ctx.head)
   
-  private def isSame(t:Token, ctx:Stack[Int]) = 
-    t != EOI() && !ctx.isEmpty && t.pos.column == ctx.top
+  private def isSame(t:Token, ctx:List[Int]) = 
+    t != EOI() && !ctx.isEmpty && t.pos.column == ctx.head
   
-  private def isDedent(t:Token, ctx:Stack[Int]) =   
-    !ctx.isEmpty && t.pos.column < ctx.top
+  private def isDedent(t:Token, ctx:List[Int]) =   
+    !ctx.isEmpty && t.pos.column < ctx.head
     
   private def vlcurly(t:Token) = {
     val vlcurly = new VLCurly
@@ -117,7 +117,7 @@ object LayoutScanner {
     error(errorToken(p,msg))
   
   private def error(t:ErrorToken):(Token,LayoutScanner) =
-    (t, new LayoutScanner(new Scanner(""), normal(), Stack()))
+    (t, new LayoutScanner(new Scanner(""), normal(), List()))
 }
 
 import LayoutScanner.{Behavior,init}
@@ -129,9 +129,9 @@ import LayoutScanner.{Behavior,init}
 class LayoutScanner(
     val in:Scanner,
     val b:Behavior,
-    val ctx:Stack[Int]) extends Reader[Token] {
+    val ctx:List[Int]) extends Reader[Token] {
 
-  def this(in:Scanner) = this(in, init, Stack())
+  def this(in:Scanner) = this(in, init, List())
   def this(in:String) = this(new Scanner(in))
   def this(in:java.io.Reader) = this(new Scanner(in))
   
@@ -158,5 +158,5 @@ class LayoutScanner(
    * layout context if possible.
    */
   def inImplicitLayout = LayoutScanner.inImplicitLayout(ctx)
-  def popCurrentLayout = new LayoutScanner(in,b,ctx.pop)
+  def popCurrentLayout = new LayoutScanner(in,b,ctx.tail)
 }

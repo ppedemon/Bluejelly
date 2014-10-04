@@ -26,8 +26,10 @@ import bluejelly.asm.PushCode
 import bluejelly.asm.PushDbl
 import bluejelly.asm.PushInt
 import bluejelly.asm.PushStr
+
+import bluejelly.utils.Document
 import bluejelly.utils.Name
-import scala.text.Document
+
 import java.io.StringWriter
 
 /**

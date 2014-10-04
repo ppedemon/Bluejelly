@@ -7,13 +7,13 @@
 package bluejelly.bjc.ast
 package module
 
-import scala.text.Document
-import scala.text.Document._
-
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.Name._
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
+
+import bluejelly.utils.Document
+import bluejelly.utils.Document._
 
 import decls._
 

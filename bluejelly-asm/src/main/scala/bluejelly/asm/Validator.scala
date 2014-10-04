@@ -9,11 +9,10 @@ package bluejelly.asm
 
 import java.io.StringWriter
 
-import scala.text.Document
-import scala.text.Document.group
-import scala.text.Document.nest
-import scala.text.Document.text
-
+import bluejelly.utils.Document
+import bluejelly.utils.Document.group
+import bluejelly.utils.Document.nest
+import bluejelly.utils.Document.text
 import bluejelly.utils.Errors
 
 /**

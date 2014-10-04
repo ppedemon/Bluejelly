@@ -7,13 +7,14 @@
 package bluejelly.bjc.ast
 
 import scala.math.BigInt
-import scala.text.Document.{text}
 import scala.util.parsing.input.Positional
 
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.Name._
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.PprUtils.{pprChrLit,pprStrLit}
+
+import bluejelly.utils.Document.{text}
 
 // Some useful name constants
 object NameConstants {

@@ -6,11 +6,11 @@
  */
 package bluejelly.bjc.common
 
-import scala.text.Document.text
 import java.io.DataOutputStream
 import java.io.DataInputStream
 import java.io.DataInput
 
+import bluejelly.utils.Document.text
 import bluejelly.utils.{Name => N}
 
 /**

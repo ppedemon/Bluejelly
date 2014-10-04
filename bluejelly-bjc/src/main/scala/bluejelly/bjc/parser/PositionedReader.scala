@@ -44,7 +44,7 @@ class ExplicitPosition(
  */
 object PositionedReader {
   final val TabSize = 8
-  final val EofCh = '\032'
+  final val EofCh = '\u001a'
 }
 
 /**

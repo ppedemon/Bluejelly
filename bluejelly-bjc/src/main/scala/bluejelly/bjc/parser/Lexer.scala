@@ -26,13 +26,13 @@ object Lexer extends RegexParsers with Tokens {
   private def any = elem("",_ => true)
 
   private def printChar(c:Char) = c match {
-    case '\n'   => "\\n"
-    case '\r'   => "\\r"
-    case '\t'   => "\\t"
-    case '\f'   => "\\f"
-    case '\b'   => "\\b"
-    case '\07'  => "\\a"
-    case '\013' => "\\v"
+    case '\n'     => "\\n"
+    case '\r'     => "\\r"
+    case '\t'     => "\\t"
+    case '\f'     => "\\f"
+    case '\b'     => "\\b"
+    case '\u0007' => "\\a"
+    case '\u000b' => "\\v"
     case _ if c.isControl || c.isSpaceChar => 
       "\\u%s" format (Integer.toHexString(c))
     case _ => "%c" format c
@@ -114,9 +114,9 @@ object Lexer extends RegexParsers with Tokens {
   private def ident =
     (("(%s\\.)?(%s|%s|%s|%s)" 
         format (modid,varid,conid,varsym,consym)).r ^? qident
-    | varid.r  ^^ {keywords(_)()}
-    | varsym.r ^^ {reservedOps(_)()}
-    | consym.r ^^ {reservedOps(_)()}
+    | varid.r  ^^ {keywords(_)(())}
+    | varsym.r ^^ {reservedOps(_)(())}
+    | consym.r ^^ {reservedOps(_)(())}
     | conid.r  ^^ {conId(None,_)})
 
   /*
@@ -225,13 +225,13 @@ object Lexer extends RegexParsers with Tokens {
   private def unquote(s:String) = s.drop(1).dropRight(1)
  
   private val escMap = Map(
-    'a'  -> '\07', 
+    'a'  -> '\u0007', 
     'b'  -> '\b'  , 
     'f'  -> '\f', 
     'n'  -> '\n', 
     'r'  -> '\r',
     't'  -> '\t' , 
-    'v'  -> '\013', 
+    'v'  -> '\u000b', 
     '"'  -> '"' , 
     '\'' -> '\'', 
     '\\' -> '\\')

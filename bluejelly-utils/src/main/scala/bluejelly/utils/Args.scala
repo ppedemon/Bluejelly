@@ -48,7 +48,7 @@ abstract class Opt(val doc:String) {
  * Command line option argument taking no arguments.
  */
 class UnitOpt(f:Unit => Unit,doc:String) extends Opt(doc) {
-  def consume(optName:String,args:List[String]) = { f(); args }
+  def consume(optName:String,args:List[String]) = { f(()); args }
 }
 
 /**

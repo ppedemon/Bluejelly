@@ -125,8 +125,8 @@ class Assembler(cfg:AsmConfig, m:Module) {
   
   // Assemble instructions, real work done here
   private def assemble(v:MethodVisitor, i:Instr) = i match {
-    case Enter  => mkFinal(scala.Function.const())(v)
-    case Return => mkFinal(scala.Function.const())(v)
+    case Enter  => mkFinal(scala.Function.const(()))(v)
+    case Return => mkFinal(scala.Function.const(()))(v)
     case Catch  => invokeVoidCtxMethod("registerCatch")(v)
     case Raise  => mkFinal(invokeVoidCtxMethod("raise"))(v)
     

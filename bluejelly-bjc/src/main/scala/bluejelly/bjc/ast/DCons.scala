@@ -10,7 +10,7 @@ package dcons
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.PprUtils._
 
-import scala.text.Document.text
+import bluejelly.utils.Document.text
 
 trait DCon extends AstElem;
 

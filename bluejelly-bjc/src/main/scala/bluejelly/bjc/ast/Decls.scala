@@ -17,7 +17,7 @@ import exp.{Exp,Guarded}
 import dcons.DCon
 import types.Type
 
-import scala.text.Document.{empty,group,text}
+import bluejelly.utils.Document.{empty,group,text}
 
 // -----------------------------------------------------------------------
 // Declarations (can appear inside a where, let or at the top level)

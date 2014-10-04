@@ -52,14 +52,14 @@ trait L4Runner extends BeforeAndAfterAll { this:Suite =>
   }
 
   def check(modName:String, cmd:String, expected:String) {
-    expectResult(expected) {
+    assertResult(expected) {
       run(modName,cmd)
     }
   }
 
   def check(modName:String, specs:Seq[(String,String)]) {
     val (cs,es) = specs.unzip
-    expectResult(es) {
+    assertResult(es) {
       run(modName,cs)
     } 
   }

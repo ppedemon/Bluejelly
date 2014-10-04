@@ -8,10 +8,11 @@ package bluejelly.bjc.ast
 package pat
 
 import scala.annotation.tailrec
-import scala.text.Document.{group,text}
 
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.PprUtils._
+
+import bluejelly.utils.Document.{group,text}
 
 /**
  * Abstract trait for patterns.

@@ -8,8 +8,6 @@ package bluejelly.bjc.iface
 
 import java.io.{DataInputStream,DataOutputStream}
 
-import scala.text.Document.{empty,group,text}
-
 import bluejelly.bjc.common.Name.asOp
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.Binary._
@@ -17,6 +15,8 @@ import bluejelly.bjc.common.{Loadable,Serializable,Binary}
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.ast.decls.{Assoc,NoAssoc,LeftAssoc,RightAssoc}
+
+import bluejelly.utils.Document.{empty,group,text}
 
 /**
  * Things exported by an interface file.

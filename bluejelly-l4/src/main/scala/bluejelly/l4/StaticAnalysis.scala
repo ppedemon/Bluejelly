@@ -8,13 +8,11 @@ package bluejelly.l4
 
 import java.io.StringWriter
 
-import scala.text.Document
-import scala.text.Document.group
-import scala.text.Document.nest
-import scala.text.Document.text
-import scala.util.parsing.input.Position
-
+import bluejelly.utils.Document
+import bluejelly.utils.Document._
 import bluejelly.utils.Errors
+
+import scala.util.parsing.input.Position
 
 /**
  * Custom error bag.

@@ -8,10 +8,11 @@ package bluejelly.bjc.ast
 package exp
 
 import scala.annotation.tailrec
-import scala.text.Document.{empty,group,nest,text}
 
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.PprUtils._
+
+import bluejelly.utils.Document.{empty,group,nest,text}
 
 /**
  * Base trait for expressions.

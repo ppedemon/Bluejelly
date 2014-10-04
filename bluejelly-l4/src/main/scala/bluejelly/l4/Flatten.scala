@@ -103,7 +103,7 @@ class Flatten {
     case AllocTyCon(_)  => push(1)
     case PackTyCon(_,n) => pop(n)
     
-    case _ => ret()
+    case _ => ret(())
   }
 
   // Process a single instruction

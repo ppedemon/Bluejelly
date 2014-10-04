@@ -6,11 +6,12 @@
  */
 package bluejelly.bjc.common
 
-import scala.text.{DocGroup,DocNil}
-import scala.text.Document
-import scala.text.Document.{_}
 import java.io.StringWriter
 import java.io.Writer
+
+import bluejelly.utils.Document
+import bluejelly.utils.Document._
+import bluejelly.utils.{DocGroup,DocNil}
 
 /*
  * Convenience constants for pretty-printing.
@@ -99,17 +100,17 @@ object PprUtils {
     text("\"%s\"" format (s flatMap (printChar(_,true))))
   
   private def printChar(c:Char,isStr:Boolean=false) = c match {
-    case '\n'   => "\\n"
-    case '\r'   => "\\r"
-    case '\t'   => "\\t"
-    case '\f'   => "\\f"
-    case '\b'   => "\\b"
-    case '\07'  => "\\a"
-    case '\013' => "\\v"
-    case '\''   => if (isStr) "'" else "\\'"
-    case '"'    => if (isStr) "\\\"" else "\""
-    case '\\'   => "\\\\"
-    case ' '    => " "
+    case '\n'     => "\\n"
+    case '\r'     => "\\r"
+    case '\t'     => "\\t"
+    case '\f'     => "\\f"
+    case '\b'     => "\\b"
+    case '\u0007' => "\\a"
+    case '\u000b' => "\\v"
+    case '\''     => if (isStr) "'" else "\\'"
+    case '"'      => if (isStr) "\\\"" else "\""
+    case '\\'     => "\\\\"
+    case ' '      => " "
     case _ if c.isControl || c.isSpaceChar => 
       "\\u%s" format (Integer.toHexString(c))
     case _ => "%c" format c
