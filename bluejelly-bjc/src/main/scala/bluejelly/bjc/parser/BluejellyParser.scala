@@ -522,7 +522,7 @@ object BluejellyParser extends Parsers {
     vars ~ elem(_.isInstanceOf[StringLit]) ^^ { case v~StringLit(s) => (v,s) }   
     
   private def primDecl = 
-    (prim ~> rep1sep(primDefn,comma)) ~ (coco ~> topType) ^^ {
+    (prim ~> rep1sep(primDefn,comma)) ~ (coco ~> `type`) ^^ {
       case ps~ty => PrimDecl(ps,ty) 
     }
 
