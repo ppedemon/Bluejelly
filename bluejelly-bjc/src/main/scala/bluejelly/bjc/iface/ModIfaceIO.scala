@@ -17,7 +17,7 @@ import java.io.{DataInputStream,DataOutputStream,InputStream}
  * The object deals with saving and retrieving interfaces.
  * @author ppedemon
  */
-object ModIFaceIO {
+object ModIfaceIO {
 
   def save(iface:ModIface, module:Array[Byte]):Array[Byte] =
     save(iface, new ClassReader(module))

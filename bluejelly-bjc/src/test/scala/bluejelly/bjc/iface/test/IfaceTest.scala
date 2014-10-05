@@ -1,6 +1,6 @@
 package bluejelly.bjc.iface.test
 
-import bluejelly.bjc.iface.{ModIface,ModIFaceIO}
+import bluejelly.bjc.iface.{ModIface,ModIfaceIO}
 import bluejelly.bjc.TestResourceReader
 
 import java.io.{File,FileInputStream,FileOutputStream}
@@ -35,7 +35,7 @@ class IfaceTest extends FunSuite with TestResourceReader {
     val inFile = new File(base,"ZipFib.class")
     val is = getClass().getResourceAsStream(inFile.getPath())
     val iface = parseIface("Simple.hi")
-    val bytes = ModIFaceIO.save(iface, is)
+    val bytes = ModIfaceIO.save(iface, is)
     val outFile = File.createTempFile("ZipFib-", ".class")
     
     val out = new FileOutputStream(outFile)
@@ -43,7 +43,7 @@ class IfaceTest extends FunSuite with TestResourceReader {
     out.close
     
     val in = new FileInputStream(outFile)
-    val loadedIface = ModIFaceIO.load(in)
+    val loadedIface = ModIfaceIO.load(in)
     assert(iface.toString == loadedIface.toString)
     println(loadedIface)
   }

@@ -1,9 +1,6 @@
 module Simple(Simple.f,Simple.Either(Simple.Left,Simple.Right)) where
 
-import bluejelly.Prelude
-import bluejelly.Types
-import bluejelly.List
-import bluejelly.Int
+import Helper
 
 infixl 5 ++,$$,**
 infixr 6 &&&,^^^

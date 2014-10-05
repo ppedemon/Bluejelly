@@ -1,0 +1,6 @@
+module Helper(Helper.apply) where
+
+import Simple
+
+apply :: (a -> a) -> a -> a
+apply f x = f x

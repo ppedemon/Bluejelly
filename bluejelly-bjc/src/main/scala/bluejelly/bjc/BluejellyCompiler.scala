@@ -12,7 +12,9 @@ import scala.util.parsing.input.Reader
 import bluejelly.bjc.parser.{Scanner,LayoutScanner,BluejellyParser}
 import bluejelly.utils.UnicodeFilter
 import java.io.StringReader
-import bluejelly.bjc.iface.ModIFaceIO
+
+import bluejelly.bjc.core._
+import bluejelly.bjc.common.Name
 
 /**
  * Entry point for the Bluejelly compiler.
@@ -29,8 +31,11 @@ object BluejellyCompiler {
   }
   
   def main(args:Array[String]) {
-    val iface = ModIFaceIO.load(args(0))
-    println(iface)
+    //val iface = ModIfaceIO.load(args(0))
+    //println(iface)
+    val env = new ModuleLoader().load(new BjcEnv,Name(Symbol(args(0))))
+    println(env.loadedMods)
+    
     /*
     val start = System.currentTimeMillis()    
     val in = new UnicodeFilter(
@@ -42,7 +47,7 @@ object BluejellyCompiler {
               x /= y = not (x == y)
         """))
     val result = BluejellyParser.phrase(BluejellyParser.program, in)
-    printf("Parsing time: %d\n", System.currentTimeMillis()-start)
+    printf("Parsing time: %d\n",l System.currentTimeMillis()-start)
     
     result match {
       case err@BluejellyParser.NoSuccess(_,_) => println(err)
