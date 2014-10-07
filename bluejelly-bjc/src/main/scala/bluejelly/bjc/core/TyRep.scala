@@ -52,7 +52,7 @@ class TyVar(val name:Name, val kind:Kind) extends PrettyPrintable {
 /**
  * Type predicates. Predicates reference type classes by name,
  * meaning that will have to lookup the name in the environment
- * to get tje corresponding TypeClass object.
+ * to get the corresponding TypeClass object.
  *
  * @author ppedemon
  */
@@ -142,5 +142,8 @@ object Type {
     AppTy(AppTy(TcTy(ArrowCon),from),to)  
     
   def mkFun(tys:List[Type]) = 
-    tys.reduceRight((x,y) => AppTy(AppTy(TcTy(ArrowCon),x),y))  
+    tys.reduceRight((x,y) => AppTy(AppTy(TcTy(ArrowCon),x),y)) 
+
+  def tyVar(n:Symbol, kind:Kind=KStar) = new TyVar(Name(n),kind)
+  def tvTy(n:Symbol) = new TvTy(Name(n))
 }

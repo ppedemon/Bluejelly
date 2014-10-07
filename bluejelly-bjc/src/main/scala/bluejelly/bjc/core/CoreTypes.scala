@@ -15,9 +15,9 @@ import scala.util.parsing.input.Position
  */
 abstract class IdDetails
 case object VanillaId extends IdDetails
-case class RSelId(val tycon:TyCon) extends IdDetails
-case class ClOpId(val cls:Cls) extends IdDetails
-case class DFunId(val inst:Inst)
+case class RecSelId(val tycon:TyCon) extends IdDetails
+case class ClsOpId(val cls:Cls) extends IdDetails
+case class DFunId(val inst:Inst) extends IdDetails
 
 /**
  * A function, type class operation, or record selector.
@@ -43,32 +43,26 @@ class TyCon(
     val newType:Boolean,
     val ctx:List[TyPred],
     val tyvars:List[TyVar],
-    val kind:Kind,
     val dcons:List[DataCon])
 
 /**
- * Data constructor field: it has a type, a flag denoting its strictness,
- * and an optional selector name if the data constructor is a record.
+ * Data constructors. If this is a record, the fields list will hold
+ * a list of selection functions. Othewrwise, the list will be empty.
  *
- * @author ppedemon
- */
-case class Field(val ty:Type, val strict:Boolean, op:Option[Id])
-
-/**
- * Data constructors.
  * @author ppedemon
  */
 class DataCon(
     val name:Name,
     val ty:Type,
-    val fields:List[Field],
-    tycon:TyCon)
+    val stricts:List[Boolean],
+    val fields:List[Id],
+    var tycon:TyCon = null)
 
 /**
  * A class operation.
  * @author ppedemon
  */
-case class ClsOp(val op:Id, val cls:Cls, val default:Boolean)
+case class ClsOp(val id:Id, val cls:Cls, val default:Boolean)
 
 /**
  * A class declaration.
