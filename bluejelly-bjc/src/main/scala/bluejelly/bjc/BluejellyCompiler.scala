@@ -33,8 +33,8 @@ object BluejellyCompiler {
   def main(args:Array[String]) {
     //val iface = ModIfaceIO.load(args(0))
     //println(iface)
-    val env = new ModuleLoader().load(new BjcEnv,Name(Symbol(args(0))))
-    println(env.loadedMods)
+    val modDefn = new ModuleLoader().load(Name(Symbol(args(0))))
+    println(modDefn)
     
     /*
     val start = System.currentTimeMillis()    

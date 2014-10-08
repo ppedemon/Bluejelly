@@ -74,7 +74,8 @@ class TyPred(val n:Name, tys:List[Type]) extends PrettyPrintable {
 trait Type extends PrettyPrintable
 
 case class PolyTy(val tvs:List[TyVar], val ty:Type) extends Type {
-  def ppr = gnest(gnest("forall" :/: pprMany(tvs) :/: text(".")) :/: ty.ppr)
+  def ppr = if (tvs.isEmpty) ty.ppr else 
+    gnest(gnest("forall" :/: pprMany(tvs) :/: text(".")) :/: ty.ppr)
 } 
 
 case class QualTy(val ctx:List[TyPred], val ty:Type) extends Type {

@@ -37,32 +37,44 @@ object ProdLoader extends IfaceLoader {
   def load(modName:Name) = try {
     val iface = ModIfaceIO.load(modName.toString)
     if (iface.name != modName) 
-      throw LoaderException(s"Invalid module: $modName") 
+      throw LoaderException(s"Invalid module: `$modName' (it declares `$iface.name')") 
     iface
   } catch {
     case e:LoaderException => 
       throw e
     case e:IOException => throw new LoaderException(
-      s"Module not found: $modName")
+      s"Module not found: `$modName'")
     case _:Exception => throw new LoaderException(
-      s"Error loading: $modName (class doesn't look like a Bluejelly module)")
+      s"Error loading: `$modName' (class doesn't look like a Bluejelly module)")
   }
 }
 
 /**
- * ModuleLoader: recursevely load a module and its dependencies.
+ * ModuleLoader: recursively load a module and its dependencies.
  * Module declarations are stored in a given [[BjcEnv]] instance.
  *
  * @author ppedemon
  */
 class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
-  def load(env:BjcEnv,modName:Name):BjcEnv = 
-    if (env.isLoaded(modName)) env else {
+
+  import scala.collection.mutable.{Map => MutableMap}
+
+  private val modCache:MutableMap[Name,ModDefn] = MutableMap.empty
+
+  def getModCache = modCache
+
+  def load(modName:Name):ModDefn = 
+    if (modCache.contains(modName)) modCache(modName) else {
       val iface = loader.load(modName)
-      val newEnv = iface.deps.foldLeft(env.register(iface.name))(load)
-      processMod(newEnv,iface)
+      val modDefn = translate(iface)
+      modCache += (modName -> modDefn)
+      for (dep <- iface.deps) load(dep)
+      modDefn
     }
 
-  // TODO Process module declarations and add them to the environment
-  private def processMod(env:BjcEnv, iface:ModIface) = env
+  // TODO Implement me!
+  private def translate(iface:ModIface) = new ModDefn(
+    iface.name,
+    List.empty, List.empty, List.empty, List.empty, 
+    List.empty, List.empty, List.empty, List.empty)
 }

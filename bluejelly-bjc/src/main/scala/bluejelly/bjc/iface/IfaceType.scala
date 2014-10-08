@@ -91,7 +91,8 @@ trait IfaceType extends PrettyPrintable with Serializable
 
 case class IfacePolyTy(
     val tvs:List[IfaceTyVar], val ty:IfaceType) extends IfaceType {
-  def ppr = gnest(gnest("forall" :/: pprMany(tvs) :/: text(".")) :/: ty.ppr)
+  def ppr = if (tvs.isEmpty) ty.ppr else
+    gnest(gnest("forall" :/: pprMany(tvs) :/: text(".")) :/: ty.ppr)
   
   def serialize(out:DataOutputStream) {
     out.writeByte(0)

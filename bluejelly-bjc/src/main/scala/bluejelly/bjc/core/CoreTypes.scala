@@ -6,8 +6,24 @@
  */
 package bluejelly.bjc.core
 
+import bluejelly.bjc.ast.decls.{Assoc,NoAssoc,LeftAssoc,RightAssoc}
 import bluejelly.bjc.common.Name
-import scala.util.parsing.input.Position
+
+/**
+ * Things exported by some loaded interface.
+ * @author ppedemon
+ */
+abstract class Export(val name:Name) 
+case class ExportId(override val name:Name) extends Export(name)
+case class ExportTc(
+    override val name:Name, 
+    val children:List[Name]) extends Export(name)
+
+/**
+ * A fixity definition.
+ * @author ppedemon
+ */
+class Fixity(val assoc:Assoc, val prec:Int)
 
 /**
  * Classify identifier declarations.
@@ -80,3 +96,18 @@ class Cls(
  * @author ppedemon
  */
 class Inst(val cls:Cls, val constr:TyCon, val dfunId:Id)
+
+/**
+ * An module definition.
+ * @author ppedemon
+ */
+ class ModDefn(
+    val name:Name,
+    val exports:List[Export],
+    val fixities:List[(Name,Fixity)],
+    val ids:List[Id],
+    val tysyns:List[TySyn],
+    val tycons:List[TyCon],
+    val dcons:List[DataCon],
+    val classes:List[Cls],
+    val insts:List[Inst])
