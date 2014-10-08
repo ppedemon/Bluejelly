@@ -17,17 +17,15 @@ import Type._
  */
 object BuiltIns {
 
-  private val mod = Symbol("bluejelly.BuiltIn")
-
-  private val nmInt = Name(mod,'Int)
-  private val nmBigInt = Name(mod,'BigInt)
-  private val nmDouble = Name(mod,'Double)
-  private val nmChar = Name(mod,'Char)
-  private val nmString = Name(mod,'String)
-  private val nmArrow = Name(mod,'->)
-  private val nmUnit = Name(mod,Symbol("()"))
-  private val nmList = Name(mod,Symbol("[]"))
-  private val nmCons = Name(mod,':)
+  private val nmInt = Name('Int)
+  private val nmBigInt = Name('BigInt)
+  private val nmDouble = Name('Double)
+  private val nmChar = Name('Char)
+  private val nmString = Name('String)
+  private val nmArrow = Name('->)
+  private val nmUnit = Name(Symbol("()"))
+  private val nmList = Name(Symbol("[]"))
+  private val nmCons = Name(':)
 
   val builtInNames = Set(
     nmInt,
