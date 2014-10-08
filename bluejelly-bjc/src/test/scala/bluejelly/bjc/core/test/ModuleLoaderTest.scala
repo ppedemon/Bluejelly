@@ -8,7 +8,7 @@ package bluejelly.bjc.core.test
 
 import bluejelly.bjc.TestResourceReader
 import bluejelly.bjc.common.Name
-import bluejelly.bjc.core.{LoaderException,IfaceLoader,ModuleLoader,BuiltIns}
+import bluejelly.bjc.core._
 import bluejelly.bjc.iface.test.ModIfaceParser
 
 import java.io.File
@@ -50,13 +50,9 @@ class ModuleLoaderTest extends FunSuite with TestResourceReader {
 
   test("ModuleLoader must load properly module interfaces in test mode") {
     val loader = new ModuleLoader(TestLoader)
-    val modDefn = loader.load(Name('Simple))
-    assert(loader.getModCache.size == 2)
-    /*
-    val env = loader.load(BuiltIns.builtInsEnv, Name('Simple))
-    assert(env.loadedMods.size == 2)
-    assert(env.tycons.size == 8)
-    assert(env.dcons.size == 2)
-    */
+    val env = new BjcEnv().addModDefn(BuiltIns.primsMod)
+    val newEnv = loader.load(env, Name('Simple))
+    assert(newEnv.hasModDefn(Name('Simple)))
+    assert(newEnv.hasModDefn(Name('Helper)))
   }
 }

@@ -6,15 +6,17 @@
  */
 package bluejelly.bjc
 
-import java.io.InputStreamReader
-import java.io.FileReader
-import scala.util.parsing.input.Reader
+
 import bluejelly.bjc.parser.{Scanner,LayoutScanner,BluejellyParser}
 import bluejelly.utils.UnicodeFilter
-import java.io.StringReader
-
-import bluejelly.bjc.core._
 import bluejelly.bjc.common.Name
+import bluejelly.bjc.core._
+
+import java.io.StringReader
+import java.io.InputStreamReader
+import java.io.FileReader
+
+import scala.util.parsing.input.Reader
 
 /**
  * Entry point for the Bluejelly compiler.
@@ -33,7 +35,9 @@ object BluejellyCompiler {
   def main(args:Array[String]) {
     //val iface = ModIfaceIO.load(args(0))
     //println(iface)
-    val modDefn = new ModuleLoader().load(Name(Symbol(args(0))))
+    val modName = Name(Symbol(args(0)))
+    val env = new BjcEnv().addModDefn(BuiltIns.primsMod)
+    val modDefn = new ModuleLoader().load(env, modName)
     println(modDefn)
     
     /*

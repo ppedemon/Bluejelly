@@ -57,24 +57,13 @@ object ProdLoader extends IfaceLoader {
  */
 class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
 
-  import scala.collection.mutable.{Map => MutableMap}
-
-  private val modCache:MutableMap[Name,ModDefn] = MutableMap.empty
-
-  def getModCache = modCache
-
-  def load(modName:Name):ModDefn = 
-    if (modCache.contains(modName)) modCache(modName) else {
+  def load(env:BjcEnv, modName:Name):BjcEnv = 
+    if (env.hasModDefn(modName)) env else {
       val iface = loader.load(modName)
       val modDefn = translate(iface)
-      modCache += (modName -> modDefn)
-      for (dep <- iface.deps) load(dep)
-      modDefn
+      iface.deps.foldLeft(env.addModDefn(modDefn))(load)
     }
 
   // TODO Implement me!
-  private def translate(iface:ModIface) = new ModDefn(
-    iface.name,
-    List.empty, List.empty, List.empty, List.empty, 
-    List.empty, List.empty, List.empty, List.empty)
+  private def translate(iface:ModIface) = new ModDefn(iface.name)
 }
