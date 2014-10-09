@@ -147,4 +147,5 @@ object Type {
 
   def tyVar(n:Symbol, kind:Kind=KStar) = new TyVar(Name(n),kind)
   def tvTy(n:Symbol) = new TvTy(Name(n))
+  def conTy(n:Name) = new TcTy(Con(n))
 }

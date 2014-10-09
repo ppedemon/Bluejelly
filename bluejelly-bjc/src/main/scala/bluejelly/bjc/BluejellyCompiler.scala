@@ -36,7 +36,7 @@ object BluejellyCompiler {
     //val iface = ModIfaceIO.load(args(0))
     //println(iface)
     val modName = Name(Symbol(args(0)))
-    val env = new BjcEnv().addModDefn(BuiltIns.primsMod)
+    val env = BjcEnv.withBuiltIns
     val modDefn = new ModuleLoader().load(env, modName)
     println(modDefn)
     

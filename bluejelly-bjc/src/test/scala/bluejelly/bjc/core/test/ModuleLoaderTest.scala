@@ -50,9 +50,9 @@ class ModuleLoaderTest extends FunSuite with TestResourceReader {
 
   test("ModuleLoader must load properly module interfaces in test mode") {
     val loader = new ModuleLoader(TestLoader)
-    val env = new BjcEnv().addModDefn(BuiltIns.primsMod)
-    val newEnv = loader.load(env, Name('Simple))
-    assert(newEnv.hasModDefn(Name('Simple)))
-    assert(newEnv.hasModDefn(Name('Helper)))
+    val env = loader.load(BjcEnv.withBuiltIns, Name('Simple))
+    assert(env.hasModDefn(Name('Simple)))
+    assert(env.hasModDefn(Name('Helper)))
+    println(env)
   }
 }

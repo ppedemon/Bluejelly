@@ -59,7 +59,8 @@ case class IfaceId(
   
   override def hashCode = name.hashCode
   
-  def ppr = gnest(cat(group(name.ppr :/: text("::")) :/: ty.ppr, details.ppr))
+  def ppr = gnest(
+    cat(group(Name.asId(name).ppr :/: text("::")) :/: ty.ppr, details.ppr))
   
   def serialize(out:DataOutputStream) {
     out.writeByte(0)

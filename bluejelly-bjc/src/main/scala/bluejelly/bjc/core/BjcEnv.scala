@@ -22,4 +22,13 @@ class BjcEnv(private val loadedMods:Map[Name,ModDefn] = Map.empty) {
   
   def getModDefn(name:Name) = loadedMods(name)
   def hasModDefn(name:Name) = loadedMods.contains(name)
+
+  override def toString = loadedMods.toString
+}
+
+object BjcEnv {
+  def withBuiltIns = {
+    val env = new BjcEnv().addModDefn(BuiltIns.wiredInMod)
+    BuiltIns.primMods.foldLeft(env)(_ addModDefn _)
+  }
 }

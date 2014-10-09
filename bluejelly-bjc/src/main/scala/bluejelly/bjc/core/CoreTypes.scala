@@ -7,24 +7,39 @@
 package bluejelly.bjc.core
 
 import bluejelly.bjc.ast.decls.{Assoc,NoAssoc,LeftAssoc,RightAssoc}
+
 import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.PprUtils._
+import bluejelly.bjc.common.PrettyPrintable
+
 import bluejelly.bjc.iface.{ModIface,IfaceExport,ExportedId,ExportedTc,Fixity}
+
+import bluejelly.utils.Document.{empty,group,text}
+
 
 /**
  * Classify identifier declarations.
  * @author ppedemon
  */
-abstract class IdDetails
-case object VanillaId extends IdDetails
-case class RecSelId(val tycon:TyCon) extends IdDetails
-case class ClsOpId(val cls:Cls) extends IdDetails
-case class DFunId(val inst:Inst) extends IdDetails
+abstract class IdDetails extends PrettyPrintable
+case object VanillaId extends IdDetails {
+  def ppr = empty 
+}
+case class RecSelId(val tycon:TyCon) extends IdDetails {
+  def ppr = group(between("{- ", "RSel " :: tycon.name.ppr, " -}"))
+}
+case class ClsOpId(val cls:Cls) extends IdDetails {
+  def ppr = group(between("{- ", "Cls " :: cls.name.ppr, " -}"))
+}
+case class DFunId(val inst:Inst) extends IdDetails {
+  def ppr = text("{- DFunId -}")
+}
 
 /**
  * An abstract module declaration.
  * @author ppedemon
  */
-abstract class ModDecl(val name:Name)
+abstract class ModDecl(val name:Name) extends PrettyPrintable
 
 /**
  * Trait for some decl belonging to the tycon scope, i.e.:
@@ -32,7 +47,7 @@ abstract class ModDecl(val name:Name)
  *
  * @author ppedemon
  */
-trait TcDecl
+trait TcDecl extends PrettyPrintable
 
 /**
  * A function, type class operation, or record selector.
@@ -40,9 +55,11 @@ trait TcDecl
  */
 case class Id(
     override val name:Name,
-    val arity:Int,
     val details:IdDetails,
-    val ty:Type) extends ModDecl(name)
+    val ty:Type) extends ModDecl(name) {
+
+  def ppr = gnest(cat(group(name.ppr :/: text("::")) :/: ty.ppr, details.ppr))
+}
 
 /**
  * A type synonym declaration.
@@ -50,7 +67,11 @@ case class Id(
 case class TySyn(
     override val name:Name,
     val tyvars:List[TyVar],  
-    ty:Type) extends ModDecl(name) with TcDecl
+    ty:Type) extends ModDecl(name) with TcDecl {
+
+  def ppr = gnest("type" :/: 
+    group(cat(name.ppr,pprMany(tyvars)) :/: text("=")) :/: ty.ppr)
+}
 
 /**
  * Type constructors.
@@ -61,7 +82,19 @@ case class TyCon(
     val newType:Boolean,
     val ctx:List[TyPred],
     val tyvars:List[TyVar],
-    val dcons:List[DataCon]) extends ModDecl(name) with TcDecl
+    val dcons:List[DataCon]) extends ModDecl(name) with TcDecl {
+
+  def ppr = {
+    val dctx = if (ctx.isEmpty) empty else group(
+      (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
+    val dlhs = gnest(cat(List(
+      text("data"), 
+      dctx, 
+      if (tyvars.isEmpty) name.ppr else group(name.ppr :/: pprMany(tyvars)),
+      if (dcons.isEmpty) empty else text("="))))
+    gnest(cat(dlhs, pprMany(dcons, " |")))
+  }
+}
 
 /**
  * Data constructors. If this is a record, the fields list will hold
@@ -74,13 +107,33 @@ case class DataCon(
     val ty:Type,
     val stricts:List[Boolean],
     val fields:List[Id],
-    var tycon:TyCon = null) extends ModDecl(name)
+    var tycon:TyCon = null) extends ModDecl(name) {
+
+  def ppr = {
+    val xs = stricts map {if (_) text("!") else text("_")}
+    val sd = if (!stricts.isEmpty) 
+      gnest("Stricts:" :/: group(cat(xs))) else empty
+    val fd = if (!fields.isEmpty) 
+      gnest("Fields:" :/: pprMany(fields.map(_.name))) else empty
+    gnest(cat(List(group(name.ppr :/: text("::")), ty.ppr, sd, fd)))
+  }
+}
 
 /**
  * A class operation.
  * @author ppedemon
  */
-case class ClsOp(val id:Id, val cls:Cls, val default:Boolean)
+case class ClsOp(
+    val id:Id, 
+    val cls:Cls, 
+    val default:Boolean) extends PrettyPrintable {
+  
+  def ppr = {
+    val nm = Name.asId(id.name)
+    val nd = if (default) group(nm.ppr :/: text("{-D-}")) else nm.ppr
+    gnest(group(nd :/: text("::")) :/: id.ty.ppr)
+  } 
+}
 
 /**
  * A class declaration.
@@ -91,13 +144,29 @@ case class Cls(
     val tyvar:TyVar,
     val ctx:List[TyPred],
     val pred:TyPred,
-    val ops:List[ClsOp]) extends ModDecl(name) with TcDecl
+    val ops:List[ClsOp]) extends ModDecl(name) with TcDecl {
+
+  def ppr = {
+    val dctx = if (ctx.isEmpty) empty else group(
+        (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
+    val rule = cat(dctx, pred.ppr)
+    val w = if (ops.isEmpty) empty else gnest("where" :/: pprBlock(ops))
+    gnest(cat(gnest("class" :/: rule), w))
+  }
+}
 
 /**
  * An instance declaration.
  * @author ppedemon
  */
-class Inst(val cls:Cls, val constr:TyCon, val dfunId:Id)
+class Inst(
+    val cls:Cls, 
+    val constr:TyCon, 
+    val dfunId:Id) extends PrettyPrintable {
+
+  def ppr = gnest(
+    group("instance" :/: cls.name.ppr :/: text("=")) :/: dfunId.ppr)
+}
 
 /**
  * An module definition.
@@ -110,9 +179,28 @@ class Inst(val cls:Cls, val constr:TyCon, val dfunId:Id)
     val ids:Map[Name,Id],        // Top-level ids, record selectors, dfun ids
     val tcs:Map[Name,TcDecl],    // TySyns, TyCons, Classes
     val dcons:Map[Name,DataCon], // Data constructors
-    val insts:Map[Name,List[Inst]]) {
-  
+    val insts:Map[Name,List[Inst]]) extends PrettyPrintable {
+
+  def ppr = {
+    val fds = fixities.toList map Function.tupled((n,f) => new PrettyPrintable {
+      def ppr = group(f.ppr :/: Name.asOp(n).ppr)
+    })
+    val fd = if (fixities.isEmpty) empty else 
+      nl::gnest("Fixities:" :/: pprMany(fds, ","))
+    val ed = if (exports.isEmpty) empty else 
+      nl::gnest("Exports:" :/: pprMany(exports))
+    cat(List(
+      group("module" :/: name.ppr :/: text("where")), 
+      ed, fd,
+      if (ids.isEmpty) empty else nl :: vppr(ids.values.toList),
+      if (tcs.isEmpty) empty else nl :: vppr(tcs.values.toList),
+      if (insts.isEmpty) empty else nl :: vppr(insts.values.flatten.toList)))
+  }
+
   def this(name:Name) = this(name, List.empty, 
+    Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
+
+  def this(name:Name, exports:List[IfaceExport]) = this(name, exports,
     Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
 
   def addExport(export:IfaceExport) = new ModDefn(name, export::exports, 

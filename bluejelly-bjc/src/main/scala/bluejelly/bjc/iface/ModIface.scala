@@ -8,7 +8,7 @@ package bluejelly.bjc.iface
 
 import java.io.{DataInputStream,DataOutputStream}
 
-import bluejelly.bjc.common.Name.asOp
+import bluejelly.bjc.common.Name.{asId,asOp}
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.Binary._
 import bluejelly.bjc.common.{Loadable,Serializable,Binary}
@@ -26,7 +26,7 @@ abstract class IfaceExport(val name:Name)
   extends PrettyPrintable with Serializable 
 
 case class ExportedId(override val name:Name) extends IfaceExport(name) { 
-  def ppr = name.ppr
+  def ppr = Name.asId(name).ppr
   def serialize(out:DataOutputStream) {
     out.writeByte(0)
     name.serialize(out)
@@ -36,7 +36,11 @@ case class ExportedId(override val name:Name) extends IfaceExport(name) {
 case class ExportedTc(
     override val name:Name, 
     val children:List[Name]) extends IfaceExport(name) {
-  def ppr = group(name.ppr :: between("{",pprMany(children,","),"}"))
+  def ppr = {
+    val d = if (children.isEmpty) empty else 
+      between("{",pprMany(children.map(Name.asId(_)),","),"}")
+    group(Name.asId(name).ppr :: d)
+  }
   def serialize(out:DataOutputStream) {
     out.writeByte(1)
     name.serialize(out)
