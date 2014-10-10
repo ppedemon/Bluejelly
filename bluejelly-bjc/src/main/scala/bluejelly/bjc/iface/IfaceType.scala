@@ -172,7 +172,7 @@ case class IfaceTvTy(val name:Name) extends IfaceType {
 
 class IfacePred(
     val n:Name, 
-    tys:List[IfaceType]) extends PrettyPrintable with Serializable {
+    val tys:List[IfaceType]) extends PrettyPrintable with Serializable {
   
   def ppr = group(n.ppr :/: pprMany(tys))
   

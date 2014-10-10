@@ -141,8 +141,8 @@ case class IfaceCls(
 class IfaceDataCon(
     val name:Name, 
     val ty:IfaceType, 
-    fields:List[Name], 
-    stricts:List[Boolean]) extends PrettyPrintable with Serializable {
+    val fields:List[Name], 
+    val stricts:List[Boolean]) extends PrettyPrintable with Serializable {
   def ppr = {
     val xs = stricts map {if (_) text("!") else text("_")}
     val sd = if (!stricts.isEmpty) 

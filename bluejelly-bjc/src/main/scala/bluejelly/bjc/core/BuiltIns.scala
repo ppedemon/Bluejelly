@@ -191,19 +191,19 @@ object BuiltIns {
     ExportedTc(tycon.name, tycon.dcons.map(_.name))
 
   private def primTyCon(name:Name) =
-    TyCon(name, false, Nil, Nil, Nil)
+    TyCon(name, Nil, Nil, Nil)
 
   private def unitTyCon = 
     primTyCon(nmUnit)
  
   private def arrowTyCon = 
-    TyCon(nmArrow, false, Nil, List(tyVar('a),tyVar('b)), Nil) 
+    TyCon(nmArrow, Nil, List(tyVar('a),tyVar('b)), Nil) 
 
   private def boolTyCon = {
     val boolType = PolyTy(Nil,conTy(nmBool))
     val `false` = DataCon(nmFalse, boolType, Nil, Nil)
     val `true` = DataCon(nmTrue, boolType, Nil, Nil)
-    val bool = TyCon(nmBool, false, Nil, Nil, List(`false`,`true`))
+    val bool = TyCon(nmBool, Nil, Nil, List(`false`,`true`))
     `false`.tycon = bool
     `true`.tycon = bool
     bool
@@ -219,7 +219,7 @@ object BuiltIns {
 
     val nil = DataCon(nmList, nilType, Nil, Nil)
     val cons = DataCon(nmCons, consType, List(false,false), Nil)
-    val list = TyCon(nmList, false, Nil, List(tyVar('a)), List(nil,cons))
+    val list = TyCon(nmList, Nil, List(tyVar('a)), List(nil,cons))
     nil.tycon = list
     cons.tycon = list
     list

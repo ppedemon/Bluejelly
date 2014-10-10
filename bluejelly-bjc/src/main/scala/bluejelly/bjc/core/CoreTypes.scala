@@ -6,6 +6,7 @@
  */
 package bluejelly.bjc.core
 
+import bluejelly.bjc.ast.{GCon}
 import bluejelly.bjc.ast.decls.{Assoc,NoAssoc,LeftAssoc,RightAssoc}
 
 import bluejelly.bjc.common.Name
@@ -55,7 +56,7 @@ trait TcDecl extends PrettyPrintable
  */
 case class Id(
     override val name:Name,
-    val details:IdDetails,
+    var details:IdDetails,
     val ty:Type) extends ModDecl(name) {
 
   def ppr = gnest(cat(group(name.ppr :/: text("::")) :/: ty.ppr, details.ppr))
@@ -79,7 +80,6 @@ case class TySyn(
  */
 case class TyCon(
     override val name:Name,
-    val newType:Boolean,
     val ctx:List[TyPred],
     val tyvars:List[TyVar],
     val dcons:List[DataCon]) extends ModDecl(name) with TcDecl {
@@ -125,7 +125,7 @@ case class DataCon(
  */
 case class ClsOp(
     val id:Id, 
-    val cls:Cls, 
+    var cls:Cls, 
     val default:Boolean) extends PrettyPrintable {
   
   def ppr = {
@@ -161,7 +161,7 @@ case class Cls(
  */
 class Inst(
     val cls:Cls, 
-    val constr:TyCon, 
+    val gcon:GCon, 
     val dfunId:Id) extends PrettyPrintable {
 
   def ppr = gnest(
@@ -203,6 +203,13 @@ class Inst(
   def this(name:Name, exports:List[IfaceExport]) = this(name, exports,
     Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
 
+  def this(
+    name:Name, 
+    exports:List[IfaceExport], 
+    fixities:Map[Name,Fixity],
+    ids:Map[Name,Id]) = this(name, exports, fixities, ids, 
+      Map.empty, Map.empty, Map.empty)
+
   def addExport(export:IfaceExport) = new ModDefn(name, export::exports, 
     fixities, ids, tcs, dcons, insts)
 
@@ -216,11 +223,10 @@ class Inst(
     fixities, ids, tcs + (tysyn.name -> tysyn), dcons, insts)
 
   def addTyCon(tycon:TyCon) = {
-    val n_ids = ids ++ tycon.dcons.flatMap(_.fields.map(id => (id.name,id)))
     val n_dcons = dcons ++ tycon.dcons.map(dc => (dc.name,dc))
     new ModDefn(name, exports, 
-      fixities, n_ids, tcs + (tycon.name -> tycon), n_dcons, insts)
-  } 
+      fixities, ids, tcs + (tycon.name -> tycon), n_dcons, insts)
+  }
 
   def addClass(cls:Cls) = {
     val n_ids = ids ++ cls.ops.map(op => (op.id.name,op.id))
@@ -232,5 +238,13 @@ class Inst(
     val n_insts = insts + 
       (inst.cls.name -> (inst :: insts.get(inst.cls.name).getOrElse(Nil)))
     new ModDefn(name, exports, fixities, ids, tcs, dcons, n_insts)
+  }
+
+  def getTyCon:PartialFunction[Name,TyCon] = n => tcs(n) match {
+    case t@TyCon(_,_,_,_) => t
+  }
+ 
+  def getCls:PartialFunction[Name,Cls] = n => tcs(n) match {
+    case c@Cls(_,_,_,_,_) => c
   }
 }
