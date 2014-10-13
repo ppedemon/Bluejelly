@@ -114,12 +114,11 @@ case class IfaceCls(
     override val name:Name, 
     val vars:List[IfaceTyVar],
     val ctx:List[IfacePred],
-    val pred:IfacePred,
     val ops:List[IfaceClsOp]) extends IfaceDecl(name) {
   def ppr = {
     val dctx = if (ctx.isEmpty) empty else group(
         (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
-    val rule = cat(dctx, pred.ppr)
+    val rule = cat(dctx, group(name.ppr :/: pprMany(vars)))
     val w = if (ops.isEmpty) empty else gnest("where" :/: pprBlock(ops))
     gnest(cat(gnest("class" :/: rule), w))
   }
@@ -129,7 +128,6 @@ case class IfaceCls(
     name.serialize(out)
     vars.serialize(out)
     ctx.serialize(out)
-    pred.serialize(out)
     ops.serialize(out)
   }
 }
@@ -231,8 +229,7 @@ object IfaceDecl extends Loadable[IfaceDecl] {
       new IfaceCls(
           Name.load(in), 
           Binary.loadList(IfaceType.loadTyVar, in), 
-          Binary.loadList(IfaceType.loadPred, in), 
-          IfaceType.loadPred(in),
+          Binary.loadList(IfaceType.loadPred, in),
           Binary.loadList(loadIfaceClsOp, in))
   }
   

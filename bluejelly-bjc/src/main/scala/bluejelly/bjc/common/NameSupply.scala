@@ -9,20 +9,10 @@ package bluejelly.bjc.common
 import scala.collection.mutable.Map
 
 /**
- * A [[NameSupply]] provides names on a name-space basis. Users
- * can provide their own name-space by extending this trait.
- * 
- * @author ppedemon
- */
-trait SupplyNS
-
-// Some add-hoc supply namespaces
-case object TyVarNS extends SupplyNS
-
-/**
  * Provide fresh names throughout the compilation pipeline.
  * @author ppedemon
  */
+/*
 object NameSupply {
   val ns:Map[SupplyNS,Int] = Map()
   
@@ -34,3 +24,4 @@ object NameSupply {
   
   def freshTyVar = freshName(TyVarNS)
 }
+*/

@@ -90,7 +90,8 @@ class IfaceTyVar(
 trait IfaceType extends PrettyPrintable with Serializable
 
 case class IfacePolyTy(
-    val tvs:List[IfaceTyVar], val ty:IfaceType) extends IfaceType {
+    val tvs:List[IfaceTyVar], 
+    val ty:IfaceType) extends IfaceType {
   def ppr = if (tvs.isEmpty) ty.ppr else
     gnest(gnest("forall" :/: pprMany(tvs) :/: text(".")) :/: ty.ppr)
   
@@ -102,9 +103,13 @@ case class IfacePolyTy(
 } 
 
 case class IfaceQualTy(
-    val ctx:List[IfacePred], val ty:IfaceType) extends IfaceType {
-  def ppr = gnest(
-    (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: "=>" :/: ty.ppr)
+    val ctx:List[IfacePred], 
+    val ty:IfaceType) extends IfaceType {
+  def ppr = {
+    val dctx = group(if (ctx.length == 1) 
+      ctx.head.ppr else pprTuple(ctx) :/: text("=>"))
+    gnest(dctx:/: ty.ppr)
+  } 
     
   def serialize(out:DataOutputStream) {
     out.writeByte(1)
@@ -139,7 +144,7 @@ case class IfaceAppTy(val fun:IfaceType, val arg:IfaceType) extends IfaceType {
         case List(f,x) => (f.ppr,x.ppr)
         case _ => sys.error("Illegal function args: %s" format allArgs)
       }
-      group(left :/: "->" :/: right)
+      group(gnest(left :/: text("->")) :/: right)
     } else
     arg match {
       case a@IfaceAppTy(_,_) if !a.isTuple && !a.isList => 

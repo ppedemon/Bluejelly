@@ -5,42 +5,54 @@ import Helper
 infixl 5 ++,$$,**
 infixr 6 &&&,^^^
 
-f,g :: (Eq a, Ord a) => (a -> b -> Int) -> ([String],Char) -> (Int,Int)
+f,g :: (Prelude.Eq a, Prelude.Ord a) => 
+  (a -> b -> bluejelly.Int.Int) -> 
+  ([bluejelly.String.String],bluejelly.Char.Char) -> 
+  (bluejelly.Int.Int, bluejelly.Int.Int)
 
-data Eq a => Either a b = Left a | Right b
+data Simple.Eq a => Either a b = Left a | Right b
 
-data Person = Manager {name::String, org::String, people::[Person]} 
-            | Employee {name:: !String, manager::Person}
+data Person = Manager {
+    name   :: bluejelly.String.String, 
+    org    :: bluejelly.String.String, 
+    people :: [Simple.Person]
+  } 
+  | Employee {
+    name    :: !bluejelly.String.String, 
+    manager :: Simple.Person
+  }
 
 -- Wtf?
-data Monad m => M m = M { x :: m a -> a }
+data Simple.Monad m => M m = M { x :: m a -> a }
 
 class Functor m where
   map :: (a -> b) -> m a -> m b
 
-class Functor m => Monad m where
+class Simple.Functor m => Monad m where
   return :: a -> m a
   (>>=) :: m a -> (a -> m b) -> m b
 
 class Eq a where
-  (==),(/=) :: a -> a -> Bool
+  (==),(/=) :: a -> a -> bluejelly.Base.Bool
   x /= y = not (x == y)
 
 type Set a = [a]
-type Point = (Int,Int)
- 
-instance Eq Int where 
+type Point = (bluejelly.Int.Int,bluejelly.Int.Int)
+
+{-
+instance Simple.Eq bluejelly.Int.Int where 
   x == y = bluejelly.Int.eq x y
 
-instance (Eq a,Eq b) => Eq (a,b) where 
+instance (Simple.Eq a, Simple.Eq b) => Simple.Eq (a,b) where 
   (u,v) == (x,y) = u == x && v == y
 
-instance Eq a => Eq [a] where
+instance Simple.Eq a => Simple.Eq [a] where
   [] == [] = True
   (x:xs) == (y:ys) = x == y && xs == ys
   _ == _ = False
 
-instance (Eq a,Eq b) => Eq (a->b) where
+instance (Simple.Eq a, Simple.Eq b) => Simple.Eq (a->b) where
   f == g = True
+-}
 
 data X a = X [a]

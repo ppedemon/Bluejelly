@@ -143,13 +143,12 @@ case class Cls(
     override val name:Name,
     val tyvar:TyVar,
     val ctx:List[TyPred],
-    val pred:TyPred,
     val ops:List[ClsOp]) extends ModDecl(name) with TcDecl {
 
   def ppr = {
     val dctx = if (ctx.isEmpty) empty else group(
         (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
-    val rule = cat(dctx, pred.ppr)
+    val rule = cat(dctx, group(name.ppr :/: tyvar.ppr))
     val w = if (ops.isEmpty) empty else gnest("where" :/: pprBlock(ops))
     gnest(cat(gnest("class" :/: rule), w))
   }
@@ -245,6 +244,6 @@ class Inst(
   }
  
   def getCls:PartialFunction[Name,Cls] = n => tcs(n) match {
-    case c@Cls(_,_,_,_,_) => c
+    case c@Cls(_,_,_,_) => c
   }
 }

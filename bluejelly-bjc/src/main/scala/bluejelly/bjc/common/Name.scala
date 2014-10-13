@@ -25,6 +25,14 @@ class Name(qual:Option[Symbol], name:Symbol)
   def isId = name.toString.drop(1).matches("""^[_\p{Ll}\p{Lu}\p{Lt}].*""")
   def isOp = !isId
 
+  def qualify(q:Symbol):Name = qual match {
+    case None => Name(q,name)
+    case Some(qual) if qual == q => this
+    case _ => sys.error(s"Incompatible qualifier (current: $qual, new: $q)")
+  }
+
+  def qualify(q:Name):Name = qualify(q.name)
+
   def ppr = if (qualified)
     text("%s.%s" format (qual.get.toString.drop(1),name.toString.drop(1))) else
     text(name.toString.drop(1))

@@ -6,6 +6,7 @@
  */
 package bluejelly.bjc.core
 
+import bluejelly.bjc.ast.Con
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.iface._
 
@@ -91,10 +92,10 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
           d.tycon = tycon
         }
         modDefn.addTyCon(tycon)
-      case IfaceCls(name,tvs,ctx,pred,ops) =>
+      case IfaceCls(name,tvs,ctx,ops) =>
         assert (tvs.size == 1)
         val clsOps = ops map translateClsOp
-        val cls = Cls(name, tyVar(tvs.head), ctx map tyPred, tyPred(pred), clsOps)
+        val cls = Cls(name, tyVar(tvs.head), ctx map tyPred, clsOps)
         for (op <- clsOps) {
           op.cls = cls
           op.id.details = ClsOpId(cls)
@@ -125,11 +126,13 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     new ClsOp(id, null, clsOp.isDefault)
   }
 
+  // Sanity check 1: non built-in constructors must be qualified
+  // Sanity check 2: type variables must not be qualified
   private def translateTy(ty:IfaceType):Type = ty match {
     case IfacePolyTy(tvs, ty) => PolyTy(tvs map tyVar, translateTy(ty))
     case IfaceQualTy(ctx, ty) => QualTy(ctx map tyPred, translateTy(ty))
     case IfaceAppTy(fun, arg) => AppTy(translateTy(fun), translateTy(arg))
-    case IfaceTcTy(gcon) => TcTy(gcon)
+    case IfaceTcTy(gcon) => TcTy(gcon) 
     case IfaceTvTy(tv) => TvTy(tv) 
   }
 

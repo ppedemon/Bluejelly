@@ -21,8 +21,11 @@ import bluejelly.utils.Document.{group,text}
 trait Type extends AstElem
 
 case class QualType(val ctx:List[Pred], ty:Type) extends Type {
-  def ppr = gnest(
-    (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: "=>" :/: ty.ppr)
+  def ppr = {
+    val dctx = group(if (ctx.length == 1) 
+      ctx.head.ppr else pprTuple(ctx) :/: text("=>"))
+    gnest(dctx:/: ty.ppr)
+  } 
 }
 
 case class AppType(val fun:Type, val arg:Type) extends Type {
@@ -50,7 +53,7 @@ case class AppType(val fun:Type, val arg:Type) extends Type {
         case List(f,x) => (f.ppr,x.ppr)
         case _ => sys.error("Illegal function args: %s" format allArgs)
       }
-      group(left :/: "->" :/: right)
+      group(gnest(left :/: text("->")) :/: right)
     } else
     arg match {
       case a@AppType(_,_) if !a.isTuple && !a.isList => 

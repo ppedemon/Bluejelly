@@ -79,8 +79,11 @@ case class PolyTy(val tvs:List[TyVar], val ty:Type) extends Type {
 } 
 
 case class QualTy(val ctx:List[TyPred], val ty:Type) extends Type {
-  def ppr = gnest(
-    (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: "=>" :/: ty.ppr)
+  def ppr = {
+    val dctx = group(if (ctx.length == 1) 
+      ctx.head.ppr else pprTuple(ctx) :/: text("=>"))
+    gnest(dctx:/: ty.ppr)
+  } 
 }
 
 case class AppTy(val fun:Type, val arg:Type) extends Type {
@@ -109,7 +112,7 @@ case class AppTy(val fun:Type, val arg:Type) extends Type {
         case List(f,x) => (f.ppr,x.ppr)
         case _ => sys.error("Illegal function args: %s" format allArgs)
       }
-      group(left :/: "->" :/: right)
+      group(gnest(left :/: text("->")) :/: right)
     } else
     arg match {
       case a@AppTy(_,_) if !a.isTuple && !a.isList => 
