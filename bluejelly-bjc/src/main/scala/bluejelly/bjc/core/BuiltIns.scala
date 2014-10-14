@@ -120,8 +120,14 @@ object BuiltIns {
   private val nmDouble = Name('Double)
   private val nmChar = Name('Char)
   private val nmString = Name('String)
-  
-  private val primIntSpec = new PrimModSpec(Name(Symbol("bluejelly.Int")),
+
+  private val intMod = Name(Symbol("bluejelly.Int"))
+  private val doubleMod = Name(Symbol("bluejelly.Double"))
+  private val bigIntMod = Name(Symbol("bluejelly.BigInt"))
+  private val charMod = Name(Symbol("bluejelly.Char"))
+  private val stringMod = Name(Symbol("bluejelly.String"))
+
+  private val primIntSpec = new PrimModSpec(intMod,
     primTyCon(nmInt), List(
       ClosedOp(Name('add), 2),
       ClosedOp(Name('sub), 2),
@@ -144,7 +150,7 @@ object BuiltIns {
       CmpOp(Name('geq),2)      
     ))
 
-  private val primDoubleSpec = new PrimModSpec(Name(Symbol("bluejelly.Double")),
+  private val primDoubleSpec = new PrimModSpec(doubleMod,
     primTyCon(nmDouble), List(
       ClosedOp(Name('add), 2),
       ClosedOp(Name('sub), 2),
@@ -160,13 +166,16 @@ object BuiltIns {
       CmpOp(Name('geq),2)
   ))
 
-  // TODO: Add ops in the runtime and reflect them here
-  private val primBigIntSpec = new PrimModSpec(Name(Symbol("bluejelly.BigInt")),
+  private val primBigIntSpec = new PrimModSpec(bigIntMod,
     primTyCon(nmBigInt), List(
       CafOp(Name('zero)),
       CafOp(Name('one)),
-      AdHocOp(Name('fromInt), PolyTy(Nil, Type.mkFun(conTy(nmInt),conTy(nmBigInt)))),
-      AdHocOp(Name('fromString), PolyTy(Nil, Type.mkFun(conTy(nmString),conTy(nmBigInt)))),
+      AdHocOp(Name('fromInt), PolyTy(Nil, Type.mkFun(
+        conTy(nmInt.qualify(intMod)),
+        conTy(nmBigInt.qualify(bigIntMod))))),
+      AdHocOp(Name('fromString), PolyTy(Nil, Type.mkFun(
+        conTy(nmString.qualify(stringMod)),
+        conTy(nmBigInt.qualify(bigIntMod))))),
       ClosedOp(Name('add), 2),
       ClosedOp(Name('mul), 2)
   ))

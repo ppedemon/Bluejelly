@@ -22,8 +22,8 @@ trait Type extends AstElem
 
 case class QualType(val ctx:List[Pred], ty:Type) extends Type {
   def ppr = {
-    val dctx = group(if (ctx.length == 1) 
-      ctx.head.ppr else pprTuple(ctx) :/: text("=>"))
+    val dctx = group((if (ctx.length == 1) 
+      ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
     gnest(dctx:/: ty.ppr)
   } 
 }

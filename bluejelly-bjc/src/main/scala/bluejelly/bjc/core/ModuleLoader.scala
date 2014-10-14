@@ -66,9 +66,11 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     }
 
   private def translate(iface:ModIface) = {
-    // Fixities
-    val fixities = iface.fixities.foldLeft(Map.empty[Name,Fixity])((m,nf) => 
-      m + (nf._1 -> nf._2))
+    // Sanity check: exports must be qualified
+    if (!iface.exports.forall(_ match {
+      case ExportedId(n) => n.isQual
+      case ExportedTc(n,ns) => n.isQual && ns.forall(_.isQual) 
+    })) throw new LoaderException(s"Invalid export list")
     
     // Create ids with details = VanillaId, adjust later
     val ids = iface.decls.foldLeft(Map.empty[Name,Id])((m,d) => d match {
@@ -78,7 +80,8 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
 
     // TyDecls (type synonyms, Type constructors, classes)
     // As a side effect, add data constructors as well
-    val m0 = new ModDefn(iface.name, iface.exports, fixities, ids)
+    val modIds = ids.values.toList
+    val m0 = new ModDefn(iface.name, iface.exports, iface.fixities, modIds)
     val m1 = iface.decls.foldLeft(m0)((modDefn,d) => d match {
       case IfaceId(_,_,_) => 
         modDefn
@@ -104,14 +107,7 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     })
 
     // Instances
-    iface.insts.foldLeft(m1)((modDefn,inst) => {
-      assert (inst.tys.size == 1)
-      val cls = modDefn.getCls(inst.name)
-      val gcon = inst.tys.head.get
-      val i = new Inst(cls, gcon, ids(inst.dfunId))
-      ids(inst.dfunId).details = DFunId(i)
-      modDefn.addInst(i)
-    })
+    iface.insts.foldLeft(m1)(_ addInst _)
   }
 
   // Translate a dcons, the tycon field must be adjusted later
@@ -126,13 +122,15 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     new ClsOp(id, null, clsOp.isDefault)
   }
 
-  // Sanity check 1: non built-in constructors must be qualified
-  // Sanity check 2: type variables must not be qualified
+  // Sanity check: names tycons must be fully qualified
   private def translateTy(ty:IfaceType):Type = ty match {
     case IfacePolyTy(tvs, ty) => PolyTy(tvs map tyVar, translateTy(ty))
     case IfaceQualTy(ctx, ty) => QualTy(ctx map tyPred, translateTy(ty))
     case IfaceAppTy(fun, arg) => AppTy(translateTy(fun), translateTy(arg))
-    case IfaceTcTy(gcon) => TcTy(gcon) 
+    case IfaceTcTy(gcon) => gcon match {
+      case Con(n) if !n.isQual => throw new LoaderException(s"Invalid tycon: $n")
+      case _ => TcTy(gcon) 
+    } 
     case IfaceTvTy(tv) => TvTy(tv) 
   }
 
@@ -144,6 +142,8 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
   private def tyVar(tv:IfaceTyVar) = 
     new TyVar(tv.name, translateKind(tv.kind))
 
-  private def tyPred(pred:IfacePred) = 
+  private def tyPred(pred:IfacePred) = {
+    if (!pred.n.isQual) throw new LoaderException(s"Invalid predicate: %pred.n")
     new TyPred(pred.n, pred.tys map translateTy)
+  }
 }

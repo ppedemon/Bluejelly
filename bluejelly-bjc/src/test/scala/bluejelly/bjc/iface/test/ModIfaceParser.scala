@@ -51,9 +51,13 @@ object ModIfaceParser {
   
   // Generate a dictionary name from the given pred
   private def genDictName(p:types.Pred) = {
-    val ctor = p.head
+    val ctor = p.head.unqualify
     val tcs = p.tys.map(types.Type.unwind(_)._1)
-    Name(Symbol("$f" + ctor + tcs.mkString))
+    val tcsUnqual = tcs map {
+      case types.TyCon(Con(n)) => types.TyCon(Con(n.unqualify))
+      case ty => ty
+    }
+    Name(Symbol("$f" + ctor + tcsUnqual.mkString))
   }
       
   // Collect the type variables of a (syntactic) predicate

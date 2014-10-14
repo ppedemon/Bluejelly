@@ -80,8 +80,8 @@ case class PolyTy(val tvs:List[TyVar], val ty:Type) extends Type {
 
 case class QualTy(val ctx:List[TyPred], val ty:Type) extends Type {
   def ppr = {
-    val dctx = group(if (ctx.length == 1) 
-      ctx.head.ppr else pprTuple(ctx) :/: text("=>"))
+    val dctx = group((if (ctx.length == 1) 
+      ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
     gnest(dctx:/: ty.ppr)
   } 
 }

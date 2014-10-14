@@ -106,8 +106,8 @@ case class IfaceQualTy(
     val ctx:List[IfacePred], 
     val ty:IfaceType) extends IfaceType {
   def ppr = {
-    val dctx = group(if (ctx.length == 1) 
-      ctx.head.ppr else pprTuple(ctx) :/: text("=>"))
+    val dctx = group((if (ctx.length == 1) 
+      ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
     gnest(dctx:/: ty.ppr)
   } 
     

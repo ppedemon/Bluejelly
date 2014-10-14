@@ -33,6 +33,11 @@ class Name(qual:Option[Symbol], name:Symbol)
 
   def qualify(q:Name):Name = qualify(q.name)
 
+  def unqualify = qual match {
+    case None => this
+    case _ => Name(name)
+  }
+
   def ppr = if (qualified)
     text("%s.%s" format (qual.get.toString.drop(1),name.toString.drop(1))) else
     text(name.toString.drop(1))

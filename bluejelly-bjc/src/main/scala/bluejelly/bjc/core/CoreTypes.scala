@@ -12,9 +12,7 @@ import bluejelly.bjc.ast.decls.{Assoc,NoAssoc,LeftAssoc,RightAssoc}
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
-
-import bluejelly.bjc.iface.{ModIface,IfaceExport,ExportedId,ExportedTc,Fixity}
-
+import bluejelly.bjc.iface._
 import bluejelly.utils.Document.{empty,group,text}
 
 
@@ -48,7 +46,7 @@ abstract class ModDecl(val name:Name) extends PrettyPrintable
  *
  * @author ppedemon
  */
-trait TcDecl extends PrettyPrintable
+trait TcDecl extends PrettyPrintable { val name:Name }
 
 /**
  * A function, type class operation, or record selector.
@@ -174,14 +172,14 @@ class Inst(
  class ModDefn(
     val name:Name,
     val exports:List[IfaceExport],
-    val fixities:Map[Name,Fixity],
-    val ids:Map[Name,Id],        // Top-level ids, record selectors, dfun ids
-    val tcs:Map[Name,TcDecl],    // TySyns, TyCons, Classes
-    val dcons:Map[Name,DataCon], // Data constructors
-    val insts:Map[Name,List[Inst]]) extends PrettyPrintable {
+    val fixities:List[(Name,Fixity)],
+    val ids:List[Id],        // Top-level ids, record selectors, dfun ids
+    val tcs:List[TcDecl],    // TySyns, TyCons, Classes
+    val dcons:List[DataCon], // Data constructors
+    val insts:List[IfaceClsInst]) extends PrettyPrintable {
 
   def ppr = {
-    val fds = fixities.toList map Function.tupled((n,f) => new PrettyPrintable {
+    val fds = fixities map Function.tupled((n,f) => new PrettyPrintable {
       def ppr = group(f.ppr :/: Name.asOp(n).ppr)
     })
     val fd = if (fixities.isEmpty) empty else 
@@ -191,59 +189,47 @@ class Inst(
     cat(List(
       group("module" :/: name.ppr :/: text("where")), 
       ed, fd,
-      if (ids.isEmpty) empty else nl :: vppr(ids.values.toList),
-      if (tcs.isEmpty) empty else nl :: vppr(tcs.values.toList),
-      if (insts.isEmpty) empty else nl :: vppr(insts.values.flatten.toList)))
+      if (ids.isEmpty) empty else nl :: vppr(ids),
+      if (tcs.isEmpty) empty else nl :: vppr(tcs),
+      if (insts.isEmpty) empty else nl :: vppr(insts)))
   }
 
-  def this(name:Name) = this(name, List.empty, 
-    Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
+  def this(name:Name) = this(name, List.empty, List.empty, 
+    List.empty, List.empty, List.empty, List.empty)
 
-  def this(name:Name, exports:List[IfaceExport]) = this(name, exports,
-    Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
+  def this(name:Name, exports:List[IfaceExport]) = this(name, exports, 
+    List.empty, List.empty, List.empty, List.empty, List.empty)
 
   def this(
     name:Name, 
     exports:List[IfaceExport], 
-    fixities:Map[Name,Fixity],
-    ids:Map[Name,Id]) = this(name, exports, fixities, ids, 
-      Map.empty, Map.empty, Map.empty)
+    fixities:List[(Name,Fixity)],
+    ids:List[Id]) = this(name, exports, fixities, ids, 
+      List.empty, List.empty, List.empty)
 
-  def addExport(export:IfaceExport) = new ModDefn(name, export::exports, 
-    fixities, ids, tcs, dcons, insts)
+  def addExport(export:IfaceExport) = 
+    new ModDefn(name, export::exports, fixities, ids, tcs, dcons, insts)
 
-  def addFixity(name:Name,fixity:Fixity) = new ModDefn(name, exports, 
-    fixities + (name -> fixity), ids, tcs, dcons, insts)  
+  def addFixity(name:Name,fixity:Fixity) = 
+    new ModDefn(name, exports, (name,fixity)::fixities, ids, tcs, dcons, insts)  
 
-  def addId(id:Id) = new ModDefn(name, exports, 
-    fixities, ids + (id.name -> id), tcs, dcons, insts)
+  def addId(id:Id) = 
+    new ModDefn(name, exports, fixities, id::ids, tcs, dcons, insts)
 
-  def addTySyn(tysyn:TySyn) = new ModDefn(name, exports, 
-    fixities, ids, tcs + (tysyn.name -> tysyn), dcons, insts)
+  def addTySyn(tysyn:TySyn) = 
+    new ModDefn(name, exports, fixities, ids, tysyn::tcs, dcons, insts)
 
   def addTyCon(tycon:TyCon) = {
-    val n_dcons = dcons ++ tycon.dcons.map(dc => (dc.name,dc))
-    new ModDefn(name, exports, 
-      fixities, ids, tcs + (tycon.name -> tycon), n_dcons, insts)
+    val n_dcons = dcons ++ tycon.dcons
+    new ModDefn(name, exports, fixities, ids, tycon::tcs, n_dcons, insts)
   }
 
   def addClass(cls:Cls) = {
-    val n_ids = ids ++ cls.ops.map(op => (op.id.name,op.id))
-    new ModDefn(name, exports, 
-      fixities, n_ids, tcs + (cls.name -> cls), dcons, insts)
+    val n_ids = ids ++ cls.ops.map(_.id)
+    new ModDefn(name, exports, fixities, n_ids, cls::tcs, dcons, insts)
   }
 
-  def addInst(inst:Inst) = {
-    val n_insts = insts + 
-      (inst.cls.name -> (inst :: insts.get(inst.cls.name).getOrElse(Nil)))
-    new ModDefn(name, exports, fixities, ids, tcs, dcons, n_insts)
-  }
-
-  def getTyCon:PartialFunction[Name,TyCon] = n => tcs(n) match {
-    case t@TyCon(_,_,_,_) => t
-  }
- 
-  def getCls:PartialFunction[Name,Cls] = n => tcs(n) match {
-    case c@Cls(_,_,_,_) => c
+  def addInst(inst:IfaceClsInst) = {
+    new ModDefn(name, exports, fixities, ids, tcs, dcons, inst::insts)
   }
 }

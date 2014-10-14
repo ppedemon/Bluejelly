@@ -39,7 +39,6 @@ class Eq a where
 type Set a = [a]
 type Point = (bluejelly.Int.Int,bluejelly.Int.Int)
 
-{-
 instance Simple.Eq bluejelly.Int.Int where 
   x == y = bluejelly.Int.eq x y
 
@@ -53,6 +52,5 @@ instance Simple.Eq a => Simple.Eq [a] where
 
 instance (Simple.Eq a, Simple.Eq b) => Simple.Eq (a->b) where
   f == g = True
--}
 
 data X a = X [a]
