@@ -19,7 +19,30 @@ import bluejelly.bjc.ast.decls.{Assoc,NoAssoc,LeftAssoc,RightAssoc}
 import bluejelly.utils.Document.{empty,group,text}
 
 /**
- * Things exported by an interface file.
+ * Things exported by an interface file. Important invariants:
+ *  
+ * 1. Any id having a parent (a class operation or record selector) is
+ * *not* exported as a ExportedId(id), but as an ExportedTc(parent,[id]).
+ *
+ * 2.Invariant (1) poses (for example) the following question: how do we 
+ * know if class C is exported in ExportedTc(C,[op])? Answer is invariant
+ * (2): an exported parent is *always* the first element of the list in
+ * ExportedTc.
+ *
+ * Example: say we have `class C a where { op :: a -> a}'. Then:
+ *
+ *  - exporting C() or C is: ExportedTc(C,[C])
+ *  - exporting op alone is: ExportedTc(C,[op])
+ *  - exporting C(op) or C(..) is: ExportedTc(C,[C,op]) 
+ *
+ *
+ * 3. Exports with the same parent are consolidated. Example: no
+ * ExportedTc(Bool,[Bool,True]) and ExportedTc(Bool,[Bool,False])
+ * but ExportedTc(Bool,[Bool,True,False]).
+
+ * These three invariants significantly simplify computing visible
+ * stuff when chasing imports.
+ *
  * @author ppedemon
  */
 abstract class IfaceExport(val name:Name) 
@@ -36,11 +59,14 @@ case class ExportedId(override val name:Name) extends IfaceExport(name) {
 case class ExportedTc(
     override val name:Name, 
     val children:List[Name]) extends IfaceExport(name) {
-  def ppr = {
-    val d = if (children.isEmpty) empty else 
-      between("{",pprMany(children.map(Name.asId(_)),","),"}")
+
+  def ppr = { 
+    val d = if (children.head == name) 
+      between("{",pprMany(children.tail.map(Name.asId(_)),","),"}") else
+      between("|{",pprMany(children.map(Name.asId(_)),","),"}")
     group(Name.asId(name).ppr :: d)
   }
+  
   def serialize(out:DataOutputStream) {
     out.writeByte(1)
     name.serialize(out)

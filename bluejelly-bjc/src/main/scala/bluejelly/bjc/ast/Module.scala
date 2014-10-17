@@ -43,22 +43,22 @@ case class ExportSome(es:List[ESpec]) extends Exports {
 // -----------------------------------------------------------------------
 // Syntax tree for module imports
 // -----------------------------------------------------------------------
-sealed trait ISpec extends PrettyPrintable;
-case class IVar(name:Name) extends ISpec {
+sealed abstract class ISpec(val name:Name) extends PrettyPrintable;
+case class IVar(override val name:Name) extends ISpec(name) {
   def ppr = asId(name).ppr
 }
-case class INone(name:Name) extends ISpec {
+case class INone(override val name:Name) extends ISpec(name) {
   def ppr = name.ppr
 }
-case class IAll(name:Name) extends ISpec {
+case class IAll(override val name:Name) extends ISpec(name) {
   def ppr = name.ppr :: text("(..)")
 }
-case class ISome(name:Name,children:List[Name]) extends ISpec {
+case class ISome(override val name:Name,children:List[Name]) extends ISpec(name) {
   def ppr = name.ppr :: pprTuple(children map asId)
 }
 
 sealed trait Imports extends PrettyPrintable;
-case object ImportAll extends Imports { def ppr = empty}
+case object ImportAll extends Imports { def ppr = empty }
 case class ImportSome(val is:List[ISpec]) extends Imports {
   def ppr = pprTuple(is)
 }

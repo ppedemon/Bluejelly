@@ -1,4 +1,8 @@
 
+import A
+import B
+import C
+
 f x = (case x of
   1 -> f (x+1)
   _ -> f (x-1)) :: Int

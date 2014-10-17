@@ -6,7 +6,7 @@
  */
 package bluejelly.bjc
 
-
+/*
 import bluejelly.bjc.parser.{Scanner,LayoutScanner,BluejellyParser}
 import bluejelly.utils.UnicodeFilter
 import bluejelly.bjc.common.Name
@@ -17,13 +17,69 @@ import java.io.InputStreamReader
 import java.io.FileReader
 
 import scala.util.parsing.input.Reader
+*/
+
+import bluejelly.bjc.ast.module
+import bluejelly.bjc.core._
+import bluejelly.bjc.parser.BluejellyParser
+import bluejelly.bjc.static._
+import bluejelly.utils.UnicodeFilter
+
+import java.io.{Reader,StringReader,PrintWriter}
+
+/**
+ * Enum for the compiler stages.
+ * @author ppedemon
+ */
+object BjcStage extends Enumeration {
+  type BjcStage = Value
+  var Parser, Reader, All = Value
+}
+
+/**
+ * This class exposes the Bluejelly compiler API.
+ * @author ppedemon
+ */
+class Bjc(ifaceLoader:IfaceLoader = ProdLoader) {
+
+  val loader = new ModuleLoader(ifaceLoader)
+
+  def parse(r:Reader):Either[String,module.Module] = {
+    val in = new UnicodeFilter(r)
+    BluejellyParser.phrase(BluejellyParser.program, in) match {
+      case err@BluejellyParser.NoSuccess(msg,_) => Left(msg)
+      case BluejellyParser.Success(m,_) => Right(m)
+    }
+  }
+
+  def chaseImports(mod:module.Module, errors:BjcErrors) = {
+    val modLoader = new ModuleLoader(ifaceLoader)
+    val importChaser = new ImportChaser(modLoader, errors)
+    importChaser.chaseImports(mod)    
+  }
+
+  private def pipeline(mod:module.Module, errors:BjcErrors) {
+    val exps = chaseImports(mod, errors)
+    if (!errors.hasErrors) println(exps)
+  }
+
+  def compile(r:Reader, errors:BjcErrors) {
+    val result = parse(r)
+    result match {
+      case Left(err) => errors.parseError(err)
+      case Right(mod) => 
+        pipeline(mod,errors)
+        if (errors.hasErrors) errors.dumpTo(new PrintWriter(System.out))  
+    }
+  }
+}
 
 /**
  * Entry point for the Bluejelly compiler.
  * @author ppedemon
  */
-object BluejellyCompiler {
-  
+object Bjc {
+  /*
   import parser.Lexer._
   
   private def scan(s:Reader[Token]):List[Token] = s.first match {
@@ -31,14 +87,23 @@ object BluejellyCompiler {
     case t@ErrorToken(msg) => t::scan(s.rest)
     case t => t::scan(s.rest)
   }
-  
+  */
+
   def main(args:Array[String]) {
+    val module = 
+      """
+      import Z
+      """
+    val errs = new BjcErrors("Main.hs")
+    val bjc = new Bjc
+    bjc.compile(new StringReader(module), errs)
+
     //val iface = ModIfaceIO.load(args(0))
     //println(iface)
-    val modName = Name(Symbol(args(0)))
-    val env = BjcEnv.withBuiltIns
-    val modDefn = new ModuleLoader().load(env, modName)
-    println(modDefn)
+    //val modName = Name(Symbol(args(0)))
+    //val env = BjcEnv.withBuiltIns
+    //val modDefn = new ModuleLoader().load(env, modName)
+    //println(modDefn)
     
     /*
     val start = System.currentTimeMillis()    

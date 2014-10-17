@@ -178,6 +178,19 @@ class Inst(
     val dcons:List[DataCon], // Data constructors
     val insts:List[IfaceClsInst]) extends PrettyPrintable {
 
+  def this(name:Name) = this(name, List.empty, List.empty, 
+    List.empty, List.empty, List.empty, List.empty)
+
+  def this(name:Name, exports:List[IfaceExport]) = this(name, exports, 
+    List.empty, List.empty, List.empty, List.empty, List.empty)
+
+  def this(
+    name:Name, 
+    exports:List[IfaceExport], 
+    fixities:List[(Name,Fixity)],
+    ids:List[Id]) = this(name, exports, fixities, ids, 
+      List.empty, List.empty, List.empty)
+
   def ppr = {
     val fds = fixities map Function.tupled((n,f) => new PrettyPrintable {
       def ppr = group(f.ppr :/: Name.asOp(n).ppr)
@@ -193,19 +206,6 @@ class Inst(
       if (tcs.isEmpty) empty else nl :: vppr(tcs),
       if (insts.isEmpty) empty else nl :: vppr(insts)))
   }
-
-  def this(name:Name) = this(name, List.empty, List.empty, 
-    List.empty, List.empty, List.empty, List.empty)
-
-  def this(name:Name, exports:List[IfaceExport]) = this(name, exports, 
-    List.empty, List.empty, List.empty, List.empty, List.empty)
-
-  def this(
-    name:Name, 
-    exports:List[IfaceExport], 
-    fixities:List[(Name,Fixity)],
-    ids:List[Id]) = this(name, exports, fixities, ids, 
-      List.empty, List.empty, List.empty)
 
   def addExport(export:IfaceExport) = 
     new ModDefn(name, export::exports, fixities, ids, tcs, dcons, insts)

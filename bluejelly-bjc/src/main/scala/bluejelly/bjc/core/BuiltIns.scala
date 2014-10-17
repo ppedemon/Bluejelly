@@ -202,10 +202,10 @@ object BuiltIns {
   // Helper stuff
   // ---------------------------------------------------------------------
 
-  private def exports(modName:Name)(tycon:TyCon) =  
-    ExportedTc(
-      tycon.name.qualify(modName), 
-      tycon.dcons.map(_.name.qualify(modName)))
+  private def exports(modName:Name)(tycon:TyCon) = {
+    val n = tycon.name.qualify(modName)
+    ExportedTc(n,n::tycon.dcons.map(_.name.qualify(modName)))
+  }
 
   private def primTyCon(name:Name) =
     TyCon(name, Nil, Nil, Nil)

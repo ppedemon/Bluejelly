@@ -1,3 +1,9 @@
+/*
+ * The Bluejelly project, Copyright 2012.
+ *
+ * This source code is distributed under the terms of 
+ * the BSD license, see the LICENSE file for details.
+ */
 package bluejelly.bjc.parser.test
 
 import java.io.File

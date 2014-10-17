@@ -38,15 +38,15 @@ object ProdLoader extends IfaceLoader {
   def load(modName:Name) = try {
     val iface = ModIfaceIO.load(modName.toString)
     if (iface.name != modName) 
-      throw LoaderException(s"Invalid module: `$modName' (it declares `$iface.name')") 
+      throw LoaderException(s"interface is for module named `$iface.name')") 
     iface
   } catch {
     case e:LoaderException => 
       throw e
     case e:IOException => throw new LoaderException(
-      s"Module not found: `$modName'")
+      s"interface not found")
     case _:Exception => throw new LoaderException(
-      s"Error loading: `$modName' (class doesn't look like a Bluejelly module)")
+      s"class doesn't look like a Bluejelly interface)")
   }
 }
 
@@ -70,7 +70,7 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     if (!iface.exports.forall(_ match {
       case ExportedId(n) => n.isQual
       case ExportedTc(n,ns) => n.isQual && ns.forall(_.isQual) 
-    })) throw new LoaderException(s"Invalid export list")
+    })) throw new LoaderException(s"export list is invalid")
     
     // Create ids with details = VanillaId, adjust later
     val ids = iface.decls.foldLeft(Map.empty[Name,Id])((m,d) => d match {
@@ -128,7 +128,7 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     case IfaceQualTy(ctx, ty) => QualTy(ctx map tyPred, translateTy(ty))
     case IfaceAppTy(fun, arg) => AppTy(translateTy(fun), translateTy(arg))
     case IfaceTcTy(gcon) => gcon match {
-      case Con(n) if !n.isQual => throw new LoaderException(s"Invalid tycon: $n")
+      case Con(n) if !n.isQual => throw new LoaderException(s"found non-qualified tycon: $n")
       case _ => TcTy(gcon) 
     } 
     case IfaceTvTy(tv) => TvTy(tv) 
@@ -143,7 +143,7 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     new TyVar(tv.name, translateKind(tv.kind))
 
   private def tyPred(pred:IfacePred) = {
-    if (!pred.n.isQual) throw new LoaderException(s"Invalid predicate: %pred.n")
+    if (!pred.n.isQual) throw new LoaderException(s"found non-qualified predicate: %pred.n")
     new TyPred(pred.n, pred.tys map translateTy)
   }
 }

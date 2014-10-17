@@ -193,7 +193,8 @@ class IfaceClsInst(
       case Some(n) => n
       case None => new PrettyPrintable { def ppr = text(".")}
     }
-    gnest(group("instance" :/: name.ppr :/: pprList(args) :/: text("=")) :/: dfunId.ppr)
+    gnest(group("instance" :/: name.ppr :/: 
+      pprList(args) :/: text("=")) :/: dfunId.ppr)
   }
   
   def serialize(out:DataOutputStream) { 
