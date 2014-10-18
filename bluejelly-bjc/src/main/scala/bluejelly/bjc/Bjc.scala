@@ -54,9 +54,15 @@ class Bjc(
 
   def pipeline(r:Reader) {
     try {
-      val mbMod = parse(r); abortIfErrors
+      // Parse
+      //val mbMod = parse(r); abortIfErrors
+      val mbMod = bjcTry(parse(r))
+      
+      // Import chasing
       val gblEnv = new GlobalEnv(BjcEnv.withBuiltIns)
-      val n_gblEnv = chaseImports(gblEnv, mbMod.get); abortIfErrors 
+      val n_gblEnv = bjcTry(chaseImports(gblEnv, mbMod.get))
+
+      // TODO: add the rest...
       println(n_gblEnv)
     } catch {
       case e:CompilerException => dumpErrors
@@ -65,8 +71,10 @@ class Bjc(
 
   def hasErrors = bjcErrs.hasErrors 
 
-  def abortIfErrors { 
-    if (bjcErrs.hasErrors) bjcErrs.abort
+  def bjcTry [T](f: =>T):T = {
+    val t = f;
+    if (hasErrors) bjcErrs.abort
+    t
   }
 
   def dumpErrors {

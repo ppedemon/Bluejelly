@@ -28,7 +28,7 @@ class ImportTest extends FunSuite with TestResourceReader {
   private val base = new File("/import.tests")
   
   test("Import Chaser must handle vanilla imports") {
-    val mod = """import qualified A as Q hiding(op1,C); --import A hiding()"""
+    val mod = """import A()"""
     val r = new StringReader(mod)
     val bjc = new Bjc("<unnamed>",new TestLoader(base))
     val result = bjc.parse(r)
