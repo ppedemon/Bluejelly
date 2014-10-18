@@ -22,29 +22,40 @@ import bluejelly.bjc.iface.{IfaceExport,ExportedId,ExportedTc}
 class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
 
   /**
-   * Chase imports for the given module, returning the
-   * resulting list of exports in scope.
+   * Chase imports for the given module.
+
+   * @return a [[GlobalEnv]] with the visible exports resulting
+   * from processing the import declarations in the module
    */
-  def chaseImports(mod:module.Module):List[IfaceExport] = {
-    val gblEnv = new GlobalEnv(new BjcEnv, Map.empty)
-    mod.impDecls.foldLeft(List.empty[IfaceExport])(_ ++ chaseOne(gblEnv,_))
+  def chaseImports(gblEnv:GlobalEnv, mod:module.Module):GlobalEnv = {
+    mod.impDecls.foldLeft(gblEnv)((gblEnv,imp) => {
+      val (bjcEnv,exps) = chaseOne(gblEnv.bjcEnv, imp)
+      gblEnv.grow(bjcEnv,exps,imp)
+    })
   }
 
   // Chase a single import declaration.
   private def chaseOne(
-      gblEnv:GlobalEnv,
-      imp:module.ImpDecl):List[IfaceExport] = {
+      env:BjcEnv,
+      imp:module.ImpDecl):(BjcEnv,List[IfaceExport]) = {
     try {
-      val n_bjcEnv = modLoader.load(gblEnv.bjcEnv, imp.modId)
-      val exps = visibleExports(imp, n_bjcEnv.getModDefn(imp.modId).exports)
-      // TODO: grow the glbEnv with the obtained exports
-      exps
+      val n_env = modLoader.load(env, imp.modId)
+      val exps = visibleExports(imp, n_env.getModDefn(imp.modId).exports)
+      (n_env, normalizeExports(exps))
     } catch {
       case e:LoaderException => 
         errors.ifaceLoadError(imp, e.msg)
-        List.empty 
+        (env,List.empty) 
     }
   }
+
+  // Normalize exports: Either{Left} + Either{Right} = Either{Left,Right}
+  private def normalizeExports(exps:List[IfaceExport]) = 
+    exps.foldLeft(Map.empty[Name,IfaceExport])((m,e) => (e,m.get(e.name)) match {
+      case (ExportedTc(n,ns),Some(ExportedTc(_,cs))) =>
+        m + (n -> ExportedTc(n, (cs ++ ns).distinct))
+      case _ => m + (e.name -> e)
+    }).values.toList
 
   // Given a `universe' of exports and a import declaration, compute
   // the subset of the universe corresponding to the given import.
@@ -101,7 +112,7 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
       case module.IAll(_) => (j,dconFlag)
       case module.INone(_) => (x,true)
       case module.ISome(_,ns) => (module.ISome(c, (cs ++ ns).distinct), dconFlag)
-      case module.IVar(_) => (j,dconFlag)
+      case module.IVar(_) => (j,dconFlag)  // Impossible
     }
     case module.IVar(_) => (j,dconFlag)
   }

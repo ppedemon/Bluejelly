@@ -1,6 +1,7 @@
 module A
   (A.D(A.D,A.C,A.Y)      -- D(..)
   ,A.C(A.C,A.op1,A.op2)  -- C(..)
+  ,M.Color(M.Color,M.Red,M.Black)
   ) where
 
 data D a = C a | Y a

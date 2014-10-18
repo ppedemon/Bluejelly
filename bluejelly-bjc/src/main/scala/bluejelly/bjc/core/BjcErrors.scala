@@ -43,14 +43,18 @@ import java.io.StringWriter
     gnest(group(mod :: ":" :: pprPos(pos) :: text(":") :/: d)) 
 
   private def locError(pos:Position, d:Document) {
-    error(pos, ppr(loc(pos,d)))
+    error(null, ppr(loc(pos,d)))
   }
+
+  private def locWarning(pos:Position, d:Document) {
+    warning(null, ppr(loc(pos,d)))
+  }  
 
   // ---------------------------------------------------------------------
   // Parse error
   // ---------------------------------------------------------------------
 
-  def parseError(msg:String) = error(null,msg)
+  def parseError(pos:Position, msg:String) = locError(pos,text(msg))
 
   // ---------------------------------------------------------------------
   // Import chasing errors
@@ -65,7 +69,7 @@ import java.io.StringWriter
 
   def ifaceImportError(imp:module.ImpDecl, ispec:module.ISpec) {
     val d = gnest("module" :/: q(imp.modId) :/: "does not export" :/: q(ispec))
-    locError(imp.pos, d) 
+    locError(imp.pos, d)
   }
  }
  
