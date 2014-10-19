@@ -209,8 +209,8 @@ object BluejellyParser extends Parsers {
   private def qop = qvarop | qconop
   
   private def modid = ((_VARID <~ dot)*) ~ _CONID ^^ {
-    case qs~m => 
-      if (qs.isEmpty) m else Name(Symbol(qs mkString ("",".","")), m.name)
+    case qs~m => if (qs.isEmpty) m else 
+      Name(Symbol("%s.%s" format (qs mkString ("",".",""), m.name.name)))
   }
 
   private def commas = (comma+) ^^ {_.length+1}

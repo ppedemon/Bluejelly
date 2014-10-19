@@ -8,8 +8,11 @@ package bluejelly.bjc.static
 
 import bluejelly.bjc.ast.module
 import bluejelly.bjc.common.Name
-import bluejelly.bjc.core.{ModuleLoader,LoaderException,BjcEnv,BjcErrors}
+import bluejelly.bjc.core.{ModuleLoader,LoaderException,BjcEnv,BjcErrors,BuiltIns}
 import bluejelly.bjc.iface.{IfaceExport,ExportedId,ExportedTc}
+
+// For fake positions in added imports
+import scala.util.parsing.input.Position
 
 /**
  * Chase imports in some module. Use a designated loader for 
@@ -28,10 +31,29 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
    * from processing the import declarations in the module
    */
   def chaseImports(gblEnv:GlobalEnv, mod:module.Module):GlobalEnv = {
-    mod.impDecls.foldLeft(gblEnv)((gblEnv,imp) => {
+    val allImpDecls = addBuiltIns(mod.impDecls)
+    allImpDecls.foldLeft(gblEnv)((gblEnv,imp) => {
       val (bjcEnv,exps) = chaseOne(gblEnv.bjcEnv, imp)
       gblEnv.grow(bjcEnv,exps,imp)
     })
+  }
+
+  // Create fake import declarations for built-in stuff
+  private def createImpDecl(name:Name = Name(Symbol(""))) = {
+    val i = new module.ImpDecl(name,false,None,module.ImportAll)
+    i.pos = new Position {
+      val line = 1
+      val column = 1
+      lazy val lineContents = i.toString
+    }
+    i
+  }  
+
+  // Add wired-in module and necessary primitive stuff to 
+  // module's import declaration
+  private def addBuiltIns(imps:List[module.ImpDecl]) = {
+    val diff = (BuiltIns.primMods map (_.name)) diff (imps map (_.modId))
+    createImpDecl() :: ((diff map createImpDecl) ++ imps)
   }
 
   // Chase a single import declaration.

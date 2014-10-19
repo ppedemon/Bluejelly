@@ -8,7 +8,7 @@ package bluejelly.bjc.core
 
 import bluejelly.bjc.ast.{GCon,UnitCon,TupleCon,ArrowCon,ListCon,Con}
 import bluejelly.bjc.common.Name
-import bluejelly.bjc.iface.{ExportedId,ExportedTc}
+import bluejelly.bjc.iface.{IfaceExport,ExportedId,ExportedTc}
 
 import Type._
 
@@ -27,11 +27,8 @@ object BuiltIns {
 
   /**
    * Wired-in tycons: provided by the compiler with special syntax
-   * (except for type bool). Even though they are defined in a module
-   * named `bluejelly.Base' (everything has to belong to a module), 
-   * they must be referenced in unqualified form in source code. So
-   * the wired-in module needs special treatment when loaded to the
-   * environment. Wired-in tycons:
+   * (except for type bool), in a special unnamed module. Wired-in 
+   * tycons are:
    *  
    *   - arrow: data (->)
    *   - unit:  data ()
@@ -39,11 +36,13 @@ object BuiltIns {
    *   - lists: data [a] = [] | a:[a]
    *
    * Tuples (other than unit) are magic: since they are an infinite
-   * family of tycons, they don't belong to `bluejelly.WiredIn'. The 
-   * environment will have to handle them as a special case. But
+   * family of tycons, they don't belong to the unnamed module. The 
+   * environment will have to handle them as a special case, but
    * they are still considered to be wired-in tycons. 
    */
-  private val wiredInModName = Name(Symbol("bluejelly.Base"))
+
+  // Wired-in module is unnamed, so you can't import it explicitly
+  private val wiredInModName = Name(Symbol(""))
 
   private val nmArrow = Name('->)
   private val nmUnit = Name(Symbol("()"))
@@ -57,7 +56,7 @@ object BuiltIns {
     val wiredInTyCons = List(unitTyCon, arrowTyCon, boolTyCon, listTyCon)
     val mod = new ModDefn(
       wiredInModName, 
-      wiredInTyCons.map(exports(wiredInModName)))
+      wiredInTyCons.map(exportTc(wiredInModName)))
     wiredInTyCons.foldLeft(mod)(_ addTyCon _)
   }
 
@@ -77,23 +76,23 @@ object BuiltIns {
   /**
    * Some code to specify a primitive module.
    */
-  abstract class PrimOp(name:Name) { 
+  abstract class PrimOp(val name:Name) { 
     def toId(modName:Name, tyCon:TyCon):Id 
   }
-  case class CafOp(name:Name) extends PrimOp(name) { 
+  case class CafOp(override val name:Name) extends PrimOp(name) { 
     def toId(modName:Name, tycon:TyCon) = {
       val ty = conTy(tycon.name.qualify(modName))
       Id(name, VanillaId, PolyTy(tycon.tyvars, ty))
     }
   }
-  case class ClosedOp(name:Name, arity:Int) extends PrimOp(name) {
+  case class ClosedOp(override val name:Name, arity:Int) extends PrimOp(name) {
      def toId(modName:Name, tycon:TyCon) = {
        val tc = conTy(tycon.name.qualify(modName))
        val ty = PolyTy(tycon.tyvars, Type.mkFun(List.fill(arity+1)(tc)))
        Id(name, VanillaId, ty)
      }
   }
-  case class CmpOp(name:Name, arity:Int) extends PrimOp(name) {
+  case class CmpOp(override val name:Name, arity:Int) extends PrimOp(name) {
     def toId(modName:Name, tycon:TyCon) = {
        val tc = conTy(tycon.name.qualify(modName))
        val bool = conTy(nmBool.qualify(wiredInModName))
@@ -101,12 +100,13 @@ object BuiltIns {
        Id(name, VanillaId, ty)      
     }
   }
-  case class AdHocOp(name:Name, ty:Type) extends PrimOp(name) {
+  case class AdHocOp(override val name:Name, ty:Type) extends PrimOp(name) {
     def toId(modName:Name, tycon:TyCon) = Id(name, VanillaId, ty)    
   }
   class PrimModSpec(name:Name, tycon:TyCon, ops:List[PrimOp]) {
     def toModDefn = {
-      val modDefn = new ModDefn(name, List(exports(name)(tycon)))
+      val exps = exportTc(name)(tycon) :: (ops map exportId(name))
+      val modDefn = new ModDefn(name, exps)
       ops.foldLeft(modDefn.addTyCon(tycon))(
         (m,op) => m.addId(op.toId(name,tycon)))
     }
@@ -202,10 +202,13 @@ object BuiltIns {
   // Helper stuff
   // ---------------------------------------------------------------------
 
-  private def exports(modName:Name)(tycon:TyCon) = {
+  private def exportTc(modName:Name)(tycon:TyCon) = {
     val n = tycon.name.qualify(modName)
     ExportedTc(n,n::tycon.dcons.map(_.name.qualify(modName)))
   }
+
+  private def exportId(modName:Name)(op:PrimOp) = 
+    ExportedId(op.name.qualify(modName))
 
   private def primTyCon(name:Name) =
     TyCon(name, Nil, Nil, Nil)

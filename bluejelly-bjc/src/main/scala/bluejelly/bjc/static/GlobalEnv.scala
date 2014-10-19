@@ -19,22 +19,18 @@ import bluejelly.bjc.iface.{IfaceExport,ExportedId,ExportedTc}
  */
 class NameEntry(
     val qname:Name,       // *Qualified* name referred by this entry
-    val builtIn:Boolean,  // Does this name come from a built in module?
     val impQual:Boolean,  // Is the entry imported as a qualified import?
     val impAs:Name,       // `as' qualified for the import, default to module name
     val imp:ImpDecl) {
 
   override def equals(other:Any) = other match {
-    case e:NameEntry => e.qname == qname && 
-      e.builtIn == builtIn && 
-      e.impAs == impAs && 
+    case e:NameEntry => e.qname == qname && e.impAs == impAs && 
       e.impQual == impQual
     case _ => false
   }
   
   override def hashCode() = 
-    31*(31*(31*qname.hashCode + impAs.hashCode) + 
-      builtIn.hashCode) + impQual.hashCode
+    31*(31*qname.hashCode + impAs.hashCode) + impQual.hashCode
 
   override def toString() = 
     "(%s%s) -> %s" format (if (impQual) "*" else "", impAs, qname)
@@ -78,10 +74,9 @@ class GlobalEnv(val bjcEnv:BjcEnv, val nameTab:GlobalEnv.NameTab = Map.empty) {
     nameTab + (uName -> (nameTab.get(uName).getOrElse(Set.empty) + entry))
   }
 
-  private def nameEntry(qname:Name, imp:ImpDecl, builtIn:Boolean = false) = 
+  private def nameEntry(qname:Name, imp:ImpDecl) = 
     new NameEntry(
       qname, 
-      builtIn, 
       imp.qualified, 
       imp.alias.getOrElse(imp.modId), 
       imp)

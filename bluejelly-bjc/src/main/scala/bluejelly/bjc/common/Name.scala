@@ -38,10 +38,10 @@ class Name(qual:Option[Symbol], name:Symbol)
     case _ => Name(name)
   }
 
-  def ppr = if (qualified)
-    text("%s.%s" format (qual.get.toString.drop(1),name.toString.drop(1))) else
-    text(name.toString.drop(1))
-  
+  def ppr = 
+    if (!qualified || qual.get.name.length == 0) text(name.name) else
+      text("%s.%s" format (qual.get.name,name.name))
+
   def serialize(out:DataOutputStream) = qual match {
     case None => 
       out.writeByte(0)
