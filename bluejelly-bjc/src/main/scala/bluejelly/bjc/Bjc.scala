@@ -14,7 +14,7 @@ import bluejelly.bjc.static._
 import bluejelly.utils.CompilerException
 import bluejelly.utils.UnicodeFilter
 
-import java.io.{Reader,StringReader,PrintWriter}
+import java.io.{File,Reader,FileReader,StringReader,PrintWriter}
 
 /**
  * Enum for the compiler stages.
@@ -88,8 +88,9 @@ class Bjc(
  */
 object Bjc {
   def main(args:Array[String]) {
-    val module = """import Z"""
-    val bjc = new Bjc
-    bjc.pipeline(new StringReader(module))
+    val f = new File(args(0))
+    val r = new FileReader(f)
+    val bjc = new Bjc(f.getName)
+    bjc.pipeline(r)
   }
 }

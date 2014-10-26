@@ -36,17 +36,18 @@ abstract class IfaceLoader {
  */
 object ProdLoader extends IfaceLoader {
   def load(modName:Name) = try {
+    println("Loading: " + modName)
     val iface = ModIfaceIO.load(modName.toString)
     if (iface.name != modName) 
-      throw LoaderException(s"interface is for module named `$iface.name')") 
+      throw LoaderException(s"interface is for module named `${iface.name}'") 
     iface
   } catch {
     case e:LoaderException => 
       throw e
-    case e:IOException => throw new LoaderException(
-      s"interface not found")
+    case e:IOException => 
+      throw new LoaderException(s"interface not found: `$modName'")
     case _:Exception => throw new LoaderException(
-      s"class doesn't look like a Bluejelly interface)")
+      s"class for module `$modName' doesn't look like a Bluejelly interface)")
   }
 }
 
