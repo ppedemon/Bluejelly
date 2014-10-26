@@ -54,3 +54,6 @@ instance (Simple.Eq a, Simple.Eq b) => Simple.Eq (a->b) where
   f == g = True
 
 data X a = X [a]
+
+class Arrow a where
+  op :: a b c -> a b c -> a b c

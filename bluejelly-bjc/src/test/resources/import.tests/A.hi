@@ -1,6 +1,7 @@
 module A
-  (A.D(A.D,A.C,A.Y)      -- D(..)
-  ,A.C(A.C,A.op1,A.op2)  -- C(..)
+  (A.D(A.D,A.C,A.Y)       -- D(..)
+  ,A.C(A.C,A.op1,A.op2)   -- C(..)
+  ,A.Arrow(A.Arrow,A.arr) -- Arrow(..)
   ,M.Color(M.Color,M.Red,M.Black)
   ) where
 
@@ -9,3 +10,6 @@ data D a = C a | Y a
 class C a where
   op1 :: a -> a
   op2 :: a -> a
+
+class Arrow a where
+  arr :: a b c -> a b c -> a b c

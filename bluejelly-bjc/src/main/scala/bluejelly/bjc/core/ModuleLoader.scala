@@ -129,7 +129,7 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     case IfaceQualTy(ctx, ty) => QualTy(ctx map tyPred, translateTy(ty))
     case IfaceAppTy(fun, arg) => AppTy(translateTy(fun), translateTy(arg))
     case IfaceTcTy(gcon) => gcon match {
-      case Con(n) if !n.isQual => throw new LoaderException(s"found non-qualified tycon: $n")
+      case Con(n) if !n.isQual => throw new LoaderException(s"found non-qualified tycon: `$n'")
       case _ => TcTy(gcon) 
     } 
     case IfaceTvTy(tv) => TvTy(tv) 
@@ -144,7 +144,7 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     new TyVar(tv.name, translateKind(tv.kind))
 
   private def tyPred(pred:IfacePred) = {
-    if (!pred.n.isQual) throw new LoaderException(s"found non-qualified predicate: %pred.n")
+    if (!pred.n.isQual) throw new LoaderException(s"found non-qualified predicate: `${pred.n}'")
     new TyPred(pred.n, pred.tys map translateTy)
   }
 }
