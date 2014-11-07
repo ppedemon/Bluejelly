@@ -47,23 +47,22 @@ class Bjc(
     }
   }
 
-  def chaseImports(gblEnv:GlobalEnv, mod:module.Module) = {
+  def chaseImports(bjcEnv:BjcEnv, mod:module.Module) = {
     val importChaser = new ImportChaser(loader, bjcErrs)
-    importChaser.chaseImports(gblEnv, mod)    
+    importChaser.chaseImports(bjcEnv, mod)    
   }
 
   def pipeline(r:Reader) {
     try {
       // Parse
-      //val mbMod = parse(r); abortIfErrors
-      val mbMod = bjcTry(parse(r))
+      val mod = bjcTry(parse(r)).get
       
       // Import chasing
-      val gblEnv = new GlobalEnv(BjcEnv.withBuiltIns)
-      val n_gblEnv = bjcTry(chaseImports(gblEnv, mbMod.get))
+      val bjcEnv = BjcEnv(mod.name)
+      val (n_bjcEnv,nameTab) = bjcTry(chaseImports(bjcEnv, mod))
 
       // TODO: add the rest...
-      println(n_gblEnv)
+      println(nameTab)
     } catch {
       case e:CompilerException => dumpErrors
     }

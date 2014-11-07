@@ -38,6 +38,9 @@ class Name(qual:Option[Symbol], name:Symbol)
     case _ => Name(name)
   }
 
+  def qualifiedBy(modName:Name) = 
+    qualified && qual.get == modName.name
+
   def ppr = 
     if (!qualified || qual.get.name.length == 0) text(name.name) else
       text("%s.%s" format (qual.get.name,name.name))

@@ -13,6 +13,8 @@ import bluejelly.utils.Document
 import bluejelly.utils.Document._
 import bluejelly.utils.{DocGroup,DocNil}
 
+import scala.util.parsing.input.Position
+
 /*
  * Convenience constants for pretty-printing.
  */
@@ -116,4 +118,6 @@ object PprUtils {
     case _ => "%c" format c
   }  
 
+  def pprPos(p:Position) = 
+    group(p.line.toString :: ":" :: text(p.column.toString))
 }

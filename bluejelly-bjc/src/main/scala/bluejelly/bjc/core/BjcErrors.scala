@@ -10,7 +10,7 @@ import bluejelly.bjc.ast.module
 
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.PrettyPrintable
-import bluejelly.bjc.common.PprUtils.gnest
+import bluejelly.bjc.common.PprUtils.{gnest,pprPos}
 
 import bluejelly.utils.Errors
 import bluejelly.utils.Document
@@ -36,9 +36,6 @@ import java.io.StringWriter
   private def q[T <: PrettyPrintable](t:T):Document = 
     group(text("`") :: t.ppr :: text("'"))
   
-  private def pprPos(pos:Position) = 
-    pos.line.toString :: ":" :: text(pos.column.toString)
-
   private def loc(pos:Position, d:Document) = 
     gnest(group(mod :: ":" :: pprPos(pos) :: text(":") :/: d)) 
 

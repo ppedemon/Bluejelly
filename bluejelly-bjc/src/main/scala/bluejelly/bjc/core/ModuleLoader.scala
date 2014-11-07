@@ -89,7 +89,9 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
       case IfaceTySyn(name,tvs,ty) => 
         modDefn.addTySyn(TySyn(name, tvs map tyVar, translateTy(ty)))
       case IfaceTyCon(name,ctx,tvs,dcons) =>
-        val ds = dcons map (d => translateDCon(d,ids))
+        val ds = (dcons.foldRight((List.empty[DataCon],dcons.size-1)){
+          case (d,(ds,tag)) => (translateDCon(d,tag,ids)::ds,tag-1)
+        })._1
         val tycon = TyCon(name, ctx map tyPred, tvs map tyVar, ds)
         for (d <- ds) {
           for (id <- d.fields) id.details = RecSelId(tycon) 
@@ -112,9 +114,9 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
   }
 
   // Translate a dcons, the tycon field must be adjusted later
-  private def translateDCon(dcon:IfaceDataCon, ids:Map[Name,Id]) = {
+  private def translateDCon(dcon:IfaceDataCon, tag:Int, ids:Map[Name,Id]) = {
     val fields = dcon.fields map (n => ids(n))
-    new DataCon(dcon.name, translateTy(dcon.ty), dcon.stricts, fields)
+    new DataCon(dcon.name, translateTy(dcon.ty), dcon.stricts, fields, tag)
   }
 
   // Translate a class op, the class field must be adjusted later

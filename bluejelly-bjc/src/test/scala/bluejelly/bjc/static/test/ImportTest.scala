@@ -29,21 +29,31 @@ class ImportTest extends FunSuite with TestResourceReader {
   
   test("Import Chaser must handle vanilla imports") {
     val mod = """import A"""
+    val unnamed = "<unnamed>"
     val r = new StringReader(mod)
-    val bjc = new Bjc("<unnamed>",new TestLoader(base))
+    val bjc = new Bjc(unnamed, new TestLoader(base))
     val result = bjc.parse(r)
     result match {
       case None => 
         bjc.dumpErrors
         fail("Test failed")
       case Some(mod) =>
-        val gblEnv = new GlobalEnv(BjcEnv.withBuiltIns)
-        val n_gblEnv = bjc.chaseImports(gblEnv, mod)
+        val bjcEnv = BjcEnv(Name(Symbol(unnamed)))
+        val (n_bjcEnv,nameTab) = bjc.chaseImports(bjcEnv, mod)
         if (bjc.hasErrors) {
           bjc.dumpErrors
           fail("Test failed")
         } else {
-          println(n_gblEnv)
+          assert(nameTab.hasName(Name('D)))
+          assert(nameTab.hasName(Name('C)))
+          assert(nameTab.hasName(Name('Y)))
+          assert(nameTab.hasName(Name('op1)))
+          assert(nameTab.hasName(Name('op2)))
+          assert(nameTab.hasName(Name('Arrow)))
+          assert(nameTab.hasName(Name('arr)))
+          assert(nameTab.hasName(Name('Color)))
+          assert(nameTab.hasName(Name('Red)))
+          assert(nameTab.hasName(Name('Black)))
         }
     }
   }

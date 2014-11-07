@@ -17,6 +17,7 @@ import bluejelly.bjc.iface.Fixity
  * @author ppedemon
  */
 class BjcEnv(
+    private val modName:Name,
     private val modEnv:Map[Name,ModDefn],
     private val fixEnv:Map[Name,Fixity],
     private val idEnv:Map[Name,Id],
@@ -24,8 +25,9 @@ class BjcEnv(
     private val dcEnv:Map[Name,DataCon],
     private val instEnv:Map[Name,List[Inst]]) {
 
-  def this() = this(Map.empty, Map.empty, 
-    Map.empty, Map.empty, Map.empty, Map.empty) 
+  def this(modName:Name) = this(modName, 
+    Map.empty, Map.empty, Map.empty, 
+    Map.empty, Map.empty, Map.empty) 
 
   def addModDefn(modDefn:ModDefn) = {
     val n_modEnv = modEnv + (modDefn.name -> modDefn)
@@ -44,6 +46,7 @@ class BjcEnv(
         n_idEnv(inst.dfunId.qualify(modDefn.name)))
     )
     new BjcEnv(
+      modName,
       modEnv + (modDefn.name -> modDefn), 
       n_fixEnv,
       n_idEnv, 
@@ -62,6 +65,10 @@ class BjcEnv(
     case id@Id(_,_,_) => id  
   }
 
+  def getDCon:PartialFunction[Name,DataCon] = dcEnv(_) match {
+    case dc@DataCon(_,_,_,_,_,_) => dc
+  }
+
   def getCls:PartialFunction[Name,Cls] = 
     classFromEnv(tcEnv,_) match {case c@Cls(_,_,_,_) => c}
 
@@ -72,8 +79,11 @@ class BjcEnv(
 }
 
 object BjcEnv {
-  def withBuiltIns = {
-    val env = new BjcEnv().addModDefn(BuiltIns.wiredInMod)
+  def apply(modName:Name) = {
+    val currMod = new ModDefn(modName)
+    val env = new BjcEnv(modName)
+      .addModDefn(BuiltIns.wiredInMod)
+      .addModDefn(currMod)
     BuiltIns.primMods.foldLeft(env)(_ addModDefn _)
   }
 }

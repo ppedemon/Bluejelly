@@ -105,6 +105,7 @@ case class DataCon(
     val ty:Type,
     val stricts:List[Boolean],
     val fields:List[Id],
+    val tag:Int,
     var tycon:TyCon = null) extends ModDecl(name) {
 
   def ppr = {

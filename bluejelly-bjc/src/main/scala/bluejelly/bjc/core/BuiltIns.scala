@@ -42,7 +42,7 @@ object BuiltIns {
    */
 
   // Wired-in module is unnamed, so you can't import it explicitly
-  private val wiredInModName = Name(Symbol(""))
+  val wiredInModName = Name(Symbol(""))
 
   private val nmArrow = Name('->)
   private val nmUnit = Name(Symbol("()"))
@@ -221,8 +221,8 @@ object BuiltIns {
 
   private def boolTyCon = {
     val boolType = PolyTy(Nil,conTy(nmBool.qualify(wiredInModName)))
-    val `false` = DataCon(nmFalse, boolType, Nil, Nil)
-    val `true` = DataCon(nmTrue, boolType, Nil, Nil)
+    val `false` = DataCon(nmFalse, boolType, Nil, Nil, 0)
+    val `true` = DataCon(nmTrue, boolType, Nil, Nil, 1)
     val bool = TyCon(nmBool, Nil, Nil, List(`false`,`true`))
     `false`.tycon = bool
     `true`.tycon = bool
@@ -237,8 +237,8 @@ object BuiltIns {
         AppTy(TcTy(ListCon),tvTy('a)), 
         AppTy(TcTy(ListCon),tvTy('a)))))
 
-    val nil = DataCon(nmList, nilType, Nil, Nil)
-    val cons = DataCon(nmCons, consType, List(false,false), Nil)
+    val nil = DataCon(nmList, nilType, Nil, Nil, 0)
+    val cons = DataCon(nmCons, consType, List(false,false), Nil, 1)
     val list = TyCon(nmList, Nil, List(tyVar('a)), List(nil,cons))
     nil.tycon = list
     cons.tycon = list

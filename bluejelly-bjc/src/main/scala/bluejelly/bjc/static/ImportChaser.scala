@@ -30,12 +30,14 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
    * @return a [[GlobalEnv]] with the visible exports resulting
    * from processing the import declarations in the module
    */
-  def chaseImports(gblEnv:GlobalEnv, mod:module.Module):GlobalEnv = {
+  def chaseImports(bjcEnv:BjcEnv, mod:module.Module):(BjcEnv,NameTable) = {
     val allImpDecls = addBuiltIns(mod.impDecls)
-    allImpDecls.foldLeft(gblEnv)((gblEnv,imp) => {
-      val (bjcEnv,exps) = chaseOne(gblEnv.bjcEnv, imp)
-      gblEnv.grow(bjcEnv,exps,imp)
-    })
+    allImpDecls.foldLeft((bjcEnv,new NameTable())){
+      case ((bjcEnv,nt),imp) => 
+      val (n_bjcEnv,exps) = chaseOne(bjcEnv, imp)
+      val n_nt = nt.grow(exps,imp)
+      (n_bjcEnv, n_nt)
+    }
   }
 
   // Create fake import declarations for built-in stuff
