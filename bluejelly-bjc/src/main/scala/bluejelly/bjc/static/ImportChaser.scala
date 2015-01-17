@@ -54,10 +54,9 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
   // Add wired-in module and necessary primitive stuff to 
   // module's import declaration
   private def addBuiltIns(imps:List[module.ImpDecl]) = {
-    imps
-    //var allBuiltIns = BuiltIns.wiredInModName::(BuiltIns.primMods map (_.name)) 
-    //val diff = allBuiltIns diff (imps map (_.modId))
-    //(diff map createImpDecl) ++ imps
+    var allBuiltIns = BuiltIns.wiredInModName::(BuiltIns.primMods map (_.name)) 
+    val diff = allBuiltIns diff (imps map (_.modId))
+    (diff map createImpDecl) ++ imps
   }
 
   // Chase a single import declaration.

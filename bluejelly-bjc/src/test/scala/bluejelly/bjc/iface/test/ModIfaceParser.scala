@@ -64,7 +64,7 @@ object ModIfaceParser {
       case types.TyCon(Con(n)) => types.TyCon(Con(n.unqualify))
       case ty => ty
     }
-    Symbol("$f" + ctor.unqualify + tcsUnqual.mkString)
+    Symbol("$f" + ctor.unqualify.toSymbol.name + tcsUnqual.mkString)
   }
       
   // Collect the type variables of a (syntactic) predicate
