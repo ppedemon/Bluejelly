@@ -63,7 +63,7 @@ object IfaceKind extends Loadable[IfaceKind]{
  * @author ppedemon
  */
 class IfaceTyVar(
-    val name:Name, 
+    val name:Symbol, 
     val kind:IfaceKind) extends PrettyPrintable with Serializable {
   def ppr = kind match {
     case IfaceKStar => name.ppr
@@ -170,7 +170,7 @@ case class IfaceTcTy(val con:GCon) extends IfaceType {
   }
 }
 
-case class IfaceTvTy(val name:Name) extends IfaceType { 
+case class IfaceTvTy(val name:Symbol) extends IfaceType { 
   def ppr = name.ppr
   def serialize(out:DataOutputStream) { out.writeByte(4); name.serialize(out) }
 }
@@ -215,11 +215,11 @@ object IfaceType extends Loadable[IfaceType] {
     case 1 => IfaceQualTy(Binary.loadList(loadPred, in), load(in))
     case 2 => IfaceAppTy(load(in), load(in))
     case 3 => IfaceTcTy(loadGCon(in))
-    case 4 => IfaceTvTy(Name.load(in))
+    case 4 => IfaceTvTy(Binary.loadSymbol(in))
   }
 
   private[iface] def loadTyVar(in:DataInputStream) =
-    new IfaceTyVar(Name.load(in), IfaceKind.load(in))
+    new IfaceTyVar(Binary.loadSymbol(in), IfaceKind.load(in))
   
   private[iface] def loadPred(in:DataInputStream) = 
     new IfacePred(Name.load(in), Binary.loadList(load, in))

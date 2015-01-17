@@ -26,16 +26,16 @@ case class TySigExp(val e:Exp, val ty:types.Type) extends Exp {
 
 case class InfixExp(val e0:Exp, val op:Name, val e1:Exp) extends Exp {
   def ppr = gnest(
-      group(Exp.pprOperand(e0) :/: Name.asOp(op).ppr)  :/: 
+      group(Exp.pprOperand(e0) :/: op.pprAsOp)  :/: 
       Exp.pprOperand(e1))
 }
 
 case class LeftSectExp(val e:Exp, val op:Name) extends Exp {
-  def ppr = group(par((Exp.pprOperand(e) :: Name.asOp(op).ppr)))
+  def ppr = group(par((Exp.pprOperand(e) :: op.pprAsOp)))
 }
 
 case class RightSectExp(val op:Name, val e:Exp) extends Exp {
-  def ppr = group(par((Name.asOp(op).ppr :: Exp.pprOperand(e))))
+  def ppr = group(par((op.pprAsOp :: Exp.pprOperand(e))))
 }
 
 case class NegExp(val e:Exp) extends Exp {
@@ -87,8 +87,8 @@ case class AppExp(val e:Exp, val arg:Exp) extends Exp {
     if (isTuple) pprTuple(args) else {
       val as = args map Exp.pprPar
       head match {
-        case ConExp(Con(n)) => group(cat(Name.asId(n).ppr :: as))
-        case VarExp(n) => group(cat(Name.asId(n).ppr :: as))
+        case ConExp(Con(n)) => group(cat(n.pprAsId :: as))
+        case VarExp(n) => group(cat(n.pprAsId :: as))
         case _ => group(cat(head.ppr :: as))
       }
     }

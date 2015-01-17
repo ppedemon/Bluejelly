@@ -8,100 +8,27 @@ package bluejelly.bjc.iface
 
 import java.io.{DataInputStream,DataOutputStream}
 
-import bluejelly.bjc.common.Name.{asId,asOp}
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.Binary._
 import bluejelly.bjc.common.{Loadable,Serializable,Binary}
+import bluejelly.bjc.common.{ExportInfo,ExportedId,ExportedTc}
+import bluejelly.bjc.common.Fixity
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
+
 import bluejelly.bjc.ast.decls.{Assoc,NoAssoc,LeftAssoc,RightAssoc}
 
 import bluejelly.utils.Document.{empty,group,text}
-
-/**
- * Things exported by an interface file. Important invariants:
- *  
- * 1. Any id having a parent (a class operation or record selector) is
- * *not* exported as a ExportedId(id), but as an ExportedTc(parent,[id]).
- *
- * 2.Invariant (1) poses (for example) the following question: how do we 
- * know if class C is exported in ExportedTc(C,[op])? Answer is invariant
- * (2): an exported parent is *always* the first element of the list in
- * ExportedTc.
- *
- * Example: say we have `class C a where { op :: a -> a}'. Then:
- *
- *  - exporting C() or C is: ExportedTc(C,[C])
- *  - exporting op alone is: ExportedTc(C,[op])
- *  - exporting C(op) or C(..) is: ExportedTc(C,[C,op]) 
- *
- *
- * 3. Exports with the same parent are consolidated. Example: no
- * ExportedTc(Bool,[Bool,True]) and ExportedTc(Bool,[Bool,False])
- * but ExportedTc(Bool,[Bool,True,False]).
-
- * These three invariants significantly simplify computing visible
- * stuff when chasing imports.
- *
- * @author ppedemon
- */
-abstract class IfaceExport(val name:Name) 
-  extends PrettyPrintable with Serializable 
-
-case class ExportedId(override val name:Name) extends IfaceExport(name) { 
-  def ppr = Name.asId(name).ppr
-  def serialize(out:DataOutputStream) {
-    out.writeByte(0)
-    name.serialize(out)
-  }
-}
-
-case class ExportedTc(
-    override val name:Name, 
-    val children:List[Name]) extends IfaceExport(name) {
-
-  def ppr = { 
-    val d = if (children.head == name) 
-      between("{",pprMany(children.tail.map(Name.asId(_)),","),"}") else
-      between("|{",pprMany(children.map(Name.asId(_)),","),"}")
-    group(Name.asId(name).ppr :: d)
-  }
-  
-  def serialize(out:DataOutputStream) {
-    out.writeByte(1)
-    name.serialize(out)
-    children.serialize(out)
-  }
-}
-
-/**
- * Fixity type.
- * @author ppedemon
- */
-class Fixity(val assoc:Assoc, val prec:Int) 
-    extends PrettyPrintable with Serializable {
-  
-  def ppr =  group(text(assoc match {
-    case NoAssoc => "infix" 
-    case LeftAssoc => "infixl"
-    case RightAssoc => "infixr"
-  }) :/: text(prec.toString))
-  
-  def serialize(out:DataOutputStream) {
-    ModIface.serializeAssoc(assoc, out)
-    out.writeByte(prec)
-  }
-}
 
 /**
  * A module interface.
  * @author ppedemon
  */
 class ModIface(
-    val name:Name,
-    val deps:List[Name],
-    val exports:List[IfaceExport],
-    val fixities:List[(Name,Fixity)],
+    val name:Symbol,
+    val deps:List[Symbol],
+    val exports:List[ExportInfo],
+    val fixities:List[(Symbol,Fixity)],
     val decls:List[IfaceDecl],
     val insts:List[IfaceClsInst]) extends PrettyPrintable with Serializable {
   def ppr = {
@@ -112,8 +39,10 @@ class ModIface(
       nl::gnest("Fixities:" :/: pprMany(fds, ","))
     val ed = if (exports.isEmpty) empty else 
       nl::gnest("Exports:" :/: pprMany(exports))
-    val ds = if (deps.isEmpty) empty else
-      nl::gnest("Dependencies:" :/: pprMany(deps, ","))
+    val ds = if (deps.isEmpty) empty else {
+      val ps = deps map {new PrettyPrintableSymbol(_)}
+      nl::gnest("Dependencies:" :/: pprMany(ps, ","))
+    }
     cat(List(
       group("module" :/: name.ppr :/: text("where")), 
       ds, ed, fd,       
@@ -135,31 +64,10 @@ object ModIface extends Loadable[ModIface]{
   
   def load(in:DataInputStream) = 
     new ModIface(
-        Name.load(in),
-        Binary.loadList(Name.load, in),
-        Binary.loadList(loadExport, in),
-        Binary.loadList(Binary.loadTuple(Name.load, loadFixity), in),
+        Binary.loadSymbol(in),
+        Binary.loadList(Binary.loadSymbol, in),
+        Binary.loadList(ExportInfo.load, in),
+        Binary.loadList(Binary.loadTuple(Binary.loadSymbol, Fixity.load), in),
         Binary.loadList(IfaceDecl.load, in),
         Binary.loadList(IfaceDecl.loadIfaceClsInst, in))
-  
-  private[iface] def serializeAssoc(a:Assoc, out:DataOutputStream) = a match {
-    case NoAssoc => out.writeByte(0)
-    case LeftAssoc => out.writeByte(1)
-    case RightAssoc => out.writeByte(2)
-  }
-  
-  private def loadAssoc(in:DataInputStream) = in.readByte match {
-    case 0 => NoAssoc 
-    case 1 => LeftAssoc 
-    case 2 => RightAssoc
-  }
-  
-  private def loadExport(in:DataInputStream) = in.readByte match {
-    case 0 => new ExportedId(Name.load(in))
-    case 1 => new ExportedTc(Name.load(in), Binary.loadList(Name.load, in))
-  }
-  
-  private def loadFixity(in:DataInputStream) = 
-    new Fixity(loadAssoc(in), in.readByte)
-  
 }

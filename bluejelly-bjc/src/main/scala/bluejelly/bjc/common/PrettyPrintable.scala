@@ -13,6 +13,7 @@ import bluejelly.utils.Document
 import bluejelly.utils.Document._
 import bluejelly.utils.{DocGroup,DocNil}
 
+import scala.language.implicitConversions
 import scala.util.parsing.input.Position
 
 /*
@@ -41,6 +42,13 @@ trait PrettyPrintable {
     output(PrettyPrintable.defaultWidth, w)
     w.toString
   }
+}
+
+trait PrettyPrintableVar extends PrettyPrintable {
+  def isId:Boolean
+  def isOp = !isId
+  def pprAsId = if (isId) this.ppr else group("(" :: this.ppr :: text(")"))
+  def pprAsOp = if (isOp) this.ppr else group("`" :: this.ppr :: text("`"))
 }
 
 /**
@@ -120,4 +128,19 @@ object PprUtils {
 
   def pprPos(p:Position) = 
     group(p.line.toString :: ":" :: text(p.column.toString))
+
+  def asId(v:PrettyPrintableVar) = 
+    if (v.isId) v else new PrettyPrintable { def ppr = v.pprAsId }
+
+  def asOp(v:PrettyPrintableVar) = 
+    if (v.isOp) v else new PrettyPrintable { def ppr = v.pprAsOp }
+
+  // Pimp Symbols: make them instances of PrettyPrintableVar
+  class PrettyPrintableSymbol(symbol:Symbol) extends PrettyPrintableVar {
+    def ppr = text(symbol.name)
+    def isId = symbol.name.matches("""^[_\p{Ll}\p{Lu}\p{Lt}].*""")
+  }
+
+  implicit def symbolToPrettyPrintableSymbol(s:Symbol) = 
+    new PrettyPrintableSymbol(s)
 }

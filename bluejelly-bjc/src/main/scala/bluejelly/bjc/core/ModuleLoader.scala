@@ -7,7 +7,9 @@
 package bluejelly.bjc.core
 
 import bluejelly.bjc.ast.Con
-import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.Fixity
+import bluejelly.bjc.common.{Name,ScopedName}
+import bluejelly.bjc.common.ScopedName._
 import bluejelly.bjc.iface._
 
 import java.io.IOException
@@ -23,7 +25,7 @@ case class LoaderException(msg:String) extends Exception(msg)
  */
 abstract class IfaceLoader {
   @throws[LoaderException]
-  def load(modName:Name):ModIface
+  def load(modName:Symbol):ModIface
 }
 
 /**
@@ -35,19 +37,18 @@ abstract class IfaceLoader {
  * @author ppedemon 
  */
 object ProdLoader extends IfaceLoader {
-  def load(modName:Name) = try {
-    println("Loading: " + modName)
-    val iface = ModIfaceIO.load(modName.toString)
+  def load(modName:Symbol) = try {
+    val iface = ModIfaceIO.load(modName.name)
     if (iface.name != modName) 
-      throw LoaderException(s"interface is for module named `${iface.name}'") 
+      throw LoaderException(s"interface is for module named `${iface.name.name}'") 
     iface
   } catch {
     case e:LoaderException => 
       throw e
     case e:IOException => 
-      throw new LoaderException(s"interface not found: `$modName'")
+      throw new LoaderException(s"interface not found: `${modName.name}'")
     case _:Exception => throw new LoaderException(
-      s"class for module `$modName' doesn't look like a Bluejelly interface)")
+      s"class for module `${modName.name}' doesn't look like a Bluejelly interface)")
   }
 }
 
@@ -59,40 +60,38 @@ object ProdLoader extends IfaceLoader {
  */
 class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
 
-  def load(env:BjcEnv, modName:Name):BjcEnv = 
+  def load(env:BjcEnv, modName:Symbol):BjcEnv = 
     if (env.hasModDefn(modName)) env else {
       val iface = loader.load(modName)
       val modDefn = translate(iface)
-      iface.deps.foldLeft(env.addModDefn(modDefn))(load)
+      iface.deps.foldLeft(env addModDefn modDefn)(load)
     }
 
-  private def translate(iface:ModIface) = {
-    // Sanity check: exports must be qualified
-    if (!iface.exports.forall(_ match {
-      case ExportedId(n) => n.isQual
-      case ExportedTc(n,ns) => n.isQual && ns.forall(_.isQual) 
-    })) throw new LoaderException(s"export list is invalid")
-    
+  private def translate(iface:ModIface) = {    
+    // Create fixity table
+    val fixities = iface.fixities.foldLeft(Map.empty[ScopedName,Fixity])(
+      (map,p) => map + (idName(p._1) -> p._2)
+    ) 
+
     // Create ids with details = VanillaId, adjust later
-    val ids = iface.decls.foldLeft(Map.empty[Name,Id])((m,d) => d match {
-      case IfaceId(n,ty,_) => m + (n -> Id(n, VanillaId, translateTy(ty)))
+    val ids = iface.decls.foldLeft(Map.empty[Symbol,Id])((m,d) => d match {
+      case IfaceId(n,ty,_) => m + (n -> Id(idName(n), VanillaId, translateTy(ty)))
       case _ => m
     })
 
     // TyDecls (type synonyms, Type constructors, classes)
     // As a side effect, add data constructors as well
-    val modIds = ids.values.toList
-    val m0 = new ModDefn(iface.name, iface.exports, iface.fixities, modIds)
+    val m0 = new ModDefn(iface.name, iface.exports, fixities)
     val m1 = iface.decls.foldLeft(m0)((modDefn,d) => d match {
-      case IfaceId(_,_,_) => 
-        modDefn
+      case IfaceId(n,_,_) => 
+        modDefn.addId(ids(n))
       case IfaceTySyn(name,tvs,ty) => 
-        modDefn.addTySyn(TySyn(name, tvs map tyVar, translateTy(ty)))
+        modDefn.addTySyn(TySyn(tcName(name), tvs map tyVar, translateTy(ty)))
       case IfaceTyCon(name,ctx,tvs,dcons) =>
         val ds = (dcons.foldRight((List.empty[DataCon],dcons.size-1)){
           case (d,(ds,tag)) => (translateDCon(d,tag,ids)::ds,tag-1)
         })._1
-        val tycon = TyCon(name, ctx map tyPred, tvs map tyVar, ds)
+        val tycon = TyCon(tcName(name), ctx map tyPred, tvs map tyVar, ds)
         for (d <- ds) {
           for (id <- d.fields) id.details = RecSelId(tycon) 
           d.tycon = tycon
@@ -101,7 +100,7 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
       case IfaceCls(name,tvs,ctx,ops) =>
         assert (tvs.size == 1)
         val clsOps = ops map translateClsOp
-        val cls = Cls(name, tyVar(tvs.head), ctx map tyPred, clsOps)
+        val cls = Cls(tcName(name), tyVar(tvs.head), ctx map tyPred, clsOps)
         for (op <- clsOps) {
           op.cls = cls
           op.id.details = ClsOpId(cls)
@@ -110,18 +109,20 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     })
 
     // Instances
-    iface.insts.foldLeft(m1)(_ addInst _)
+    iface.insts.foldLeft(m1)((modDefn,i) => 
+      modDefn.addInst(new Inst(i.name, i.con, ids(i.dfunId)))
+    )
   }
 
   // Translate a dcons, the tycon field must be adjusted later
-  private def translateDCon(dcon:IfaceDataCon, tag:Int, ids:Map[Name,Id]) = {
+  private def translateDCon(dcon:IfaceDataCon, tag:Int, ids:Map[Symbol,Id]) = {
     val fields = dcon.fields map (n => ids(n))
-    new DataCon(dcon.name, translateTy(dcon.ty), dcon.stricts, fields, tag)
+    new DataCon(idName(dcon.name), translateTy(dcon.ty), dcon.stricts, fields, tag)
   }
 
   // Translate a class op, the class field must be adjusted later
   private def translateClsOp(clsOp:IfaceClsOp) = {
-    val id = Id(clsOp.name, VanillaId, translateTy(clsOp.ty))
+    val id = Id(idName(clsOp.name), VanillaId, translateTy(clsOp.ty))
     new ClsOp(id, null, clsOp.isDefault)
   }
 
@@ -134,7 +135,7 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
       case Con(n) if !n.isQual => throw new LoaderException(s"found non-qualified tycon: `$n'")
       case _ => TcTy(gcon) 
     } 
-    case IfaceTvTy(tv) => TvTy(tv) 
+    case IfaceTvTy(tv) => TvTy(tvName(tv)) 
   }
 
   private def translateKind(k:IfaceKind):Kind = k match {
@@ -143,10 +144,8 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
   }
 
   private def tyVar(tv:IfaceTyVar) = 
-    new TyVar(tv.name, translateKind(tv.kind))
+    new TyVar(tvName(tv.name), translateKind(tv.kind))
 
-  private def tyPred(pred:IfacePred) = {
-    if (!pred.n.isQual) throw new LoaderException(s"found non-qualified predicate: `${pred.n}'")
+  private def tyPred(pred:IfacePred) = 
     new TyPred(pred.n, pred.tys map translateTy)
-  }
 }

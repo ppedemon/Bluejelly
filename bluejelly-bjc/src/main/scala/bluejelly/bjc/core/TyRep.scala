@@ -12,6 +12,8 @@ import bluejelly.bjc.ast.{GCon,UnitCon,TupleCon,ArrowCon,ListCon,Con}
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
+import bluejelly.bjc.common.ScopedName
+import bluejelly.bjc.common.ScopedName.{tvName}
 
 import bluejelly.utils.Document.{text,group}
 
@@ -42,7 +44,7 @@ case class KFun(val from:Kind, val to:Kind) extends Kind {
  * Type variables.
  * @author ppedemon
  */
-class TyVar(val name:Name, val kind:Kind) extends PrettyPrintable {
+class TyVar(val name:ScopedName, val kind:Kind) extends PrettyPrintable {
   def ppr = kind match {
     case KStar => name.ppr
     case _ => par(group(name.ppr :: "::" :: kind.ppr))
@@ -51,8 +53,8 @@ class TyVar(val name:Name, val kind:Kind) extends PrettyPrintable {
 
 /**
  * Type predicates. Predicates reference type classes by name,
- * meaning that will have to lookup the name in the environment
- * to get the corresponding TypeClass object.
+ * meaning that will have to lookup the name in the corresponding 
+ * environment to get the corresponding TypeClass object.
  *
  * @author ppedemon
  */
@@ -128,7 +130,7 @@ case class TcTy(val con:GCon) extends Type {
   def ppr = con.ppr 
 }
 
-case class TvTy(val name:Name) extends Type { 
+case class TvTy(val name:ScopedName) extends Type { 
   def ppr = name.ppr
 }
 
@@ -148,7 +150,7 @@ object Type {
   def mkFun(tys:List[Type]) = 
     tys.reduceRight((x,y) => AppTy(AppTy(TcTy(ArrowCon),x),y)) 
 
-  def tyVar(n:Symbol, kind:Kind=KStar) = new TyVar(Name(n),kind)
-  def tvTy(n:Symbol) = new TvTy(Name(n))
+  def tyVar(n:Symbol, kind:Kind=KStar) = new TyVar(tvName(n),kind)
+  def tvTy(n:Symbol) = new TvTy(tvName(n))
   def conTy(n:Name) = new TcTy(Con(n))
 }

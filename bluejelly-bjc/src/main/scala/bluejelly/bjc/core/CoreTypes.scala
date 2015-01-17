@@ -9,12 +9,17 @@ package bluejelly.bjc.core
 import bluejelly.bjc.ast.{GCon}
 import bluejelly.bjc.ast.decls.{Assoc,NoAssoc,LeftAssoc,RightAssoc}
 
+import bluejelly.bjc.common.{ExportInfo,ExportedId,ExportedTc}
+import bluejelly.bjc.common.Fixity
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
-import bluejelly.bjc.iface._
-import bluejelly.utils.Document.{empty,group,text}
+import bluejelly.bjc.common.ScopedName
 
+import bluejelly.bjc.iface._
+
+import bluejelly.utils.Document
+import bluejelly.utils.Document.{empty,group,text}
 
 /**
  * Classify identifier declarations.
@@ -38,22 +43,20 @@ case class DFunId(val inst:Inst) extends IdDetails {
  * An abstract module declaration.
  * @author ppedemon
  */
-abstract class ModDecl(val name:Name) extends PrettyPrintable
-
-/**
- * Trait for some decl belonging to the tycon scope, i.e.:
- * Type synonyms, Type constructors, or Classes.
- *
- * @author ppedemon
- */
-trait TcDecl extends PrettyPrintable { val name:Name }
+abstract class ModDecl(val name:ScopedName) extends PrettyPrintable {
+  override def equals(x:Any) = x match {
+    case other:ModDecl => other.name == name
+    case _ => false
+  }
+  override def hashCode = name.hashCode
+}
 
 /**
  * A function, type class operation, or record selector.
  * @author ppedemon
  */
 case class Id(
-    override val name:Name,
+    override val name:ScopedName,
     var details:IdDetails,
     val ty:Type) extends ModDecl(name) {
 
@@ -64,9 +67,9 @@ case class Id(
  * A type synonym declaration.
  */
 case class TySyn(
-    override val name:Name,
+    override val name:ScopedName,
     val tyvars:List[TyVar],  
-    ty:Type) extends ModDecl(name) with TcDecl {
+    ty:Type) extends ModDecl(name) {
 
   def ppr = gnest("type" :/: 
     group(cat(name.ppr,pprMany(tyvars)) :/: text("=")) :/: ty.ppr)
@@ -77,10 +80,10 @@ case class TySyn(
  * @author ppedemon
  */
 case class TyCon(
-    override val name:Name,
+    override val name:ScopedName,
     val ctx:List[TyPred],
     val tyvars:List[TyVar],
-    val dcons:List[DataCon]) extends ModDecl(name) with TcDecl {
+    val dcons:List[DataCon]) extends ModDecl(name) {
 
   def ppr = {
     val dctx = if (ctx.isEmpty) empty else group(
@@ -101,7 +104,7 @@ case class TyCon(
  * @author ppedemon
  */
 case class DataCon(
-    override val name:Name,
+    override val name:ScopedName,
     val ty:Type,
     val stricts:List[Boolean],
     val fields:List[Id],
@@ -128,8 +131,8 @@ case class ClsOp(
     val default:Boolean) extends PrettyPrintable {
   
   def ppr = {
-    val nm = Name.asId(id.name)
-    val nd = if (default) group(nm.ppr :/: text("{-D-}")) else nm.ppr
+    val nm = id.name.pprAsId
+    val nd = if (default) group(nm :/: text("{-D-}")) else nm
     gnest(group(nd :/: text("::")) :/: id.ty.ppr)
   } 
 }
@@ -139,10 +142,10 @@ case class ClsOp(
  * @author ppedemon
  */
 case class Cls(
-    override val name:Name,
+    override val name:ScopedName,
     val tyvar:TyVar,
     val ctx:List[TyPred],
-    val ops:List[ClsOp]) extends ModDecl(name) with TcDecl {
+    val ops:List[ClsOp]) extends ModDecl(name) {
 
   def ppr = {
     val dctx = if (ctx.isEmpty) empty else group(
@@ -158,12 +161,12 @@ case class Cls(
  * @author ppedemon
  */
 class Inst(
-    val cls:Cls, 
-    val gcon:GCon, 
+    val clsName:Name, 
+    val con:GCon, 
     val dfunId:Id) extends PrettyPrintable {
 
   def ppr = gnest(
-    group("instance" :/: cls.name.ppr :/: text("=")) :/: dfunId.ppr)
+    group("instance" :/: clsName.ppr :/: text("=")) :/: dfunId.ppr)
 }
 
 /**
@@ -171,31 +174,24 @@ class Inst(
  * @author ppedemon
  */
  class ModDefn(
-    val name:Name,
-    val exports:List[IfaceExport],
-    val fixities:List[(Name,Fixity)],
-    val ids:List[Id],        // Top-level ids, record selectors, dfun ids
-    val tcs:List[TcDecl],    // TySyns, TyCons, Classes
-    val dcons:List[DataCon], // Data constructors
-    val insts:List[IfaceClsInst]) extends PrettyPrintable {
+    val name:Symbol,
+    val exports:List[ExportInfo],
+    val fixities:Map[ScopedName,Fixity],
+    val decls:Map[ScopedName, ModDecl],
+    val insts:List[Inst]) extends PrettyPrintable {
 
-  def this(name:Name) = this(name, List.empty, List.empty, 
-    List.empty, List.empty, List.empty, List.empty)
+  def this(name:Symbol) = 
+    this(name, List.empty, Map.empty, Map.empty, List.empty)
 
-  def this(name:Name, exports:List[IfaceExport]) = this(name, exports, 
-    List.empty, List.empty, List.empty, List.empty, List.empty)
+  def this(name:Symbol, exports:List[ExportInfo]) = 
+    this(name, exports, Map.empty, Map.empty, List.empty) 
 
-  def this(
-    name:Name, 
-    exports:List[IfaceExport], 
-    fixities:List[(Name,Fixity)],
-    ids:List[Id]) = this(name, exports, fixities, ids, 
-      List.empty, List.empty, List.empty)
+  def this(name:Symbol, exports:List[ExportInfo], fixities:Map[ScopedName,Fixity]) =
+    this(name, exports, fixities, Map.empty, List.empty)
 
   def ppr = {
-    val fds = fixities map Function.tupled((n,f) => new PrettyPrintable {
-      def ppr = group(f.ppr :/: Name.asOp(n).ppr)
-    })
+    val fds = fixities.foldRight(List.empty[PrettyPrintable])((p,ps) => 
+      new PrettyPrintable {def ppr = group(p._2.ppr :/: p._1.pprAsOp)}::ps)
     val fd = if (fixities.isEmpty) empty else 
       nl::gnest("Fixities:" :/: pprMany(fds, ","))
     val ed = if (exports.isEmpty) empty else 
@@ -203,34 +199,67 @@ class Inst(
     cat(List(
       group("module" :/: name.ppr :/: text("where")), 
       ed, fd,
-      if (ids.isEmpty) empty else nl :: vppr(ids),
-      if (tcs.isEmpty) empty else nl :: vppr(tcs),
-      if (insts.isEmpty) empty else nl :: vppr(insts)))
+      if (decls.isEmpty) empty else nl::vppr(decls.values.toList),
+      if (insts.isEmpty) empty else nl::vppr(insts.toList)))
   }
 
-  def addExport(export:IfaceExport) = 
-    new ModDefn(name, export::exports, fixities, ids, tcs, dcons, insts)
+  // ---------------------------------------------------------------------
+  // Grow a ModDefn instance
+  // ---------------------------------------------------------------------
 
-  def addFixity(name:Name,fixity:Fixity) = 
-    new ModDefn(name, exports, (name,fixity)::fixities, ids, tcs, dcons, insts)  
+  def addExport(export:ExportInfo) = 
+    new ModDefn(name, export::exports, fixities, decls, insts)
+
+  def addFixity(op:ScopedName,fixity:Fixity) = 
+    new ModDefn(name, exports, fixities + (op -> fixity), decls, insts)
 
   def addId(id:Id) = 
-    new ModDefn(name, exports, fixities, id::ids, tcs, dcons, insts)
+    new ModDefn(name, exports, fixities, addDecl(decls, id), insts)
 
   def addTySyn(tysyn:TySyn) = 
-    new ModDefn(name, exports, fixities, ids, tysyn::tcs, dcons, insts)
+    new ModDefn(name, exports, fixities, addDecl(decls, tysyn), insts)
 
   def addTyCon(tycon:TyCon) = {
-    val n_dcons = dcons ++ tycon.dcons
-    new ModDefn(name, exports, fixities, ids, tycon::tcs, n_dcons, insts)
+    val n_decls = addDecls(decls, tycon::tycon.dcons)
+    new ModDefn(name, exports, fixities, n_decls, insts)
   }
 
   def addClass(cls:Cls) = {
-    val n_ids = ids ++ cls.ops.map(_.id)
-    new ModDefn(name, exports, fixities, n_ids, cls::tcs, dcons, insts)
+    val n_decls = addDecls(decls, cls::cls.ops.map(_.id))
+    new ModDefn(name, exports, fixities, n_decls, insts)
   }
 
-  def addInst(inst:IfaceClsInst) = {
-    new ModDefn(name, exports, fixities, ids, tcs, dcons, inst::insts)
+  def addInst(inst:Inst) =
+    new ModDefn(name, exports, fixities, decls, inst::insts)
+
+  def getId:PartialFunction[ScopedName,Id] = decls(_) match {
+    case id:Id => id
   }
+
+  def getTyCon:PartialFunction[ScopedName,TyCon] = decls(_) match {
+    case tc:TyCon => tc
+  }
+
+  def getTySyn:PartialFunction[ScopedName,TySyn] = decls(_) match {
+    case ts:TySyn => ts
+  }
+
+  def getCls:PartialFunction[ScopedName,Cls] = decls(_) match {
+    case cl:Cls => cl
+  }
+
+  def getDataCon:PartialFunction[ScopedName,DataCon] = decls(_) match {
+    case dc:DataCon => dc
+  }
+
+  // ---------------------------------------------------------------------
+  // Helper private functions: 
+  //  grow a ModDefn with one or more ModDecl instances
+  // ---------------------------------------------------------------------
+
+  private def addDecl(m:Map[ScopedName,ModDecl],d:ModDecl) = 
+    m + (d.name -> d)
+ 
+  private def addDecls(m:Map[ScopedName,ModDecl], ds:List[ModDecl]) = 
+    ds.foldLeft(this.decls)(addDecl)
 }

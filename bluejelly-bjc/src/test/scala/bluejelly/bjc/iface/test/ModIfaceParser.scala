@@ -6,12 +6,16 @@
  */
 package bluejelly.bjc.iface.test
 
-import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.{Name,LocalName,QualName}
+import bluejelly.bjc.common.{ExportInfo,ExportedTc,ExportedId}
+import bluejelly.bjc.common.Fixity
+
 import bluejelly.bjc.ast.{GCon,Con,Decl}
 import bluejelly.bjc.ast.dcons
 import bluejelly.bjc.ast.decls
 import bluejelly.bjc.ast.module._
 import bluejelly.bjc.ast.types
+
 import bluejelly.bjc.iface._
 import bluejelly.bjc.parser.BluejellyParser
 
@@ -36,8 +40,11 @@ import java.io.Reader
 object ModIfaceParser {
   
   // Kind arbitrarily set to *
-  private def mkTv(n:Name) = 
-    new IfaceTyVar(n,IfaceKStar)
+  private def mkTv(n:Name):IfaceTyVar = mkTv(n.toSymbol)
+
+  // Kind arbitrarily set to *
+  private def mkTv(n:Symbol):IfaceTyVar = 
+    new IfaceTyVar(n, IfaceKStar)
 
   // Transform a syntactic predicate to an interface predicate
   private def mkPred(p:types.Pred):IfacePred = 
@@ -51,13 +58,13 @@ object ModIfaceParser {
   
   // Generate a dictionary name from the given pred
   private def genDictName(p:types.Pred) = {
-    val ctor = p.head.unqualify
+    val ctor = p.head
     val tcs = p.tys.map(types.Type.unwind(_)._1)
     val tcsUnqual = tcs map {
       case types.TyCon(Con(n)) => types.TyCon(Con(n.unqualify))
       case ty => ty
     }
-    Name(Symbol("$f" + ctor + tcsUnqual.mkString))
+    Symbol("$f" + ctor.unqualify + tcsUnqual.mkString)
   }
       
   // Collect the type variables of a (syntactic) predicate
@@ -93,12 +100,12 @@ object ModIfaceParser {
   private def getRecSelId(t:IfaceType) = {
     val (f,_) = IfaceType.unwind(t)
     f match {
-      case IfaceTcTy(Con(n)) => IfaceRecSelId(n)
+      case IfaceTcTy(Con(n)) => IfaceRecSelId(n.toSymbol)
       case _ => IfaceVanillaId // Shouldn't be reached
     }
   }  
 
-  private def qualifyPred(modName:Name, pred:IfacePred) =
+  private def qualifyPred(modName:Symbol, pred:IfacePred) =
     new IfacePred(pred.n.qualify(modName), pred.tys)
 
   private def narrowCtx(ctx:List[IfacePred], tys:List[IfaceType]) = {
@@ -128,9 +135,9 @@ object ModIfaceParser {
       tvs:List[IfaceTyVar], 
       pred:IfacePred, 
       t:decls.TySigDecl):List[IfaceId] = {
-    t.vars.foldRight[List[IfaceId]](Nil)((n,ids) => defs.contains(n) match {
+    t.vars.foldRight(List.empty[IfaceId])((n,ids) => defs.contains(n) match {
       case true =>
-        val idName = Name(Symbol("$dm" + n))
+        val idName = Symbol("$dm" + n)
         val allTvs = tvs.toSet ++ tyVarsIn(t.ty)
         val allPreds = pred::predsIn(t.ty)
         val idTy = mkTy(allTvs.toList, allPreds, convert(t.ty))
@@ -141,7 +148,7 @@ object ModIfaceParser {
   
   // Create an interface class operation
   private def mkClsOps(
-      modName:Name,
+      modName:Symbol,
       defs:List[Name],
       tvs:List[IfaceTyVar],
       ctx:IfacePred,
@@ -151,7 +158,7 @@ object ModIfaceParser {
       case decls.TySigDecl(ns,ty) =>
         val allTvs = tvs.toSet ++ tyVarsIn(ty)
         val opTy = mkTy(allTvs.toList, List(qctx), convert(ty))
-        ns.map(n => new IfaceClsOp(n, opTy, defs.contains(n))) ++ ds
+        ns.map(n => new IfaceClsOp(n.toSymbol, opTy, defs.contains(n))) ++ ds
       case _ => ds
     })
     val ids = ds.foldRight[List[IfaceId]](Nil)((d,ids) => d match {
@@ -161,37 +168,51 @@ object ModIfaceParser {
     (ops,ids)
   }
   
-  private def mkClsInstArgs(pred:types.Pred):List[Option[GCon]] = {
-    val tys = pred.tys map (types.Type.unwind(_)._1)
-    tys map {
-      case types.TyCon(gcon) => Some(gcon)
-      case _ => None
+  private def mkClsInstArgs(pred:types.Pred):GCon = {
+    assert(pred.tys.length == 1)
+    val ty = types.Type.unwind(pred.tys.head)._1
+    ty match {
+      case types.TyCon(gcon) => gcon
+      case _ => ???
     }
   }
   
   // Convert module imports
   private def convert(is:List[ImpDecl]) = is map {_.modId}
   
-  // Convert module exports
-  private def convert(es:Exports):List[IfaceExport] = es match {
-    case ExportSome(es) => es.foldRight[List[IfaceExport]](Nil)((e,es) => 
+  // Convert module exports: we assume that parent names are
+  // qualified, but not necessarily children names
+  private def convert(modName:Symbol, es:Exports):List[ExportInfo] = es match {
+    case ExportSome(es) => es.foldRight[List[ExportInfo]](Nil)((e,es) => 
       e match {
         case EVar(n) => ExportedId(n)::es
-        case ESome(n,ns) => ExportedTc(n,ns)::es
+        case EAbs(n) => ExportedTc(n,List(n))::es
+        case ESome(n,ns) => 
+          val qual = n match {
+            case LocalName(_) => modName
+            case QualName(q,_) => q
+          }
+          val q_ns = ns map {
+            case LocalName(n) => QualName(qual,n)
+            case n => n
+          }
+          val fixed_ns = if (!q_ns.isEmpty && q_ns.head.toSymbol == n.toSymbol) 
+            n::q_ns.tail else q_ns
+          ExportedTc(n,fixed_ns)::es
         case _ => es
       }) 
     case _ => Nil
   }
   
   // Convert fixity declarations
-  private def convert(f:decls.FixityDecl):List[(Name,Fixity)] = 
-    f.ops map {(_,new Fixity(f.assoc,f.prec))}
+  private def convert(f:decls.FixityDecl):List[(Symbol,Fixity)] = 
+    f.ops map {op => (op.toSymbol, new Fixity(f.assoc,f.prec))}
 
   // Convert type signatures
   private def convert(ty:types.Type):IfaceType = ty match {
     case types.QualType(ctx,ty) => IfaceQualTy(ctx map mkPred, convert(ty))
     case types.AppType(f,x) => IfaceAppTy(convert(f),convert(x))
-    case types.TyVar(n) => IfaceTvTy(n)
+    case types.TyVar(n) => IfaceTvTy(n.toSymbol)
     case types.TyCon(tc) => IfaceTcTy(tc)
   }
 
@@ -204,21 +225,21 @@ object ModIfaceParser {
     case dcons.AlgDCon(n,args) => 
       val tys = args map (a => convert(a.ty))
       val t = IfaceType.mkFun(tys :+ ty)
-      (new IfaceDataCon(n, mkTy(tvs, narrowCtx(ctx,tys), t), 
+      (new IfaceDataCon(n.toSymbol, mkTy(tvs, narrowCtx(ctx,tys), t), 
         Nil, args map {_.strict}), Nil)
     case r@dcons.RecDCon(n,lgrps) =>
       val lts = r.flatten
-      val labels = lts map (_._1)
+      val labels = lts map (_._1.toSymbol)
       val strict = lts map (_._3)
       val tys = lts map (Function.tupled((_,t,_) => convert(t)))
       val ids = (labels,tys).zipped.map((l,t) => 
-        IfaceId(l,mkSelTy(tvs, narrowCtx(ctx,List(t)), ty, t), getRecSelId(ty)))
+        IfaceId(l, mkSelTy(tvs, narrowCtx(ctx,List(t)), ty, t), getRecSelId(ty)))
       val t = IfaceType.mkFun(tys :+ ty)
-      (new IfaceDataCon(n, mkTy(tvs, narrowCtx(ctx,tys), t), labels, strict),ids)
+      (new IfaceDataCon(n.toSymbol, mkTy(tvs, narrowCtx(ctx,tys), t), labels, strict),ids)
   }
 
   // Convert a type constructor declaration
-  private def convert(modName:Name, tc:decls.DataDecl):(IfaceTyCon,List[IfaceId]) = {
+  private def convert(modName:Symbol, tc:decls.DataDecl):(IfaceTyCon,List[IfaceId]) = {
     val tvs = tc.vars map mkTv
     val ctx = tc.ctx.map(_ map mkPred).getOrElse(Nil)
     val tcTy = IfaceType.mkApp(IfaceTcTy(Con(tc.n.qualify(modName))), 
@@ -228,31 +249,31 @@ object ModIfaceParser {
         val (d,is) = convert(tvs, ctx, tcTy, dcon)
         (d::p._1, is ++ p._2)
       })
-    (IfaceTyCon(tc.n, ctx, tvs, dcons),ids)
+    (IfaceTyCon(tc.n.toSymbol, ctx, tvs, dcons),ids)
   }
   
   // Convert a newtype declaration
-  private def convert(modName:Name, nt:decls.NewTyDecl):(IfaceTyCon,List[IfaceId]) = {
+  private def convert(modName:Symbol, nt:decls.NewTyDecl):(IfaceTyCon,List[IfaceId]) = {
     val tvs = nt.vars map mkTv
     val ctx = nt.ctx.map(_ map mkPred).getOrElse(Nil)
     val tcTy = IfaceType.mkApp(IfaceTcTy(Con(nt.n.qualify(modName))),
         tvs map {tv => IfaceTvTy(tv.name)})
     val (dcon,ids) = convert(tvs, ctx, tcTy, nt.rhs)
-    (IfaceTyCon(nt.n, ctx, tvs, List(dcon)), ids)
+    (IfaceTyCon(nt.n.toSymbol, ctx, tvs, List(dcon)), ids)
   }
 
   // Convert a type synonym declaration
   private def convert(tysyn:decls.TySynDecl):IfaceTySyn =
-    IfaceTySyn(tysyn.n, tysyn.vars map mkTv, convert(tysyn.rhs))
+    IfaceTySyn(tysyn.n.toSymbol, tysyn.vars map mkTv, convert(tysyn.rhs))
   
   // Convert type signature declarations
   private def convert(tysig:decls.TySigDecl):List[IfaceId] = {
     val tvs = tyVarsIn(tysig.ty).toList
-    tysig.vars map {v => IfaceId(v, mkTy(tvs, Nil, convert(tysig.ty)), IfaceVanillaId)}
+    tysig.vars map {v => IfaceId(v.toSymbol, mkTy(tvs, Nil, convert(tysig.ty)), IfaceVanillaId)}
   }
   
   // Convert class declarations
-  private def convert(modName:Name, cls:decls.ClassDecl):(IfaceCls,List[IfaceId]) = {
+  private def convert(modName:Symbol, cls:decls.ClassDecl):(IfaceCls,List[IfaceId]) = {
     val tvs = predTvs(cls.pred).toList
     val ctx = cls.ctx map (_ map mkPred) getOrElse Nil
     val pred = mkPred(cls.pred)
@@ -261,7 +282,7 @@ object ModIfaceParser {
       case _ => ds
     })
     val (ops,ids) = mkClsOps(modName, defs, tvs, pred, cls.ds)
-    (IfaceCls(cls.pred.head, tvs, ctx, ops),ids)
+    (IfaceCls(cls.pred.head.toSymbol, tvs, ctx, ops),ids)
   }
   
   // Convert instance declarations
@@ -277,7 +298,7 @@ object ModIfaceParser {
   // Convert an entire module
   private def convert(mod:Module):ModIface = {
     val is = convert(mod.impDecls)
-    val es = convert(mod.exports)
+    val es = convert(mod.name, mod.exports)
     val m = new ModIface(mod.name, is, es, Nil, Nil, Nil)
     val m0 = mod.topDecls.foldLeft(m)((m,d) => d match {
       case f@decls.FixityDecl(_,_,_) =>

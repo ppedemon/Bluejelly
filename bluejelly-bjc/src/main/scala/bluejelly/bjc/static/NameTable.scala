@@ -7,11 +7,11 @@
 package bluejelly.bjc.static
 
 import bluejelly.bjc.ast.module.ImpDecl
-import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.{ExportInfo,ExportedId,ExportedTc}
+import bluejelly.bjc.common.{Name,LocalName,QualName,ScopedName}
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.PprUtils.{pprPos,par}
 import bluejelly.bjc.core.{BjcEnv,BuiltIns}
-import bluejelly.bjc.iface.{IfaceExport,ExportedId,ExportedTc}
 
 import bluejelly.utils.Document
 import bluejelly.utils.Document._
@@ -40,22 +40,22 @@ case class ImportedOrigin(val imp:ImpDecl) extends Origin {
  * @author ppedemon
  */
 class NameEntry(
-    val qname:Name,       // *Qualified* name referred by this entry
+    val name:Name,        // *Qualified* name referred by this entry
     val impQual:Boolean,  // Is the entry imported as a qualified import?
-    val impAs:Name,       // `as' qualified for the import, default to module name
+    val impAs:Symbol,     // `as' qualified for the import, default to module name
     val origin:Origin) {
 
   override def equals(other:Any) = other match {
-    case e:NameEntry => e.qname == qname && e.impAs == impAs && 
+    case e:NameEntry => e.name == name && e.impAs == impAs && 
       e.impQual == impQual
     case _ => false
   }
   
   override def hashCode() = 
-    31*(31*qname.hashCode + impAs.hashCode) + impQual.hashCode
+    31*(31*name.hashCode + impAs.hashCode) + impQual.hashCode
 
   override def toString() = 
-    "(%s%s) -> %s" format (if (impQual) "*" else "", impAs, qname)
+    "(%s%s) -> %s" format (if (impQual) "*" else "", impAs, name)
 }
 
 /**
@@ -70,9 +70,9 @@ class NameEntry(
  *
  * @author ppedemon
  */
-class NameTable(val nameTab:Map[Name,Set[NameEntry]] = Map.empty) {
+class NameTable(val nameTab:Map[ScopedName,Set[NameEntry]] = Map.empty) {
 
-  def grow(exps:List[IfaceExport], imp:ImpDecl) = {
+  def grow(exps:List[ExportInfo], imp:ImpDecl) = {
     val n_nameTab = exps.foldLeft(nameTab)((nameTab,e) => e match {
       case ExportedId(n) => 
         addToNameTab(nameTab, nameEntry(n, imp))
@@ -83,22 +83,22 @@ class NameTable(val nameTab:Map[Name,Set[NameEntry]] = Map.empty) {
     new NameTable(n_nameTab)
   }
 
-  def hasName(n:Name) = nameTab.contains(n)
+  def hasName(n:Name) = nameTab.contains(n.name)
 
   override def toString = nameTab.toString
 
-  private def addToNameTab(nameTab:Map[Name,Set[NameEntry]], entry:NameEntry) = {
-    val uName = entry.qname.unqualify
-    nameTab + (uName -> (nameTab.get(uName).getOrElse(Set.empty) + entry))
+  private def addToNameTab(
+      nameTab:Map[ScopedName,Set[NameEntry]], 
+      entry:NameEntry) = {
+    val sname = entry.name.name
+    nameTab + (sname -> (nameTab.get(sname).getOrElse(Set.empty) + entry))
   }
 
-  private def nameEntry(qname:Name, imp:ImpDecl) = { 
-    val origin = if (qname.qual.get == BuiltIns.wiredInModName) 
-      WiredInOrigin else ImportedOrigin(imp)
-    new NameEntry(
-      qname, 
-      imp.qualified, 
-      imp.alias.getOrElse(imp.modId), 
-      origin)
-  }
+  private def nameEntry(name:Name, imp:ImpDecl) = name match {
+    case LocalName(_) => sys.error("Unqualified export: %s" format name)
+    case QualName(q,n) =>
+      val origin = if (q == BuiltIns.wiredInModName) 
+        WiredInOrigin else ImportedOrigin(imp)
+      new NameEntry(name, imp.qualified, imp.alias.getOrElse(imp.modId), origin)
+  } 
 }

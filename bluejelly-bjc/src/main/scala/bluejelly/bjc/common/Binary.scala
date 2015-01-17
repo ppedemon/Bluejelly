@@ -34,6 +34,16 @@ trait Loadable[T] {
  */
 object Binary {
   
+  // Pimp symbols
+  class SerializableSymbol(s:Symbol) extends Serializable {
+    def serialize(out:DataOutputStream) = out.writeUTF(s.name)
+  }
+
+  implicit def symbolToSerializableSymbol(s:Symbol) = 
+    new SerializableSymbol(s)
+
+  def loadSymbol(in:DataInputStream) = Symbol(in.readUTF())
+
   // Pimp boolean type
   class SerializableBoolean(x:Boolean) extends Serializable {
     def serialize(out:DataOutputStream) = out.writeBoolean(x)
@@ -78,6 +88,7 @@ object Binary {
     read(in.readInt,Nil)
   }
   
+  // Pimp option type
   class SerializableOption[T <% Serializable](x:Option[T]) extends Serializable {
     def serialize(out:DataOutputStream) = x match {
       case None => out.writeByte(0)

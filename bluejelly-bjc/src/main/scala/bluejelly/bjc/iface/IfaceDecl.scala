@@ -32,7 +32,7 @@ case object IfaceDFunId extends IfaceIdDetails {
   def ppr = text("{- DFunId -}")
   def serialize(out:DataOutputStream) { out.writeByte(1) }
 }
-case class IfaceRecSelId(val tycon:Name) extends IfaceIdDetails {
+case class IfaceRecSelId(val tycon:Symbol) extends IfaceIdDetails {
   def ppr = group(between("{- ", "RSel " :: tycon.ppr, " -}"))
   def serialize(out:DataOutputStream) {
     out.writeByte(2)
@@ -44,11 +44,11 @@ case class IfaceRecSelId(val tycon:Name) extends IfaceIdDetails {
  * Interface top-level declarations.
  * @author ppedemon
  */
-abstract class IfaceDecl(val name:Name) 
+abstract class IfaceDecl(val name:Symbol) 
   extends PrettyPrintable with Serializable
 
 case class IfaceId(
-    override val name:Name, 
+    override val name:Symbol, 
     val ty:IfaceType,
     val details:IfaceIdDetails) extends IfaceDecl(name) {
   
@@ -60,7 +60,7 @@ case class IfaceId(
   override def hashCode = name.hashCode
   
   def ppr = gnest(
-    cat(group(Name.asId(name).ppr :/: text("::")) :/: ty.ppr, details.ppr))
+    cat(group(name.ppr :/: text("::")) :/: ty.ppr, details.ppr))
   
   def serialize(out:DataOutputStream) {
     out.writeByte(0)
@@ -71,7 +71,7 @@ case class IfaceId(
 }
 
 case class IfaceTyCon(
-    override val name:Name, 
+    override val name:Symbol,
     val ctx:List[IfacePred],
     val vars:List[IfaceTyVar], 
     val cons:List[IfaceDataCon]) extends IfaceDecl(name) {
@@ -96,7 +96,7 @@ case class IfaceTyCon(
 }
 
 case class IfaceTySyn(
-    override val name:Name, 
+    override val name:Symbol, 
     val vars:List[IfaceTyVar],
     val ty:IfaceType) extends IfaceDecl(name) {
   def ppr = gnest("type" :/: 
@@ -111,7 +111,7 @@ case class IfaceTySyn(
 }
 
 case class IfaceCls(
-    override val name:Name, 
+    override val name:Symbol, 
     val vars:List[IfaceTyVar],
     val ctx:List[IfacePred],
     val ops:List[IfaceClsOp]) extends IfaceDecl(name) {
@@ -137,16 +137,18 @@ case class IfaceCls(
  * @author ppedemon
  */
 class IfaceDataCon(
-    val name:Name, 
+    val name:Symbol, 
     val ty:IfaceType, 
-    val fields:List[Name], 
+    val fields:List[Symbol], 
     val stricts:List[Boolean]) extends PrettyPrintable with Serializable {
   def ppr = {
     val xs = stricts map {if (_) text("!") else text("_")}
     val sd = if (!stricts.isEmpty) 
       gnest("Stricts:" :/: group(cat(xs))) else empty
-    val fd = if (!fields.isEmpty) 
-      gnest("Fields:" :/: pprMany(fields)) else empty
+    val fd = if (!fields.isEmpty) {
+      val ps = fields map {new PrettyPrintableSymbol(_)}
+      gnest("Fields:" :/: pprMany(ps)) 
+    } else empty
     gnest(cat(List(group(name.ppr :/: text("::")), ty.ppr, sd, fd)))
   }
   
@@ -163,12 +165,12 @@ class IfaceDataCon(
  * @author ppedemon
  */
 class IfaceClsOp(
-    val name:Name, 
+    val name:Symbol, 
     val ty:IfaceType, 
     val isDefault:Boolean) extends PrettyPrintable with Serializable {
   def ppr = {
-    val id = Name.asId(name)
-    val nd = if (isDefault) group(id.ppr :/: text("{-D-}")) else id.ppr
+    val nd = if (isDefault) 
+      group(name.pprAsId :/: text("{-D-}")) else name.pprAsId
     gnest(group(nd :/: text("::")) :/: ty.ppr)
   }
   
@@ -185,23 +187,17 @@ class IfaceClsOp(
  */
 class IfaceClsInst(
     val name:Name,
-    val tys:List[Option[GCon]],
-    val dfunId:Name) extends PrettyPrintable with Serializable {
+    val con:GCon,
+    val dfunId:Symbol) extends PrettyPrintable with Serializable {
   
   def ppr = {
-    val args = tys map {
-      case Some(n) => n
-      case None => new PrettyPrintable { def ppr = text(".")}
-    }
     gnest(group("instance" :/: name.ppr :/: 
-      pprList(args) :/: text("=")) :/: dfunId.ppr)
+      con.ppr :/: text("=")) :/: dfunId.ppr)
   }
   
   def serialize(out:DataOutputStream) { 
     name.serialize(out)
-    (tys map (_ map(con => new Serializable {
-      def serialize(out:DataOutputStream) = IfaceType.serializeGCon(con, out)
-    }))).serialize(out)
+    IfaceType.serializeGCon(con, out)
     dfunId.serialize(out) 
   }
 }
@@ -214,21 +210,24 @@ object IfaceDecl extends Loadable[IfaceDecl] {
   
   def load(in:DataInputStream) = in.readByte match {
     case 0 => 
-      new IfaceId(Name.load(in), IfaceType.load(in), loadIfaceIdDetails(in))
+      new IfaceId(
+        Binary.loadSymbol(in), 
+        IfaceType.load(in), 
+        loadIfaceIdDetails(in))
     case 1 =>
       new IfaceTyCon(
-          Name.load(in), 
+          Binary.loadSymbol(in), 
           Binary.loadList(IfaceType.loadPred, in), 
           Binary.loadList(IfaceType.loadTyVar, in), 
           Binary.loadList(loadIfaceDataCon, in))
     case 2 =>
       new IfaceTySyn(
-          Name.load(in), 
+          Binary.loadSymbol(in), 
           Binary.loadList(IfaceType.loadTyVar, in), 
           IfaceType.load(in))
     case 3 =>
       new IfaceCls(
-          Name.load(in), 
+          Binary.loadSymbol(in), 
           Binary.loadList(IfaceType.loadTyVar, in), 
           Binary.loadList(IfaceType.loadPred, in),
           Binary.loadList(loadIfaceClsOp, in))
@@ -238,22 +237,25 @@ object IfaceDecl extends Loadable[IfaceDecl] {
     in.readByte match {
       case 0 => IfaceVanillaId
       case 1 => IfaceDFunId
-      case 2 => IfaceRecSelId(Name.load(in))
+      case 2 => IfaceRecSelId(Binary.loadSymbol(in))
     }
     
   private def loadIfaceDataCon(in:DataInputStream) =
     new IfaceDataCon(
-        Name.load(in), 
+        Binary.loadSymbol(in), 
         IfaceType.load(in), 
-        Binary.loadList(Name.load, in), 
+        Binary.loadList(Binary.loadSymbol, in), 
         Binary.loadList(Binary.loadBoolean, in))
   
   private def loadIfaceClsOp(in:DataInputStream) = 
-    new IfaceClsOp(Name.load(in), IfaceType.load(in), Binary.loadBoolean(in))
+    new IfaceClsOp(
+      Binary.loadSymbol(in), 
+      IfaceType.load(in), 
+      Binary.loadBoolean(in))
   
   private[iface] def loadIfaceClsInst(in:DataInputStream) = 
     new IfaceClsInst(
         Name.load(in),
-        Binary.loadList(in => Binary.loadOption(IfaceType.loadGCon, in), in), 
-        Name.load(in))
+        IfaceType.loadGCon(in), 
+        Binary.loadSymbol(in))
 }

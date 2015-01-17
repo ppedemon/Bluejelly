@@ -24,7 +24,7 @@ class ParserSuite extends FunSuite with TestResourceReader {
       case err@BluejellyParser.NoSuccess(_,_) => 
         fail(err.toString)
       case BluejellyParser.Success(m,_) => 
-        assert(m.name.toString == name)
+        assert(m.name.name == name)
         printf("Parsing time for module `%s': %.3f secs.\n", 
             name, (end-start)/1000f)
         if (verbose) println(m)

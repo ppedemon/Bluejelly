@@ -21,8 +21,9 @@ object BluejellyParser extends Parsers {
   
   import Lexer._
 
-  import bluejelly.bjc.common.Name
   import bluejelly.bjc.common.Name._
+  import bluejelly.bjc.common.{Name,LocalName,QualName}
+  import bluejelly.bjc.common.{Scope,TcScope,IdScope,TvScope,ScopedName}
   
   import bluejelly.bjc.ast
   import bluejelly.bjc.ast.NameConstants._
@@ -34,6 +35,8 @@ object BluejellyParser extends Parsers {
   import bluejelly.bjc.ast.decls._
   import bluejelly.bjc.ast.module._
   
+  import bluejelly.utils.{Name => N}
+
   type Elem = Token
     
   // ---------------------------------------------------------------------
@@ -67,22 +70,30 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
 
   // Names
-  private def _VARID = elem("identifier",_.isInstanceOf[VarId]) ^^ 
-    { case VarId(id) => Name(id.name); case _ => ??? }
-  private def _VAROP = elem("operator",_.isInstanceOf[VarSym]) ^^ 
-    { case VarSym(op) => Name(op.name); case _ => ??? }
-  private def _QVARID = elem("identifier",_.isInstanceOf[QVarId]) ^^ 
-    { case QVarId(id) => Name(id.qual.get,id.name); case _ => ??? }
-  private def _QVAROP = elem("operator",_.isInstanceOf[QVarSym]) ^^ 
-    { case QVarSym(op) => Name(op.qual.get,op.name); case _ => ??? }
-  private def _CONID = elem("constructor",_.isInstanceOf[ConId]) ^^
-    { case ConId(id) => Name(id.name); case _ => ??? }
-  private def _CONOP = elem("constructor",_.isInstanceOf[ConSym]) ^^
-    { case ConSym(op) => Name(op.name); case _ => ??? }
-  private def _QCONID = elem("constructor",_.isInstanceOf[QConId]) ^^
-    { case QConId(id) => Name(id.qual.get,id.name); case _ => ??? }
-  private def _QCONOP = elem("constructor",_.isInstanceOf[QConSym]) ^^
-    { case QConSym(op) => Name(op.qual.get,op.name); case _ => ??? }
+  private def _VARID = elem("identifier",_.isInstanceOf[VarId]) ^^ { 
+    case VarId(id) => id; case _ => ??? 
+  }
+  private def _VAROP = elem("operator",_.isInstanceOf[VarSym]) ^^ { 
+    case VarSym(op) => op; case _ => ??? 
+  }
+  private def _QVARID = elem("identifier",_.isInstanceOf[QVarId]) ^^ { 
+    case QVarId(id) => id; case _ => ??? 
+  }
+  private def _QVAROP = elem("operator",_.isInstanceOf[QVarSym]) ^^ { 
+    case QVarSym(op) => op; case _ => ??? 
+  }
+  private def _CONID = elem("constructor",_.isInstanceOf[ConId]) ^^ { 
+    case ConId(id) => id; case _ => ??? 
+  }
+  private def _CONOP = elem("constructor",_.isInstanceOf[ConSym]) ^^ { 
+    case ConSym(op) => op; case _ => ??? 
+  }
+  private def _QCONID = elem("constructor",_.isInstanceOf[QConId]) ^^ { 
+    case QConId(id) => id; case _ => ??? 
+  }
+  private def _QCONOP = elem("constructor",_.isInstanceOf[QConSym]) ^^ { 
+    case QConSym(op) => op; case _ => ??? 
+  }
   
   // Literals
   private def lit = 
@@ -128,7 +139,7 @@ object BluejellyParser extends Parsers {
   })
   
   private def bang = elem(_ match {
-    case t:VarSym => (t.asInstanceOf[VarSym].sym.name == '!)
+    case t:VarSym => (t.asInstanceOf[VarSym].sym.name == Symbol("!"))
     case _ => false
   })
   
@@ -166,56 +177,84 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
   // Variables + Constructors (as identifiers or operators)
   // ---------------------------------------------------------------------
-  private def varid = 
-    ( elem("identifier", _.isInstanceOf[TAs]) ^^^ nmAs
-    | elem("identifier", _.isInstanceOf[THiding]) ^^^ nmHiding
-    | elem("identifier", _.isInstanceOf[TQualified]) ^^^ nmQualified
-    | _VARID)
-   
-  private def vars = 
-    varid | lpar ~> _VAROP <~ rpar | lpar ~> minus <~ rpar ^^^ nmMinus
+  
+  private def nmMinus = Name.idName(ncMinus)
+
+  private def mkName(n:N, scope:Scope) = {
+    if (n.isQual) Name.qualName(n.qual.get, n.name, scope) 
+      else Name.localName(n.name, scope)
+  }     
+  private def idName(n:N) = mkName(n, IdScope)
+  private def tcName(n:N) = mkName(n, TcScope)
+  private def tvName(n:N) = mkName(n, TvScope)
+
+  private def varid(scope:Scope = IdScope) = 
+    ( elem("identifier", _.isInstanceOf[TAs]) ^^^ localName(ncAs, scope)
+    | elem("identifier", _.isInstanceOf[THiding]) ^^^ localName(ncHiding, scope)
+    | elem("identifier", _.isInstanceOf[TQualified]) ^^^ localName(ncQualified, scope)
+    | _VARID ^^ {mkName(_,scope)})
+  
+  private def tyvar = varid(TvScope)
+
+  private def `var` = 
+    ( varid()
+    | lpar ~> _VAROP <~ rpar ^^ {idName(_)}
+    | lpar ~> minus <~ rpar ^^^ nmMinus)
   
   private def qvar = 
-    _QVARID | lpar ~> _QVAROP <~ rpar | vars
+    (_QVARID ^^ {idName(_)}
+    | lpar ~> _QVAROP <~ rpar ^^ {idName(_)}
+    | `var` )
 
   private def varopNoMinus = 
-    _VAROP | back ~> varid <~ back
+    ( _VAROP ^^ {idName(_)} 
+    | back ~> varid() <~ back )
   
   private def varop = 
     varopNoMinus | minus ^^^ nmMinus
     
   private def qvaropNoMinus = 
-    _QVAROP | back ~> _QVARID <~ back | varopNoMinus
+    ( _QVAROP ^^ {idName(_)} 
+    | back ~> _QVARID <~ back ^^ {idName(_)} 
+    | varopNoMinus )
     
   private def qvarop = 
     qvaropNoMinus | minus ^^^ nmMinus
     
   private def con = 
-    _CONID | lpar ~> _CONOP  <~ rpar
+    ( _CONID ^^ {idName(_)}
+    | lpar ~> _CONOP  <~ rpar ^^ {idName(_)})
   
   private def qcon = 
-    _QCONID | lpar ~> _QCONOP <~ rpar | con
+    ( _QCONID ^^ {idName(_)} 
+    | lpar ~> _QCONOP <~ rpar ^^ {idName(_)} 
+    | con )
   
   private def conop = 
-    _CONOP | back ~> _CONID  <~ back
+    ( _CONOP ^^ {idName(_)}
+    | back ~> _CONID  <~ back ^^ {idName(_)})
   
   private def qconop = 
-    _QCONOP | back ~> _QCONID <~ back | conop
+    ( _QCONOP ^^ {idName(_)}
+    | back ~> _QCONID <~ back ^^ {idName(_)} 
+    | conop )
   
-  private def qconid = 
-    _QCONID | _CONID  
+  private def qconid(scope:Scope = TcScope) = 
+    (_QCONID | _CONID) ^^ {mkName(_,scope)}  
+
+  private def tcon = _CONID ^^ {tcName(_)}
 
   private def op = varop | conop
   private def qop = qvarop | qconop
   
   private def modid = ((_VARID <~ dot)*) ~ _CONID ^^ {
-    case qs~m => if (qs.isEmpty) m else 
-      Name(Symbol("%s.%s" format (qs mkString ("",".",""), m.name.name)))
+    case qs~m => if (qs.isEmpty) m.name else 
+      Symbol("%s.%s" format (qs mkString ("",".",""), m.name.name)) 
   }
 
   private def commas = (comma+) ^^ {_.length+1}
   
-  private def commaVars = rep1sep(vars,comma)
+  private def commaVars = rep1sep(`var`,comma)
   
   private def gcon = 
     ( qcon ^^ {ast.Con(_)}
@@ -227,10 +266,10 @@ object BluejellyParser extends Parsers {
   // Exports
   // ---------------------------------------------------------------------
   private def expSpec = $(
-    ( qconid <~ (lpar ~ dotdot ~ rpar) ^^ {EAll(_)}
-    | qconid ~ (lpar ~> enames <~ rpar) ^^ {case e~es => ESome(e,es)}
+    ( qconid() <~ (lpar ~ dotdot ~ rpar) ^^ {EAll(_)}
+    | qconid() ~ (lpar ~> enames <~ rpar) ^^ {case e~es => ESome(e,es)}
+    | qconid() ^^ {EAbs(_)}
     | qvar ^^ {EVar(_)}
-    | qcon ^^ {EVar(_)}
     | module ~> modid ^^ {EMod(_)}))
   
   private def enames = repsep(qvar|qcon,comma) <~ (comma?)
@@ -242,13 +281,13 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
   // Imports
   // ---------------------------------------------------------------------
-  private def inames = repsep(vars|con,comma) <~ (comma?)
+  private def inames = repsep(`var`|con,comma) <~ (comma?)
 
   private def impSpec = 
-    ( _CONID <~ (lpar ~ dotdot ~ rpar) ^^ {IAll(_)}
-    | _CONID ~ (lpar ~> inames <~ rpar) ^^ {case i~is => ISome(i,is)}
-    | _CONID ^^ {INone(_)}
-    | vars ^^ {IVar(_)})
+    ( tcon <~ (lpar ~ dotdot ~ rpar) ^^ {IAll(_)}
+    | tcon ~ (lpar ~> inames <~ rpar) ^^ {case i~is => ISome(i,is)}
+    | tcon ^^ {INone(_)}
+    |`var` ^^ {IVar(_)})
    
   private def impSpecs = 
     lpar ~> (repsep(impSpec,comma) <~ (comma?)) <~ rpar
@@ -297,14 +336,14 @@ object BluejellyParser extends Parsers {
     case ty~args => Type.mkApp(ty, args) 
   }
   
-  private def btype2 = qconid ~ (atype*) ^^ {
+  private def btype2 = qconid() ~ (atype*) ^^ {
     case n~args => Type.mkApp(Type.tyCon(n), args)
   }
   
-  private def atype = atype1 | qconid ^^ {Type.tyCon(_)}
+  private def atype = atype1 | qconid() ^^ {Type.tyCon(_)}
   
   private def atype1:Parser[Type] = 
-    ( varid ^^ {TyVar(_)}
+    ( tyvar ^^ {TyVar(_)}
     | lpar ~ rarr ~ rpar ^^^ Type.arrowCon
     | lpar ~> commas <~ rpar ^^ {Type.tupleCon(_)}
     | lpar ~> repsep(`type`,comma) <~ rpar ^^ {
@@ -337,10 +376,10 @@ object BluejellyParser extends Parsers {
   }
   
   private def apat:Parser[Pat] = 
-    ( (vars <~ at) ~ pat ^^ {case v~p => AsPat(v,p)}
+    ( (`var` <~ at) ~ pat ^^ {case v~p => AsPat(v,p)}
     | lit ^^ {LitPat(_)}
     | under ^^^ WildPat
-    | vars ^^ {VarPat(_)}
+    | `var` ^^ {VarPat(_)}
     | tilde ~> apat ^^ {LazyPat(_)} 
     | lbrack ~> rep1sep(pat,comma) <~ rbrack ^^ {ListPat(_)}
     | lpar ~> rep1sep(pat,comma) <~ rpar ^^ {
@@ -443,12 +482,12 @@ object BluejellyParser extends Parsers {
   // Type constructors, type synonyms, new types
   // ---------------------------------------------------------------------
   
-  private def tyLhs = _CONID ~ (varid*)
+  private def tyLhs = tcon ~ (tyvar*)
   private def mbang = (bang?) ^^ {_.map(_=>true).getOrElse(false)}
   
   private def derivings = 
-    deriving ~> qconid ^^ {List(_)} |
-    deriving ~> (lpar ~> repsep(qconid,comma) <~ rpar)
+    deriving ~> qconid() ^^ {List(_)} |
+    deriving ~> (lpar ~> repsep(qconid(),comma) <~ rpar)
   
   private def labelGrp = 
     ((commaVars <~ coco) ~ `type` ^^ { 
@@ -458,6 +497,8 @@ object BluejellyParser extends Parsers {
       case vs~ty => new LabelGroup(vs,ty,true)
     })
   
+  private def dcon = qconid(IdScope) | lpar ~> _CONOP <~ rpar ^^ {idName(_)}
+
   private def conopArg = 
     btype ^^ {new DConArg(_,false)} | bang ~> atype ^^ {new DConArg(_,true)}
   
@@ -471,7 +512,7 @@ object BluejellyParser extends Parsers {
     |con ~ (lcurly ~> repsep(labelGrp,comma) <~ rcurly) ^^ {
       case n~grps => new RecDCon(n,grps)
     }
-    |(qconid|lpar ~> _CONOP <~ rpar) ~ (conidArg*) ^^ {
+    |dcon ~ (conidArg*) ^^ {
       case n~tys => new AlgDCon(n, tys)
     })
   
@@ -519,7 +560,7 @@ object BluejellyParser extends Parsers {
   
   // Primitive declarations
   private def primDefn = 
-    vars ~ elem(_.isInstanceOf[StringLit]) ^^ { case v~StringLit(s) => (v,s) }   
+    `var` ~ elem(_.isInstanceOf[StringLit]) ^^ { case v~StringLit(s) => (v,s) }   
     
   private def primDecl = 
     (prim ~> rep1sep(primDefn,comma)) ~ (coco ~> `type`) ^^ {
@@ -572,7 +613,7 @@ object BluejellyParser extends Parsers {
   }
   private def base = 
     ( (lpar ~> funlhs0 <~ rpar) ~ apat ^^ { case (f,args)~p1 => (f, args :+ p1) }
-    | vars ~ apat ^^ { case v~p => (v,List(p)) })
+    | `var` ~ apat ^^ { case v~p => (v,List(p)) })
   private def funlhs1:Parser[(Name,List[Pat])] = 
     ( base ~ (apat*) ^^ { case (f,args)~ps => (f,args ++ ps) } 
     | (lpar ~> funlhs1 <~ rpar) ~ (apat+) ^^ { 

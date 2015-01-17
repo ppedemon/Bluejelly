@@ -18,11 +18,10 @@ import bluejelly.utils.Document.{text}
 
 // Some useful name constants
 object NameConstants {
-  import bluejelly.bjc.common.Name
-  val nmMinus     = Name('-)
-  val nmAs        = Name('as)
-  val nmHiding    = Name('hiding)
-  val nmQualified = Name('qualified)
+  val ncMinus     = '-
+  val ncAs        = 'as
+  val ncHiding    = 'hiding
+  val ncQualified = 'qualified
 }
 
 /**

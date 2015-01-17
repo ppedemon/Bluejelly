@@ -18,22 +18,22 @@ import java.io.File
  * file that is parsed using the Bluejelly parser.
  */
 class TestLoader(base:File) extends IfaceLoader with TestResourceReader {
-  def load(modName:Name) = try {
-    val normName = modName.toString.replaceAll("\\.","/") + ".hi"
+  def load(modName:Symbol) = try {
+    val normName = modName.name.replaceAll("\\.","/") + ".hi"
     val in = readerFor(new File(base,normName))
     val iface = ModIfaceParser.parse(in)
     iface match {
        case Left(err) => 
-         throw new LoaderException(s"Error loading module: $modName")
+         throw new LoaderException(s"Error loading module: ${modName.name}")
        case Right(iface) => 
          if (iface.name != modName) 
-           throw LoaderException(s"Invalid module: $modName") 
+           throw LoaderException(s"Invalid module: ${modName.name}") 
          iface
     }
   } catch {
     case e:LoaderException => 
       throw e
     case e:NullPointerException => 
-      throw LoaderException(s"Module not found: $modName")
+      throw LoaderException(s"Module not found: ${modName.name}")
   }
 }

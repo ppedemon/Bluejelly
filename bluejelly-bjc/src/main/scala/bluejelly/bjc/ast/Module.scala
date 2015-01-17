@@ -27,11 +27,14 @@ case class EVar(name:Name) extends ESpec {
 case class EAll(name:Name) extends ESpec {
   def ppr = asId(name).ppr :: text("(..)")
 }
+case class EAbs(name:Name) extends ESpec {
+  def ppr = asId(name).ppr
+}
 case class ESome(name:Name,children:List[Name]) extends ESpec {
   def ppr = asId(name).ppr :: pprTuple(children map asId)
 }
-case class EMod(name:Name) extends ESpec {
-  def ppr = "module" :/: name.ppr
+case class EMod(modName:Symbol) extends ESpec {
+  def ppr = "module" :/: modName.ppr
 }
 
 sealed trait Exports extends PrettyPrintable;
@@ -67,9 +70,9 @@ case class HideSome(val is:List[ISpec]) extends Imports {
 }
 
 class ImpDecl(
-    val modId:Name, 
+    val modId:Symbol, 
     val qualified:Boolean,
-    val alias:Option[Name],
+    val alias:Option[Symbol],
     val imports:Imports) extends AstElem {
   def ppr = {
     val d0 = if (qualified) text("import qualified") else text("import")
@@ -87,12 +90,12 @@ class ImpDecl(
 // A top-level module.
 // -----------------------------------------------------------------------
 class Module(
-    val name:Name, 
+    val name:Symbol, 
     val exports:Exports,
     val impDecls:List[ImpDecl],
     val topDecls:List[TopDecl]) extends PrettyPrintable {
   
-  def this(name:Name,exports:Exports) = this(name,exports,Nil,Nil)
+  def this(name:Symbol,exports:Exports) = this(name,exports,Nil,Nil)
   
   def addImpDecl(i:ImpDecl) = new Module(name,exports,i::impDecls,topDecls)
   def addTopDecl(d:TopDecl) = new Module(name,exports,impDecls,d::topDecls)
@@ -105,7 +108,7 @@ class Module(
 }
 
 object Module {
-  private def defaultName = Name('Main)
-  private def defaultExports = ExportSome(List(EVar(Name('main))))
+  private def defaultName = 'Main
+  private def defaultExports = ExportSome(List(EVar(idName('main))))
   def defaultModule = new Module(defaultName, defaultExports)
 }

@@ -7,9 +7,9 @@
 package bluejelly.bjc.static
 
 import bluejelly.bjc.ast.module
-import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.{Name,LocalName,ScopedName}
+import bluejelly.bjc.common.{ExportInfo,ExportedId,ExportedTc}
 import bluejelly.bjc.core.{ModuleLoader,LoaderException,BjcEnv,BjcErrors,BuiltIns}
-import bluejelly.bjc.iface.{IfaceExport,ExportedId,ExportedTc}
 
 // For fake positions in added imports
 import scala.util.parsing.input.Position
@@ -41,8 +41,8 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
   }
 
   // Create fake import declarations for built-in stuff
-  private def createImpDecl(name:Name = Name(Symbol(""))) = {
-    val i = new module.ImpDecl(name,false,None,module.ImportAll)
+  private def createImpDecl(modName:Symbol) = {
+    val i = new module.ImpDecl(modName,false,None,module.ImportAll)
     i.pos = new Position {
       val line = 1
       val column = 1
@@ -54,14 +54,16 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
   // Add wired-in module and necessary primitive stuff to 
   // module's import declaration
   private def addBuiltIns(imps:List[module.ImpDecl]) = {
-    val diff = (BuiltIns.primMods map (_.name)) diff (imps map (_.modId))
-    createImpDecl() :: ((diff map createImpDecl) ++ imps)
+    imps
+    //var allBuiltIns = BuiltIns.wiredInModName::(BuiltIns.primMods map (_.name)) 
+    //val diff = allBuiltIns diff (imps map (_.modId))
+    //(diff map createImpDecl) ++ imps
   }
 
   // Chase a single import declaration.
   private def chaseOne(
       env:BjcEnv,
-      imp:module.ImpDecl):(BjcEnv,List[IfaceExport]) = {
+      imp:module.ImpDecl):(BjcEnv,List[ExportInfo]) = {
     try {
       val n_env = modLoader.load(env, imp.modId)
       val exps = visibleExports(imp, n_env.getModDefn(imp.modId).exports)
@@ -69,13 +71,13 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
     } catch {
       case e:LoaderException => 
         errors.ifaceLoadError(imp, e.msg)
-        (env,List.empty) 
+        (env,List.empty)
     }
   }
 
   // Normalize exports: Either{Left} + Either{Right} = Either{Left,Right}
-  private def normalizeExports(exps:List[IfaceExport]) = 
-    exps.foldLeft(Map.empty[Name,IfaceExport])((m,e) => (e,m.get(e.name)) match {
+  private def normalizeExports(exps:List[ExportInfo]) = 
+    exps.foldLeft(Map.empty[Name,ExportInfo])((m,e) => (e,m.get(e.name)) match {
       case (ExportedTc(n,ns),Some(ExportedTc(_,cs))) =>
         m + (n -> ExportedTc(n, (cs ++ ns).distinct))
       case _ => m + (e.name -> e)
@@ -85,15 +87,17 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
   // the subset of the universe corresponding to the given import.
   private def visibleExports(
       imp:module.ImpDecl,
-      exports:List[IfaceExport]) = {
-    lazy val exps = exports.foldLeft(Map.empty[Name,IfaceExport])((m,e) => 
+      exports:List[ExportInfo]) = {
+    // This assumes that ExportedTc's are grouped by constructor name
+    // That is, no `module Test(C(f),C(g))' but module `Test(C(f,g))'
+    lazy val exps = exports.foldLeft(Map.empty[LocalName,ExportInfo])((m,e) => 
       m + (e.name.unqualify -> e))
     imp.imports match {
       case module.ImportAll => 
         exports
       case module.ImportSome(is) => 
         val n_is = normalizeISpecs(is) map {case (i,_) => i}
-        n_is.foldLeft(List.empty[IfaceExport])((es,i) => select(imp,exps,i) match {
+        n_is.foldLeft(List.empty[ExportInfo])((es,i) => select(imp,exps,i) match {
           case Some(e) => e::es
           case None => es
         })
@@ -145,7 +149,7 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
   // selected by the given [[ISpec]]
   private def select(
       imp:module.ImpDecl, 
-      exps:Map[Name,IfaceExport],
+      exps:Map[LocalName,ExportInfo],
       i:module.ISpec) = i match {
     case module.IAll(c) => exportForCon(c,exps) match {
       case e@Some(_) => e
@@ -172,19 +176,20 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
   // taking into account a hiding [[ISpec]].
   private def hide(
       imp:module.ImpDecl,
-      exps:Map[Name,IfaceExport],
+      exps:Map[LocalName,ExportInfo],
       itup:(module.ISpec,Boolean)) = itup._1 match {
     case module.IAll(c) => 
       val n_exps = exportForCon(c,exps) match {
-        case Some(_) => exps - c
+        case Some(_) => exps - c.unqualify
         case None => exps
       }
       if (itup._2) removeCon(c,n_exps) else n_exps
     case module.ISome(c,cs) => 
+      val u = c.unqualify
       val n_exps = exportForCon(c,exps) match {
         case Some(e@ExportedTc(_,_)) =>
           val n_exp = remove(c::cs,e)
-          if (n_exp.children.isEmpty) exps - c else exps + (c -> n_exp)
+          if (n_exp.children.isEmpty) exps - u else exps + (u -> n_exp)
         case _ => exps
       }
       if (itup._2) removeCon(c,n_exps) else n_exps
@@ -196,14 +201,16 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
   // some subordinate stuff)
   private def exportForCon(
        c:Name, 
-       exps:Map[Name,IfaceExport]) = exps.get(c) match {
-     case Some(e@ExportedTc(_,ns)) if ns.head.unqualify == c => Some(e)
+       exps:Map[LocalName,ExportInfo]) = exps.get(c.unqualify) match {
+     case Some(e@ExportedTc(_,ns)) if e.exportsParent => Some(e)
      case _ => None
   }
 
   // Retrieve the fully qualified id corresponding to the
   // [[id]] in some map.
-  private def findId(id:Name, exps:Map[Name,IfaceExport]) = exps.get(id) match {
+  private def findId(
+      id:Name, 
+      exps:Map[LocalName,ExportInfo]) = exps.get(id.unqualify) match {
     case Some(e@ExportedId(_)) => Some(e)
     case Some(_) => None // Impossible
     case None => 
@@ -220,8 +227,8 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
   }
 
   // Remove occurrences of constructor name [[c]] from an export map
-  private def removeCon(c:Name, exps:Map[Name,IfaceExport]) = {
-    exps.foldLeft(Map.empty[Name,IfaceExport])((m,kv) => {
+  private def removeCon(c:Name, exps:Map[LocalName,ExportInfo]) = {
+    exps.foldLeft(Map.empty[LocalName,ExportInfo])((m,kv) => {
       val k = kv._1
       kv._2 match {
         case e@ExportedId(_) => m + (k -> e)
@@ -233,8 +240,8 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
   }
 
   // Remove occurrences of id names [[id]] from an export map
-  private def removeId(id:Name, exps:Map[Name,IfaceExport]) = {
-    exps.foldLeft(Map.empty[Name,IfaceExport])((m,kv) => {
+  private def removeId(id:Name, exps:Map[LocalName,ExportInfo]) = {
+    exps.foldLeft(Map.empty[LocalName,ExportInfo])((m,kv) => {
       val k = kv._1
       kv._2 match {
         case ExportedId(n) if n.unqualify == id => m
@@ -248,18 +255,18 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
 
   // Retain only the given names from the children of a ExportedTc
   private def retain(names:List[Name], e:ExportedTc) = {
-    val retained = e.children.filter(n => names.contains(n.unqualify))
+    val retained = e.children filter (n => names.contains(n.unqualify))
     ExportedTc(e.name, retained)
   }
 
   // Remove the given names from the children of a ExportedTc
   private def remove(names:List[Name], e:ExportedTc) = {
-    val removed = e.children.filterNot(n => names.contains(n.unqualify))
+    val removed = e.children filterNot (n => names.contains(n.unqualify))
     ExportedTc(e.name, removed) 
   }
 
   // Utility function for signaling an import error
-  private def err(imp:module.ImpDecl, i:module.ISpec):Option[IfaceExport] = {
+  private def err(imp:module.ImpDecl, i:module.ISpec):Option[ExportInfo] = {
     errors.ifaceImportError(imp, i)
     None
   }

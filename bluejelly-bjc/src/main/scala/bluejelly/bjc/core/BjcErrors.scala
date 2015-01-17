@@ -10,7 +10,7 @@ import bluejelly.bjc.ast.module
 
 import bluejelly.bjc.common.Name
 import bluejelly.bjc.common.PrettyPrintable
-import bluejelly.bjc.common.PprUtils.{gnest,pprPos}
+import bluejelly.bjc.common.PprUtils._
 
 import bluejelly.utils.Errors
 import bluejelly.utils.Document
@@ -33,8 +33,10 @@ import java.io.StringWriter
     s.toString
   }
   
-  private def q[T <: PrettyPrintable](t:T):Document = 
-    group(text("`") :: t.ppr :: text("'"))
+  //private def q(t:Any):Document = text("`%s'" format t.toString)
+
+  private def q[T <% PrettyPrintable](t:T) = 
+    group("`" :: t.ppr :: text("'")) 
   
   private def loc(pos:Position, d:Document) = 
     gnest(group(mod :: ":" :: pprPos(pos) :: text(":") :/: d)) 
@@ -59,13 +61,14 @@ import java.io.StringWriter
 
   def ifaceLoadError(imp:module.ImpDecl, msg:String) {
     val d = gnest(
-      gnest("Failed to load interface for" :/: group(q(imp.modId) :: text(":"))) :/: 
-      text(msg))
+      gnest("Failed to load interface for" :/: 
+        group(q(imp.modId) :: text(":"))) :/: text(msg))
     locError(imp.pos, d)
   }
 
   def ifaceImportError(imp:module.ImpDecl, ispec:module.ISpec) {
-    val d = gnest("module" :/: q(imp.modId) :/: "does not export" :/: q(ispec))
+    val d = gnest("module" :/: q(imp.modId) 
+      :/: "does not export" :/: q(ispec))
     locError(imp.pos, d)
   }
  }

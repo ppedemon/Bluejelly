@@ -8,7 +8,7 @@ package bluejelly.bjc.static.test
 
 import bluejelly.bjc.Bjc
 import bluejelly.bjc.TestResourceReader
-import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.Name.{idName,tcName}
 import bluejelly.bjc.core._
 import bluejelly.bjc.static._
 
@@ -38,22 +38,22 @@ class ImportTest extends FunSuite with TestResourceReader {
         bjc.dumpErrors
         fail("Test failed")
       case Some(mod) =>
-        val bjcEnv = BjcEnv(Name(Symbol(unnamed)))
+        val bjcEnv = BjcEnv(Symbol(unnamed))
         val (n_bjcEnv,nameTab) = bjc.chaseImports(bjcEnv, mod)
         if (bjc.hasErrors) {
           bjc.dumpErrors
           fail("Test failed")
         } else {
-          assert(nameTab.hasName(Name('D)))
-          assert(nameTab.hasName(Name('C)))
-          assert(nameTab.hasName(Name('Y)))
-          assert(nameTab.hasName(Name('op1)))
-          assert(nameTab.hasName(Name('op2)))
-          assert(nameTab.hasName(Name('Arrow)))
-          assert(nameTab.hasName(Name('arr)))
-          assert(nameTab.hasName(Name('Color)))
-          assert(nameTab.hasName(Name('Red)))
-          assert(nameTab.hasName(Name('Black)))
+          assert(nameTab.hasName(tcName('D)))
+          assert(nameTab.hasName(idName('C)))
+          assert(nameTab.hasName(idName('Y)))
+          assert(nameTab.hasName(idName('op1)))
+          assert(nameTab.hasName(idName('op2)))
+          assert(nameTab.hasName(tcName('Arrow)))
+          assert(nameTab.hasName(idName('arr)))
+          assert(nameTab.hasName(tcName('Color)))
+          assert(nameTab.hasName(idName('Red)))
+          assert(nameTab.hasName(idName('Black)))
         }
     }
   }

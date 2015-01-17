@@ -8,7 +8,6 @@ package bluejelly.bjc.ast
 package decls
 
 import bluejelly.bjc.common.Name
-import bluejelly.bjc.common.Name.{asId,asOp}
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 

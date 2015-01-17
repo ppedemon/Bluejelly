@@ -7,8 +7,8 @@
 package bluejelly.bjc.core
 
 import bluejelly.bjc.ast.{GCon,UnitCon,TupleCon,ArrowCon,ListCon,Con}
-import bluejelly.bjc.common.Name
-import bluejelly.bjc.iface.{IfaceExport,ExportedId,ExportedTc}
+import bluejelly.bjc.common.{ExportInfo, ExportedId,ExportedTc,Fixity}
+import bluejelly.bjc.common.{Name,ScopedName}
 
 import Type._
 
@@ -42,15 +42,16 @@ object BuiltIns {
    */
 
   // Wired-in module is unnamed, so you can't import it explicitly
-  val wiredInModName = Name(Symbol(""))
+  val wiredInModName = Symbol("bluejelly.WiredIn")
 
-  private val nmArrow = Name('->)
-  private val nmUnit = Name(Symbol("()"))
-  private val nmList = Name(Symbol("[]"))
-  private val nmCons = Name(':)
-  private val nmBool = Name('Bool)
-  private val nmTrue = Name('True)
-  private val nmFalse = Name('False)
+  private val nmArrow = ScopedName.tcName('->)
+  private val nmUnit = ScopedName.tcName(Symbol("()"))
+  private val nmList = ScopedName.tcName(Symbol("[]"))
+  private val nmNil = ScopedName.idName(Symbol("[]"))
+  private val nmCons = ScopedName.idName(':)
+  private val nmBool = ScopedName.tcName('Bool)
+  private val nmTrue = ScopedName.idName('True)
+  private val nmFalse = ScopedName.idName('False)
 
   def wiredInMod = {
     val wiredInTyCons = List(unitTyCon, arrowTyCon, boolTyCon, listTyCon)
@@ -62,7 +63,7 @@ object BuiltIns {
 
   def isWiredIn(con:GCon) = con match {
     case UnitCon | ArrowCon | ListCon | TupleCon(_) => true
-    case Con(n) if n == nmBool => true
+    case Con(n) if n.name == nmBool => true
     case _ => false
   }
  
@@ -76,34 +77,34 @@ object BuiltIns {
   /**
    * Some code to specify a primitive module.
    */
-  abstract class PrimOp(val name:Name) { 
-    def toId(modName:Name, tyCon:TyCon):Id 
+  abstract class PrimOp(val name:ScopedName) { 
+    def toId(modName:Symbol, tyCon:TyCon):Id 
   }
-  case class CafOp(override val name:Name) extends PrimOp(name) { 
-    def toId(modName:Name, tycon:TyCon) = {
-      val ty = conTy(tycon.name.qualify(modName))
+  case class CafOp(override val name:ScopedName) extends PrimOp(name) { 
+    def toId(modName:Symbol, tycon:TyCon) = {
+      val ty = conTy(Name.qualName(modName, tycon.name))
       Id(name, VanillaId, PolyTy(tycon.tyvars, ty))
     }
   }
-  case class ClosedOp(override val name:Name, arity:Int) extends PrimOp(name) {
-     def toId(modName:Name, tycon:TyCon) = {
-       val tc = conTy(tycon.name.qualify(modName))
+  case class ClosedOp(override val name:ScopedName, arity:Int) extends PrimOp(name) {
+     def toId(modName:Symbol, tycon:TyCon) = {
+       val tc = conTy(Name.qualName(modName, tycon.name))
        val ty = PolyTy(tycon.tyvars, Type.mkFun(List.fill(arity+1)(tc)))
        Id(name, VanillaId, ty)
      }
   }
-  case class CmpOp(override val name:Name, arity:Int) extends PrimOp(name) {
-    def toId(modName:Name, tycon:TyCon) = {
-       val tc = conTy(tycon.name.qualify(modName))
-       val bool = conTy(nmBool.qualify(wiredInModName))
+  case class CmpOp(override val name:ScopedName, arity:Int) extends PrimOp(name) {
+    def toId(modName:Symbol, tycon:TyCon) = {
+       val tc = conTy(Name.qualName(modName, tycon.name))
+       val bool = conTy(Name.qualName(wiredInModName, nmBool))
        val ty = PolyTy(tycon.tyvars, Type.mkFun(List.fill(arity)(tc) :+ bool))
-       Id(name, VanillaId, ty)      
+       Id(name, VanillaId, ty)
     }
   }
-  case class AdHocOp(override val name:Name, ty:Type) extends PrimOp(name) {
-    def toId(modName:Name, tycon:TyCon) = Id(name, VanillaId, ty)    
+  case class AdHocOp(override val name:ScopedName, ty:Type) extends PrimOp(name) {
+    def toId(modName:Symbol, tycon:TyCon) = Id(name, VanillaId, ty)    
   }
-  class PrimModSpec(name:Name, tycon:TyCon, ops:List[PrimOp]) {
+  class PrimModSpec(name:Symbol, tycon:TyCon, ops:List[PrimOp]) {
     def toModDefn = {
       val exps = exportTc(name)(tycon) :: (ops map exportId(name))
       val modDefn = new ModDefn(name, exps)
@@ -115,78 +116,78 @@ object BuiltIns {
   /**
    * Primitive types available so far. 
    */
-  private val nmInt = Name('Int)
-  private val nmBigInt = Name('BigInt)
-  private val nmDouble = Name('Double)
-  private val nmChar = Name('Char)
-  private val nmString = Name('String)
+  private val nmInt = ScopedName.tcName('Int)
+  private val nmBigInt = ScopedName.tcName('BigInt)
+  private val nmDouble = ScopedName.tcName('Double)
+  private val nmChar = ScopedName.tcName('Char)
+  private val nmString = ScopedName.tcName('String)
 
-  private val intMod = Name(Symbol("bluejelly.Int"))
-  private val doubleMod = Name(Symbol("bluejelly.Double"))
-  private val bigIntMod = Name(Symbol("bluejelly.BigInt"))
-  private val charMod = Name(Symbol("bluejelly.Char"))
-  private val stringMod = Name(Symbol("bluejelly.String"))
+  private val intMod = Symbol("bluejelly.Int")
+  private val doubleMod = Symbol("bluejelly.Double")
+  private val bigIntMod = Symbol("bluejelly.BigInt")
+  private val charMod = Symbol("bluejelly.Char")
+  private val stringMod = Symbol("bluejelly.String")
 
   private val primIntSpec = new PrimModSpec(intMod,
     primTyCon(nmInt), List(
-      ClosedOp(Name('add), 2),
-      ClosedOp(Name('sub), 2),
-      ClosedOp(Name('mul), 2),
-      ClosedOp(Name('div), 2),
-      ClosedOp(Name('rem), 2),
-      ClosedOp(Name('neg), 1),
-      ClosedOp(Name('not), 1),
-      ClosedOp(Name('and), 2),
-      ClosedOp(Name('or),  2),
-      ClosedOp(Name('xor), 2),
-      ClosedOp(Name('shl), 2),
-      ClosedOp(Name('shr), 2),
-      ClosedOp(Name('lshr), 2),
-      CmpOp(Name('eq), 2),
-      CmpOp(Name('neq),2),
-      CmpOp(Name('lt), 2),
-      CmpOp(Name('gt), 2),
-      CmpOp(Name('leq),2),
-      CmpOp(Name('geq),2)      
+      ClosedOp(ScopedName.idName('add), 2),
+      ClosedOp(ScopedName.idName('sub), 2),
+      ClosedOp(ScopedName.idName('mul), 2),
+      ClosedOp(ScopedName.idName('div), 2),
+      ClosedOp(ScopedName.idName('rem), 2),
+      ClosedOp(ScopedName.idName('neg), 1),
+      ClosedOp(ScopedName.idName('not), 1),
+      ClosedOp(ScopedName.idName('and), 2),
+      ClosedOp(ScopedName.idName('or),  2),
+      ClosedOp(ScopedName.idName('xor), 2),
+      ClosedOp(ScopedName.idName('shl), 2),
+      ClosedOp(ScopedName.idName('shr), 2),
+      ClosedOp(ScopedName.idName('lshr), 2),
+      CmpOp(ScopedName.idName('eq), 2),
+      CmpOp(ScopedName.idName('neq),2),
+      CmpOp(ScopedName.idName('lt), 2),
+      CmpOp(ScopedName.idName('gt), 2),
+      CmpOp(ScopedName.idName('leq),2),
+      CmpOp(ScopedName.idName('geq),2)      
     ))
 
   private val primDoubleSpec = new PrimModSpec(doubleMod,
     primTyCon(nmDouble), List(
-      ClosedOp(Name('add), 2),
-      ClosedOp(Name('sub), 2),
-      ClosedOp(Name('mul), 2),
-      ClosedOp(Name('div), 2),
-      ClosedOp(Name('rem), 2),
-      ClosedOp(Name('neg), 1),
-      CmpOp(Name('eq), 2),
-      CmpOp(Name('neq),2),
-      CmpOp(Name('lt), 2),
-      CmpOp(Name('gt), 2),
-      CmpOp(Name('leq),2),
-      CmpOp(Name('geq),2)
+      ClosedOp(ScopedName.idName('add), 2),
+      ClosedOp(ScopedName.idName('sub), 2),
+      ClosedOp(ScopedName.idName('mul), 2),
+      ClosedOp(ScopedName.idName('div), 2),
+      ClosedOp(ScopedName.idName('rem), 2),
+      ClosedOp(ScopedName.idName('neg), 1),
+      CmpOp(ScopedName.idName('eq), 2),
+      CmpOp(ScopedName.idName('neq),2),
+      CmpOp(ScopedName.idName('lt), 2),
+      CmpOp(ScopedName.idName('gt), 2),
+      CmpOp(ScopedName.idName('leq),2),
+      CmpOp(ScopedName.idName('geq),2)
   ))
 
   private val primBigIntSpec = new PrimModSpec(bigIntMod,
     primTyCon(nmBigInt), List(
-      CafOp(Name('zero)),
-      CafOp(Name('one)),
-      AdHocOp(Name('fromInt), PolyTy(Nil, Type.mkFun(
-        conTy(nmInt.qualify(intMod)),
-        conTy(nmBigInt.qualify(bigIntMod))))),
-      AdHocOp(Name('fromString), PolyTy(Nil, Type.mkFun(
-        conTy(nmString.qualify(stringMod)),
-        conTy(nmBigInt.qualify(bigIntMod))))),
-      ClosedOp(Name('add), 2),
-      ClosedOp(Name('mul), 2)
+      CafOp(ScopedName.idName('zero)),
+      CafOp(ScopedName.idName('one)),
+      AdHocOp(ScopedName.idName('fromInt), PolyTy(Nil, Type.mkFun(
+        conTy(Name.qualName(intMod, nmInt)),
+        conTy(Name.qualName(bigIntMod, nmBigInt))))),
+      AdHocOp(ScopedName.idName('fromString), PolyTy(Nil, Type.mkFun(
+        conTy(Name.qualName(stringMod, nmString)),
+        conTy(Name.qualName(bigIntMod, nmBigInt))))),
+      ClosedOp(ScopedName.idName('add), 2),
+      ClosedOp(ScopedName.idName('mul), 2)
   ))
 
   // TODO: Complete this module
   private val primCharSpec = new PrimModSpec(
-    Name(Symbol("bluejelly.Char")), primTyCon(nmChar), Nil)
+    charMod, primTyCon(nmChar), Nil)
 
   // TODO: Complete this module
   private val primStringSpec = new PrimModSpec(
-    Name(Symbol("bluejelly.String")), primTyCon(nmString), Nil)
+    stringMod, primTyCon(nmString), Nil)
 
   /**
    * Built-in modules for primitive types.
@@ -202,15 +203,15 @@ object BuiltIns {
   // Helper stuff
   // ---------------------------------------------------------------------
 
-  private def exportTc(modName:Name)(tycon:TyCon) = {
-    val n = tycon.name.qualify(modName)
-    ExportedTc(n,n::tycon.dcons.map(_.name.qualify(modName)))
+  private def exportTc(modName:Symbol)(tycon:TyCon) = {
+    val n = Name.qualName(modName, tycon.name)
+    ExportedTc(n, n::tycon.dcons.map(d => Name.qualName(modName,d.name)))
   }
 
-  private def exportId(modName:Name)(op:PrimOp) = 
-    ExportedId(op.name.qualify(modName))
+  private def exportId(modName:Symbol)(op:PrimOp) = 
+    ExportedId(Name.qualName(modName, op.name))
 
-  private def primTyCon(name:Name) =
+  private def primTyCon(name:ScopedName) =
     TyCon(name, Nil, Nil, Nil)
 
   private def unitTyCon = 
@@ -220,7 +221,7 @@ object BuiltIns {
     TyCon(nmArrow, Nil, List(tyVar('a),tyVar('b)), Nil) 
 
   private def boolTyCon = {
-    val boolType = PolyTy(Nil,conTy(nmBool.qualify(wiredInModName)))
+    val boolType = PolyTy(Nil,conTy(Name.qualName(wiredInModName, nmBool)))
     val `false` = DataCon(nmFalse, boolType, Nil, Nil, 0)
     val `true` = DataCon(nmTrue, boolType, Nil, Nil, 1)
     val bool = TyCon(nmBool, Nil, Nil, List(`false`,`true`))
@@ -237,7 +238,7 @@ object BuiltIns {
         AppTy(TcTy(ListCon),tvTy('a)), 
         AppTy(TcTy(ListCon),tvTy('a)))))
 
-    val nil = DataCon(nmList, nilType, Nil, Nil, 0)
+    val nil = DataCon(nmNil, nilType, Nil, Nil, 0)
     val cons = DataCon(nmCons, consType, List(false,false), Nil, 1)
     val list = TyCon(nmList, Nil, List(tyVar('a)), List(nil,cons))
     nil.tycon = list

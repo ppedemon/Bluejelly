@@ -6,72 +6,98 @@
  */
 package bluejelly.bjc.common
 
+import bluejelly.bjc.common.PprUtils.symbolToPrettyPrintableSymbol
+import bluejelly.utils.Document.{group,text}
+
 import java.io.DataOutputStream
 import java.io.DataInputStream
-import java.io.DataInput
-
-import bluejelly.utils.Document.text
-import bluejelly.utils.{Name => N}
 
 /**
- * A bluejelly.utils name incorporating serialization and pretty printing
- * capabilities.
+ * Abstract class for possibly qualified names.
  * @author ppedemon
  */
-class Name(qual:Option[Symbol], name:Symbol) 
-    extends N(qual,name) with PrettyPrintable with Serializable {
-  
-  def qualified = isQual
-  def isId = name.toString.drop(1).matches("""^[_\p{Ll}\p{Lu}\p{Lt}].*""")
-  def isOp = !isId
-
-  def qualify(q:Symbol):Name = qual match {
-    case None => Name(q,name)
-    case Some(qual) if qual == q => this
-    case _ => sys.error(s"Incompatible qualifier (current: $qual, new: $q)")
-  }
-
-  def qualify(q:Name):Name = qualify(q.name)
-
-  def unqualify = qual match {
-    case None => this
-    case _ => Name(name)
-  }
-
-  def qualifiedBy(modName:Name) = 
-    qualified && qual.get == modName.name
-
-  def ppr = 
-    if (!qualified || qual.get.name.length == 0) text(name.name) else
-      text("%s.%s" format (qual.get.name,name.name))
-
-  def serialize(out:DataOutputStream) = qual match {
-    case None => 
-      out.writeByte(0)
-      out.writeUTF(name.toString.drop(1))
-    case _ =>
-      out.writeByte(1)
-      out.writeUTF(qual.get.toString.drop(1))
-      out.writeUTF(name.toString.drop(1))
-  }
+abstract class Name(val name:ScopedName) 
+    extends PrettyPrintableVar with Serializable {
+  def isId = name.isId
+  def isQual:Boolean
+  def qualify(qual:Symbol):QualName
+  def unqualify:LocalName
+  def toSymbol = name.toSymbol
 }
 
 /**
- * Factory object for names.
+ * A local name. Essentially, a scoped name with no qualified.
  * @author ppedemon
  */
-object Name extends Loadable[Name] {
-  def apply(name:Symbol) = new Name(None, name)
-  def apply(modId:Symbol, name:Symbol) = new Name(Some(modId), name)
-    
-  def asId(n:Name) = 
-    if (n.isId) n else new PrettyPrintable { def ppr = text("(%s)" format n) }
+case class LocalName(override val name:ScopedName) extends Name(name) {
+  def ppr = name.ppr
 
-  def asOp(n:Name) = 
-    if (n.isOp) n else new PrettyPrintable { def ppr = text("`%s`" format n) }
+  def serialize(out:DataOutputStream) {
+    out.writeByte(0)
+    name.serialize(out)
+  }
+
+  def isQual = false
+  def qualify(qual:Symbol) = QualName(qual, name)
+  def unqualify = this
+
+  override def equals(o:Any) = o match {
+    case lcl:LocalName => lcl.name == name
+    case _ => false
+  }
+
+  override def hashCode = name.hashCode
+}
+
+/**
+ * A qualified name. A scoped name plus a module qualifier.
+ */
+case class QualName(
+    val qual:Symbol, 
+    override val name:ScopedName) extends Name(name) {
+
+  def ppr = group(qual.ppr :: "." :: name.ppr)
+
+  def serialize(out:DataOutputStream) {
+    out.writeByte(1)
+    out.writeUTF(qual.name)
+    name.serialize(out)
+  }
+
+  def isQual = true
+  def qualify(qual:Symbol) = 
+    if (qual == this.qual) this else 
+      sys.error("Invalid qualifier for already qualified name: %s" format qual.name)
+  def unqualify = LocalName(name)
+
+  override def equals(o:Any) = o match {
+    case q:QualName => q.qual == qual && q.name == name
+    case _ => false
+  }
+
+  override def hashCode = 31*qual.hashCode + name.hashCode
+}
+
+object Name extends Loadable[Name] {
+  def localName(n:Symbol, scope:Scope) = LocalName(ScopedName(n,scope))
+  def qualName(q:Symbol, n:Symbol, scope:Scope) = QualName(q, ScopedName(n,scope))
   
-  def load(in:DataInputStream) = in.readByte match {
-    case 0 => Name(Symbol(in.readUTF()))
-    case 1 => Name(Symbol(in.readUTF()), Symbol(in.readUTF()))
+  def localName(n:ScopedName) = LocalName(n)
+  def qualName(q:Symbol, n:ScopedName) = QualName(q,n)
+
+  def idName(name:Symbol) = localName(name, IdScope)
+  def idName(qual:Symbol, name:Symbol) = qualName(qual, name, IdScope)
+  def tcName(name:Symbol) = localName(name, TcScope)
+  def tcName(qual:Symbol, name:Symbol) = qualName(qual, name, TcScope)
+  def tvName(name:Symbol) = localName(name, TvScope)
+  def tvName(qual:Symbol, name:Symbol) = qualName(qual, name, TvScope)
+
+  def qualifier:PartialFunction[Name,Symbol] = _ match {
+    case QualName(q,_) => q
+  }
+
+  def load(in:DataInputStream) = in.readByte() match {
+    case 0 => new LocalName(ScopedName.load(in))
+    case 1 => new QualName(Symbol(in.readUTF()), ScopedName.load(in))
   }
 }

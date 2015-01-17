@@ -30,7 +30,7 @@ case class RecPat(val con:Name, val bs:List[PBind]) extends Pat {
 
 case class InfixPat(val p0:Pat, val op:Name, val p1:Pat) extends Pat {
   def ppr = {
-    gnest(p0.ppr :/: Name.asOp(op).ppr :/: p1.ppr)
+    gnest(p0.ppr :/: op.pprAsOp :/: p1.ppr)
   }
 }
 
@@ -46,8 +46,8 @@ case class AppPat(val p:Pat, val arg:Pat) extends Pat {
     if (isTuple) pprTuple(allArgs) else {
       val as = allArgs map Pat.pprPar
       head match {
-        case ConPat(Con(n)) => group(cat(Name.asId(n).ppr :: as))
-        case VarPat(n) => group(cat(Name.asId(n).ppr :: as))
+        case ConPat(Con(n)) => group(cat(n.pprAsId :: as))
+        case VarPat(n) => group(cat(n.pprAsId :: as))
         case _ => group(cat(head.ppr :: as))
       }
     }
