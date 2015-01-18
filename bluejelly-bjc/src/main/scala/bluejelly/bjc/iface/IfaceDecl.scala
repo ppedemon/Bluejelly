@@ -8,8 +8,8 @@ package bluejelly.bjc.iface
 
 import java.io.{DataInputStream,DataOutputStream}
 
-import bluejelly.bjc.ast.GCon
-import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.TcRef
+import bluejelly.bjc.common.{Name,QualName}
 import bluejelly.bjc.common.Binary._
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
@@ -186,8 +186,8 @@ class IfaceClsOp(
  * @author ppedemon
  */
 class IfaceClsInst(
-    val name:Name,
-    val con:GCon,
+    val name:QualName,
+    val con:TcRef,
     val dfunId:Symbol) extends PrettyPrintable with Serializable {
   
   def ppr = {
@@ -197,7 +197,7 @@ class IfaceClsInst(
   
   def serialize(out:DataOutputStream) { 
     name.serialize(out)
-    IfaceType.serializeGCon(con, out)
+    con.serialize(out)
     dfunId.serialize(out) 
   }
 }
@@ -255,7 +255,7 @@ object IfaceDecl extends Loadable[IfaceDecl] {
   
   private[iface] def loadIfaceClsInst(in:DataInputStream) = 
     new IfaceClsInst(
-        Name.load(in),
-        IfaceType.loadGCon(in), 
+        Name.loadQual(in),
+        TcRef.load(in), 
         Binary.loadSymbol(in))
 }

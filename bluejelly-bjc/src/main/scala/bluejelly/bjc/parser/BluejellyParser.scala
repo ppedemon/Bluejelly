@@ -188,6 +188,10 @@ object BluejellyParser extends Parsers {
   private def tcName(n:N) = mkName(n, TcScope)
   private def tvName(n:N) = mkName(n, TvScope)
 
+  private def coerceUnqual:PartialFunction[Name,LocalName] = {
+    case x@LocalName(_) => x
+  }
+
   private def varid(scope:Scope = IdScope) = 
     ( elem("identifier", _.isInstanceOf[TAs]) ^^^ localName(ncAs, scope)
     | elem("identifier", _.isInstanceOf[THiding]) ^^^ localName(ncHiding, scope)
@@ -281,13 +285,15 @@ object BluejellyParser extends Parsers {
   // ---------------------------------------------------------------------
   // Imports
   // ---------------------------------------------------------------------
-  private def inames = repsep(`var`|con,comma) <~ (comma?)
+  private def inames = repsep(`var`|con,comma) <~ (comma?) ^^ {
+    _ map coerceUnqual
+  }
 
   private def impSpec = 
-    ( tcon <~ (lpar ~ dotdot ~ rpar) ^^ {IAll(_)}
-    | tcon ~ (lpar ~> inames <~ rpar) ^^ {case i~is => ISome(i,is)}
-    | tcon ^^ {INone(_)}
-    |`var` ^^ {IVar(_)})
+    ( tcon <~ (lpar ~ dotdot ~ rpar) ^^ {n => IAll(coerceUnqual(n))}
+    | tcon ~ (lpar ~> inames <~ rpar) ^^ {case i~is => ISome(coerceUnqual(i),is)}
+    | tcon ^^ {n => INone(coerceUnqual(n))}
+    |`var` ^^ {n => IVar(coerceUnqual(n))})
    
   private def impSpecs = 
     lpar ~> (repsep(impSpec,comma) <~ (comma?)) <~ rpar

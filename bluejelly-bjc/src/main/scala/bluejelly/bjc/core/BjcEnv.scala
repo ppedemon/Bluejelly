@@ -7,7 +7,7 @@
 package bluejelly.bjc.core
 
 import bluejelly.bjc.ast.{UnitCon,TupleCon,ArrowCon,ListCon,Con}
-import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.{Name,QualName}
 import bluejelly.bjc.common.ScopedName
 
 /**
@@ -19,7 +19,7 @@ import bluejelly.bjc.common.ScopedName
 class BjcEnv(
     private val modName:Symbol, // Name of module being compiled
     private val modEnv:Map[Symbol,ModDefn],
-    private val instEnv:Map[Name,List[Inst]]) {
+    private val instEnv:Map[QualName,List[Inst]]) {
 
   def this(modName:Symbol) = this(modName, Map.empty, Map.empty) 
 
@@ -35,17 +35,22 @@ class BjcEnv(
   def hasModDefn(modName:Symbol) = modEnv.contains(modName)
 
   private def getModDecl[T <: ModDecl](
-      extractor:PartialFunction[(ModDefn,ScopedName),T]):PartialFunction[Name,T] = {
+      extractor:PartialFunction[(ModDefn,ScopedName),T]):PartialFunction[QualName,T] = {
     case n => 
-      val (q,s) = (Name.qualifier(n), n.name)
+      val (q,s) = (n.qual, n.name)
       extractor((getModDefn(q),s))
   }
 
-  def getId:PartialFunction[Name,Id] = getModDecl({case (m,n) => m.getId(n)})
-  def getTyCon:PartialFunction[Name,TyCon] = getModDecl({case (m,n) => m.getTyCon(n)})
-  def getTySyn:PartialFunction[Name,TySyn] = getModDecl({case (m,n) => m.getTySyn(n)})
-  def getCls:PartialFunction[Name,Cls] = getModDecl({case (m,n) => m.getCls(n)})
-  def getDataCon:PartialFunction[Name,DataCon] = getModDecl({case (m,n) => m.getDataCon(n)})
+  def getId:PartialFunction[QualName,Id] = 
+    getModDecl({case (m,n) => m.getId(n)})
+  def getTyCon:PartialFunction[QualName,TyCon] = 
+    getModDecl({case (m,n) => m.getTyCon(n)})
+  def getTySyn:PartialFunction[QualName,TySyn] = 
+    getModDecl({case (m,n) => m.getTySyn(n)})
+  def getCls:PartialFunction[QualName,Cls] = 
+    getModDecl({case (m,n) => m.getCls(n)})
+  def getDataCon:PartialFunction[QualName,DataCon] = 
+    getModDecl({case (m,n) => m.getDataCon(n)})
 
   override def toString = modEnv.toString  
 }

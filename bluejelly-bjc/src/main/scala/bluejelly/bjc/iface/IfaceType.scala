@@ -10,12 +10,12 @@ import java.io.{DataInputStream,DataOutputStream}
 
 import scala.annotation.tailrec
 
-import bluejelly.bjc.ast.{GCon,UnitCon,TupleCon,ArrowCon,ListCon,Con}
+import bluejelly.bjc.common.{TcRef,ConRef,ListRef,UnitRef,ArrowRef,TupleRef}
 
 import bluejelly.bjc.common.Binary._
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
-import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.{Name,QualName}
 import bluejelly.bjc.common.{Serializable,Loadable,Binary}
 
 import bluejelly.utils.Document.{text,group}
@@ -122,15 +122,15 @@ case class IfaceAppTy(val fun:IfaceType, val arg:IfaceType) extends IfaceType {
   lazy val (head,allArgs) = IfaceType.unwind(this)
 
   def isTuple = head match {
-    case IfaceTcTy(TupleCon(_)) => true
+    case IfaceTcTy(TupleRef(_)) => true
     case _ => false
   }
   def isFun = head match {
-    case IfaceTcTy(ArrowCon) => true
+    case IfaceTcTy(ArrowRef) => true
     case _ => false
   }
   def isList = fun match {
-    case IfaceTcTy(ListCon) => true
+    case IfaceTcTy(ListRef) => true
     case _ => false
   }
   
@@ -162,11 +162,11 @@ case class IfaceAppTy(val fun:IfaceType, val arg:IfaceType) extends IfaceType {
   }
 }
 
-case class IfaceTcTy(val con:GCon) extends IfaceType { 
+case class IfaceTcTy(val con:TcRef) extends IfaceType { 
   def ppr = con.ppr 
   def serialize(out:DataOutputStream) { 
     out.writeByte(3)
-    IfaceType.serializeGCon(con, out) 
+    con.serialize(out) 
   }
 }
 
@@ -176,7 +176,7 @@ case class IfaceTvTy(val name:Symbol) extends IfaceType {
 }
 
 class IfacePred(
-    val n:Name, 
+    val n:QualName, 
     val tys:List[IfaceType]) extends PrettyPrintable with Serializable {
   
   def ppr = group(n.ppr :/: pprMany(tys))
@@ -200,12 +200,11 @@ object IfaceType extends Loadable[IfaceType] {
     args.foldLeft(fun)(IfaceAppTy(_,_))
   
   def mkFun(from:IfaceType, to:IfaceType) = 
-    IfaceAppTy(IfaceAppTy(IfaceTcTy(ArrowCon),from),to)  
+    IfaceAppTy(IfaceAppTy(IfaceTcTy(ArrowRef),from),to)  
     
   def mkFun(tys:List[IfaceType]) = 
-    tys.reduceRight((x,y) => IfaceAppTy(IfaceAppTy(IfaceTcTy(ArrowCon),x),y))
+    tys.reduceRight((x,y) => IfaceAppTy(IfaceAppTy(IfaceTcTy(ArrowRef),x),y))
   
-
   // ---------------------------------------------------------------------
   // Serialization stuff
   // ---------------------------------------------------------------------
@@ -214,7 +213,7 @@ object IfaceType extends Loadable[IfaceType] {
     case 0 => IfacePolyTy(Binary.loadList(loadTyVar, in), load(in))
     case 1 => IfaceQualTy(Binary.loadList(loadPred, in), load(in))
     case 2 => IfaceAppTy(load(in), load(in))
-    case 3 => IfaceTcTy(loadGCon(in))
+    case 3 => IfaceTcTy(TcRef.load(in))
     case 4 => IfaceTvTy(Binary.loadSymbol(in))
   }
 
@@ -222,23 +221,5 @@ object IfaceType extends Loadable[IfaceType] {
     new IfaceTyVar(Binary.loadSymbol(in), IfaceKind.load(in))
   
   private[iface] def loadPred(in:DataInputStream) = 
-    new IfacePred(Name.load(in), Binary.loadList(load, in))
-
-  private[iface] def loadGCon(in:DataInputStream) = in.readByte match {
-    case 0 => ListCon
-    case 1 => ArrowCon
-    case 2 => UnitCon
-    case 3 => Con(Name.load(in))
-    case 4 => TupleCon(in.readInt)
-  }
-
-  // We could do out.writeByte(3+n) for tuples, but that would artificially 
-  // limit tuple size to 256 elements, we don't want that!
-  private[iface] def serializeGCon(con:GCon, out:DataOutputStream) = con match {
-    case ListCon     => out.writeByte(0)
-    case ArrowCon    => out.writeByte(1)
-    case UnitCon     => out.writeByte(2)
-    case Con(n)      => out.writeByte(3); n.serialize(out)
-    case TupleCon(n) => out.writeByte(4); out.writeInt(n)
-  }  
+    new IfacePred(Name.loadQual(in), Binary.loadList(load, in))
 }

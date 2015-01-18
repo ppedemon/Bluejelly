@@ -6,7 +6,7 @@
  */
 package bluejelly.bjc.core
 
-import bluejelly.bjc.ast.{GCon,UnitCon,TupleCon,ArrowCon,ListCon,Con}
+import bluejelly.bjc.common.{TcRef,ConRef,ListRef,UnitRef,ArrowRef,TupleRef}
 import bluejelly.bjc.common.{ExportInfo, ExportedId,ExportedTc,Fixity}
 import bluejelly.bjc.common.{Name,ScopedName}
 
@@ -61,9 +61,9 @@ object BuiltIns {
     wiredInTyCons.foldLeft(mod)(_ addTyCon _)
   }
 
-  def isWiredIn(con:GCon) = con match {
-    case UnitCon | ArrowCon | ListCon | TupleCon(_) => true
-    case Con(n) if n.name == nmBool => true
+  def isWiredIn(tcRef:TcRef) = tcRef match {
+    case UnitRef | ArrowRef | ListRef | TupleRef(_) => true
+    case ConRef(n) if n.name == nmBool => true
     case _ => false
   }
  
@@ -231,12 +231,12 @@ object BuiltIns {
   }
 
   private def listTyCon = {
-    val nilType = PolyTy(List(tyVar('a)), AppTy(TcTy(ListCon),tvTy('a)))
+    val nilType = PolyTy(List(tyVar('a)), AppTy(TcTy(ListRef),tvTy('a)))
 
     val consType = PolyTy(List(tyVar('a)), mkFun(List(
         tvTy('a), 
-        AppTy(TcTy(ListCon),tvTy('a)), 
-        AppTy(TcTy(ListCon),tvTy('a)))))
+        AppTy(TcTy(ListRef),tvTy('a)), 
+        AppTy(TcTy(ListRef),tvTy('a)))))
 
     val nil = DataCon(nmNil, nilType, Nil, Nil, 0)
     val cons = DataCon(nmCons, consType, List(false,false), Nil, 1)

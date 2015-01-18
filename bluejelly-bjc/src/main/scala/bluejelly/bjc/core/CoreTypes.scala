@@ -6,12 +6,12 @@
  */
 package bluejelly.bjc.core
 
-import bluejelly.bjc.ast.{GCon}
 import bluejelly.bjc.ast.decls.{Assoc,NoAssoc,LeftAssoc,RightAssoc}
 
+import bluejelly.bjc.common.TcRef
 import bluejelly.bjc.common.{ExportInfo,ExportedId,ExportedTc}
 import bluejelly.bjc.common.Fixity
-import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.{Name,QualName}
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.ScopedName
@@ -161,8 +161,8 @@ case class Cls(
  * @author ppedemon
  */
 class Inst(
-    val clsName:Name, 
-    val con:GCon, 
+    val clsName:QualName, 
+    val con:TcRef, 
     val dfunId:Id) extends PrettyPrintable {
 
   def ppr = gnest(

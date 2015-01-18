@@ -8,8 +8,9 @@
 package bluejelly.bjc.core
 
 import bluejelly.bjc.ast.{GCon,UnitCon,TupleCon,ArrowCon,ListCon,Con}
+import bluejelly.bjc.common.{TcRef,ConRef,ListRef,UnitRef,ArrowRef,TupleRef}
 
-import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.{QualName}
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
 import bluejelly.bjc.common.ScopedName
@@ -29,7 +30,7 @@ case object KStar extends Kind {
   def ppr = text("*") 
 }
 
-case class KVar(val name:Name) extends Kind{
+case class KVar(val name:Symbol) extends Kind{
   def ppr = name.ppr
 }
 
@@ -58,7 +59,7 @@ class TyVar(val name:ScopedName, val kind:Kind) extends PrettyPrintable {
  *
  * @author ppedemon
  */
-class TyPred(val n:Name, tys:List[Type]) extends PrettyPrintable {  
+class TyPred(val n:QualName, tys:List[Type]) extends PrettyPrintable {  
   def ppr = group(n.ppr :/: pprMany(tys))
 }
 
@@ -92,15 +93,15 @@ case class AppTy(val fun:Type, val arg:Type) extends Type {
   lazy val (head,allArgs) = Type.unwind(this)
 
   def isTuple = head match {
-    case TcTy(TupleCon(_)) => true
+    case TcTy(TupleRef(_)) => true
     case _ => false
   }
   def isFun = head match {
-    case TcTy(ArrowCon) => true
+    case TcTy(ArrowRef) => true
     case _ => false
   }
   def isList = fun match {
-    case TcTy(ListCon) => true
+    case TcTy(ListRef) => true
     case _ => false
   }
   
@@ -126,7 +127,7 @@ case class AppTy(val fun:Type, val arg:Type) extends Type {
     } 
 }
 
-case class TcTy(val con:GCon) extends Type { 
+case class TcTy(val con:TcRef) extends Type { 
   def ppr = con.ppr 
 }
 
@@ -145,12 +146,12 @@ object Type {
     args.foldLeft(fun)(AppTy(_,_))
   
   def mkFun(from:Type, to:Type) = 
-    AppTy(AppTy(TcTy(ArrowCon),from),to)  
+    AppTy(AppTy(TcTy(ArrowRef),from),to)  
     
   def mkFun(tys:List[Type]) = 
-    tys.reduceRight((x,y) => AppTy(AppTy(TcTy(ArrowCon),x),y)) 
+    tys.reduceRight((x,y) => AppTy(AppTy(TcTy(ArrowRef),x),y)) 
 
   def tyVar(n:Symbol, kind:Kind=KStar) = new TyVar(tvName(n),kind)
   def tvTy(n:Symbol) = new TvTy(tvName(n))
-  def conTy(n:Name) = new TcTy(Con(n))
+  def conTy(n:QualName) = new TcTy(ConRef(n))
 }

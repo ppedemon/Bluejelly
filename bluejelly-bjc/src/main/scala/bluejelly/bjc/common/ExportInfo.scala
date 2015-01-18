@@ -34,10 +34,10 @@ import java.io.{DataInputStream,DataOutputStream}
  *
  * @author ppedemon
  */
-abstract class ExportInfo(val name:Name) 
+abstract class ExportInfo(val name:QualName) 
   extends PrettyPrintable with Serializable 
 
-case class ExportedId(override val name:Name) extends ExportInfo(name) { 
+case class ExportedId(override val name:QualName) extends ExportInfo(name) { 
   def ppr = name.pprAsId
   def serialize(out:DataOutputStream) {
     out.writeByte(0)
@@ -46,8 +46,8 @@ case class ExportedId(override val name:Name) extends ExportInfo(name) {
 }
 
 case class ExportedTc(
-    override val name:Name, 
-    val children:List[Name]) extends ExportInfo(name) {
+    override val name:QualName, 
+    val children:List[QualName]) extends ExportInfo(name) {
 
   def exportsParent = children.head == name
 
@@ -72,7 +72,7 @@ case class ExportedTc(
 
 object ExportInfo extends Loadable[ExportInfo] {
   def load(in:DataInputStream) = in.readByte match {
-    case 0 => new ExportedId(Name.load(in))
-    case 1 => new ExportedTc(Name.load(in), Binary.loadList(Name.load, in))
+    case 0 => new ExportedId(Name.loadQual(in))
+    case 1 => new ExportedTc(Name.loadQual(in), Binary.loadList(Name.loadQual, in))
   }
 }

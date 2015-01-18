@@ -40,7 +40,7 @@ case class ImportedOrigin(val imp:ImpDecl) extends Origin {
  * @author ppedemon
  */
 class NameEntry(
-    val name:Name,        // *Qualified* name referred by this entry
+    val name:QualName,    // *Qualified* name referenced by this entry
     val impQual:Boolean,  // Is the entry imported as a qualified import?
     val impAs:Symbol,     // `as' qualified for the import, default to module name
     val origin:Origin) {
@@ -94,11 +94,9 @@ class NameTable(val nameTab:Map[ScopedName,Set[NameEntry]] = Map.empty) {
     nameTab + (sname -> (nameTab.get(sname).getOrElse(Set.empty) + entry))
   }
 
-  private def nameEntry(name:Name, imp:ImpDecl) = name match {
-    case LocalName(_) => sys.error("Unqualified export: %s" format name)
-    case QualName(q,n) =>
-      val origin = if (q == BuiltIns.wiredInModName) 
-        WiredInOrigin else ImportedOrigin(imp)
-      new NameEntry(name, imp.qualified, imp.alias.getOrElse(imp.modId), origin)
+  private def nameEntry(name:QualName, imp:ImpDecl) = {
+    val origin = if (name.qual == BuiltIns.wiredInModName) 
+      WiredInOrigin else ImportedOrigin(imp)
+    new NameEntry(name, imp.qualified, imp.alias.getOrElse(imp.modId), origin)
   } 
 }

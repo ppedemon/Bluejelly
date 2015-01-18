@@ -109,9 +109,12 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     })
 
     // Instances
-    iface.insts.foldLeft(m1)((modDefn,i) => 
-      modDefn.addInst(new Inst(i.name, i.con, ids(i.dfunId)))
-    )
+    iface.insts.foldLeft(m1)((modDefn,i) => { 
+      val id = ids(i.dfunId)
+      val inst = new Inst(i.name, i.con, id)
+      id.details = DFunId(inst)
+      modDefn.addInst(inst)
+    })
   }
 
   // Translate a dcons, the tycon field must be adjusted later
@@ -131,10 +134,7 @@ class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
     case IfacePolyTy(tvs, ty) => PolyTy(tvs map tyVar, translateTy(ty))
     case IfaceQualTy(ctx, ty) => QualTy(ctx map tyPred, translateTy(ty))
     case IfaceAppTy(fun, arg) => AppTy(translateTy(fun), translateTy(arg))
-    case IfaceTcTy(gcon) => gcon match {
-      case Con(n) if !n.isQual => throw new LoaderException(s"found non-qualified tycon: `$n'")
-      case _ => TcTy(gcon) 
-    } 
+    case IfaceTcTy(tcref) => TcTy(tcref)
     case IfaceTvTy(tv) => TvTy(tvName(tv)) 
   }
 

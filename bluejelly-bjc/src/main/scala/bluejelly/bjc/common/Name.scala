@@ -92,12 +92,13 @@ object Name extends Loadable[Name] {
   def tvName(name:Symbol) = localName(name, TvScope)
   def tvName(qual:Symbol, name:Symbol) = qualName(qual, name, TvScope)
 
-  def qualifier:PartialFunction[Name,Symbol] = _ match {
-    case QualName(q,_) => q
-  }
-
   def load(in:DataInputStream) = in.readByte() match {
     case 0 => new LocalName(ScopedName.load(in))
     case 1 => new QualName(Symbol(in.readUTF()), ScopedName.load(in))
   }
+
+  def loadQual(in:DataInputStream) = {
+    in.readByte();
+    new QualName(Symbol(in.readUTF()), ScopedName.load(in))
+  } 
 }

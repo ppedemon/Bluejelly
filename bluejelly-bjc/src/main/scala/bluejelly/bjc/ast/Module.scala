@@ -7,7 +7,7 @@
 package bluejelly.bjc.ast
 package module
 
-import bluejelly.bjc.common.Name
+import bluejelly.bjc.common.{Name,LocalName}
 import bluejelly.bjc.common.Name._
 import bluejelly.bjc.common.PprUtils._
 import bluejelly.bjc.common.PrettyPrintable
@@ -18,7 +18,7 @@ import bluejelly.utils.Document._
 import decls._
 
 // -----------------------------------------------------------------------
-// Syntax tree for module exports
+// Syntax tree fa module exports
 // -----------------------------------------------------------------------
 sealed trait ESpec extends AstElem;
 case class EVar(name:Name) extends ESpec {
@@ -46,17 +46,19 @@ case class ExportSome(es:List[ESpec]) extends Exports {
 // -----------------------------------------------------------------------
 // Syntax tree for module imports
 // -----------------------------------------------------------------------
-sealed abstract class ISpec(val name:Name) extends PrettyPrintable;
-case class IVar(override val name:Name) extends ISpec(name) {
+sealed abstract class ISpec(val name:LocalName) extends PrettyPrintable;
+case class IVar(override val name:LocalName) extends ISpec(name) {
   def ppr = asId(name).ppr
 }
-case class INone(override val name:Name) extends ISpec(name) {
+case class INone(override val name:LocalName) extends ISpec(name) {
   def ppr = name.ppr
 }
-case class IAll(override val name:Name) extends ISpec(name) {
+case class IAll(override val name:LocalName) extends ISpec(name) {
   def ppr = name.ppr :: text("(..)")
 }
-case class ISome(override val name:Name,children:List[Name]) extends ISpec(name) {
+case class ISome(
+    override val name:LocalName,
+    children:List[LocalName]) extends ISpec(name) {
   def ppr = name.ppr :: pprTuple(children map asId)
 }
 
