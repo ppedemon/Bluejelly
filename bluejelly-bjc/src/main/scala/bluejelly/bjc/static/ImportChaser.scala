@@ -260,9 +260,7 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
 
   // Remove the given names from the children of a ExportedTc
   private def remove(names:List[LocalName], e:ExportedTc) = {
-    val removed = e.children filterNot (n => {
-      names.contains(n.unqualify)
-    })
+    val removed = e.children filterNot (n => names.contains(n.unqualify))
     ExportedTc(e.name, removed)
   }
 
