@@ -1,11 +1,12 @@
 module A
-  (A.D(A.D,A.C,A.Y)       -- D(..)
+  (A.D(A.D,A.C,A.D)       -- D(..)
   ,A.C(A.C,A.op1,A.op2)   -- C(..)
-  ,A.Arrow(A.Arrow,A.arr) -- Arrow(..)
+  ,A.Arrow(A.arr)         -- *just* arr, *NOT* Arrow(arr)
   ,M.Color(M.Color,M.Red,M.Black)
+  ,A.id
   ) where
 
-data D a = C a | Y a
+data D a = C a | D a
 
 class C a where
   op1 :: a -> a
@@ -13,3 +14,5 @@ class C a where
 
 class Arrow a where
   arr :: a b c -> a b c -> a b c
+
+id :: a -> a

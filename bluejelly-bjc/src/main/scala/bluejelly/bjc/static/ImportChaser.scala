@@ -225,13 +225,14 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
   }
 
   // Remove occurrences of constructor name [[c]] from an export map
+  // Precondition: [[c]] belongs to the TcScope
   private def removeCon(c:LocalName, exps:Map[LocalName,ExportInfo]) = {
     exps.foldLeft(Map.empty[LocalName,ExportInfo])((m,kv) => {
       val k = kv._1
       kv._2 match {
         case e@ExportedId(_) => m + (k -> e)
         case e@ExportedTc(_,_) => 
-          val n_exp = remove(List(c),e)
+          val n_exp = remove(List(c,Name.idName(c.toSymbol)), e)
           if (n_exp.children.isEmpty) m else m + (k -> n_exp)
       }
     })
@@ -259,7 +260,9 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
 
   // Remove the given names from the children of a ExportedTc
   private def remove(names:List[LocalName], e:ExportedTc) = {
-    val removed = e.children filterNot (n => names.contains(n.unqualify))
+    val removed = e.children filterNot (n => {
+      names.contains(n.unqualify)
+    })
     ExportedTc(e.name, removed)
   }
 

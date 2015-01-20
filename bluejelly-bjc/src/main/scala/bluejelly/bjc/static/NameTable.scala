@@ -55,7 +55,7 @@ class NameEntry(
     31*(31*name.hashCode + impAs.hashCode) + impQual.hashCode
 
   override def toString() = 
-    "(%s%s) -> %s" format (if (impQual) "*" else "", impAs, name)
+    "(%s%s) = %s" format (if (impQual) "*" else "", impAs, name)
 }
 
 /**
@@ -85,7 +85,9 @@ class NameTable(val nameTab:Map[ScopedName,Set[NameEntry]] = Map.empty) {
 
   def hasName(n:Name) = nameTab.contains(n.name)
 
-  override def toString = nameTab.toString
+  override def toString = nameTab.filterNot(Function.tupled((n,s) =>
+    s.exists(e => e.name.qual.name startsWith "bluejelly")
+  )).toString
 
   private def addToNameTab(
       nameTab:Map[ScopedName,Set[NameEntry]], 
