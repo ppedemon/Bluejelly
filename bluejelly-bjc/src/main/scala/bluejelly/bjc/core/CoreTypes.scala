@@ -81,16 +81,12 @@ case class TySyn(
  */
 case class TyCon(
     override val name:ScopedName,
-    val ctx:List[TyPred],
     val tyvars:List[TyVar],
     val dcons:List[DataCon]) extends ModDecl(name) {
 
   def ppr = {
-    val dctx = if (ctx.isEmpty) empty else group(
-      (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
     val dlhs = gnest(cat(List(
-      text("data"), 
-      dctx, 
+      text("data"),
       if (tyvars.isEmpty) name.ppr else group(name.ppr :/: pprMany(tyvars)),
       if (dcons.isEmpty) empty else text("="))))
     gnest(cat(dlhs, pprMany(dcons, " |")))

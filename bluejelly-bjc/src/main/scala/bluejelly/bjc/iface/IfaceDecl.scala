@@ -72,15 +72,11 @@ case class IfaceId(
 
 case class IfaceTyCon(
     override val name:Symbol,
-    val ctx:List[IfacePred],
     val vars:List[IfaceTyVar], 
     val cons:List[IfaceDataCon]) extends IfaceDecl(name) {
   def ppr = {
-    val dctx = if (ctx.isEmpty) empty else group(
-      (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>"))
     val dlhs = gnest(cat(List(
-      text("data"), 
-      dctx, 
+      text("data"),
       if (vars.isEmpty) name.ppr else group(name.ppr :/: pprMany(vars)),
       if (cons.isEmpty) empty else text("="))))
     gnest(cat(dlhs, pprMany(cons, " |")))
@@ -89,7 +85,6 @@ case class IfaceTyCon(
   def serialize(out:DataOutputStream) {
     out.writeByte(1)
     name.serialize(out)
-    ctx.serialize(out)
     vars.serialize(out)
     cons.serialize(out)
   }
@@ -217,7 +212,6 @@ object IfaceDecl extends Loadable[IfaceDecl] {
     case 1 =>
       new IfaceTyCon(
           Binary.loadSymbol(in), 
-          Binary.loadList(IfaceType.loadPred, in), 
           Binary.loadList(IfaceType.loadTyVar, in), 
           Binary.loadList(loadIfaceDataCon, in))
     case 2 =>

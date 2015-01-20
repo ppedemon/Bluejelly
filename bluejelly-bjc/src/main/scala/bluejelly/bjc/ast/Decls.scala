@@ -128,16 +128,11 @@ case class TySynDecl(
 case class DataDecl(
     val n:Name, 
     val vars:List[Name], 
-    val ctx:Option[List[types.Pred]],
     val rhs:List[DCon],
     val derivings:List[Name]) extends TopDecl {
   def ppr = {
-    val dctx = ctx.map(ctx => group(
-      (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>")))
-      .getOrElse(empty)
     val dlhs = gnest(cat(List(
-        text("data"), 
-        dctx, 
+        text("data"),
         group(cat(n.ppr,pprMany(vars))),
         if (rhs.isEmpty) empty else text("="))))
     val drhs = pprMany(rhs," |")
@@ -155,16 +150,11 @@ case class DataDecl(
 case class NewTyDecl(
     val n:Name, 
     val vars:List[Name], 
-    val ctx:Option[List[types.Pred]],
     val rhs:DCon,
     val derivings:List[Name]) extends TopDecl {
   def ppr = {
-    val dctx = ctx.map(ctx => group(
-      (if (ctx.length == 1) ctx.head.ppr else pprTuple(ctx)) :/: text("=>")))
-      .getOrElse(empty)
     val dlhs = gnest(cat(List(
         text("newtype"), 
-        dctx, 
         group(cat(n.ppr,pprMany(vars))),
         text("="))))
     val ders = derivings match { 
@@ -215,18 +205,3 @@ case class InstDecl(
 case class DefaultDecl(val tys:List[types.Type]) extends TopDecl {
   def ppr = gnest("default" :/: par(pprMany(tys,",")))
 }
-
-/*
- * Primitive declarations
- */
-case class PrimDecl(
-    val prims:List[(Name,String)], 
-    val ty:Type) extends TopDecl {
-  def ppr = {
-    val ps = prims map Function.tupled((n,s) => new PrettyPrintable {
-      def ppr = group(n.ppr :/: pprStrLit(s)) 
-    })
-    gnest(group("primitive" :/: pprMany(ps,",")) :/: group("::" :/: ty.ppr))
-  }
-}
-

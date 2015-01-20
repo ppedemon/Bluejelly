@@ -10,7 +10,7 @@ f,g :: (Prelude.Eq a, Prelude.Ord a) =>
   ([bluejelly.String.String],bluejelly.Char.Char) -> 
   (bluejelly.Int.Int, bluejelly.Int.Int)
 
-data Simple.Eq a => Either a b = Left a | Right b
+data Either a b = Left a | Right b
 
 data Person = Manager {
     name   :: bluejelly.String.String, 
@@ -23,7 +23,7 @@ data Person = Manager {
   }
 
 -- Wtf?
-data Simple.Monad m => M m = M { x :: m a -> a }
+data M m = M { x :: m a -> a }
 
 class Functor m where
   map :: (a -> b) -> m a -> m b

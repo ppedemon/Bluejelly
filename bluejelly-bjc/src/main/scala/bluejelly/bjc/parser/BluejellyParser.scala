@@ -528,17 +528,15 @@ object BluejellyParser extends Parsers {
    case (conid~vs)~ty => new TySynDecl(conid,vs,ty)
   })
   
-  private def dataDecl = $(data ~>
-    ((context <~ implies)?) ~ tyLhs ~ (eq ~> constrs) ~ (derivings?) ^^ {
-      case preds~(conid~vs)~dcons~ds => 
-        new DataDecl(conid,vs,preds,dcons,ds.getOrElse(Nil))
+  private def dataDecl = $(data ~> tyLhs ~ (eq ~> constrs) ~ (derivings?) ^^ {
+      case (conid~vs)~dcons~ds => 
+        new DataDecl(conid,vs,dcons,ds.getOrElse(Nil))
     })
     
-  private def newtyDecl = $(newtype ~> 
-    (((context <~ implies)?) ~ tyLhs ~ (eq ~> constr) ~ (derivings?) ^^ {
-      case preds~(conid~vs)~dcon~ds => 
-        new NewTyDecl(conid,vs,preds,dcon,ds.getOrElse(Nil))
-    }))
+  private def newtyDecl = $(newtype ~> tyLhs ~ (eq ~> constr) ~ (derivings?) ^^ {
+      case (conid~vs)~dcon~ds => 
+        new NewTyDecl(conid,vs,dcon,ds.getOrElse(Nil))
+    })
   
   // ---------------------------------------------------------------------
   // Class and instances
@@ -567,25 +565,19 @@ object BluejellyParser extends Parsers {
   // Primitive declarations
   private def primDefn = 
     `var` ~ elem(_.isInstanceOf[StringLit]) ^^ { case v~StringLit(s) => (v,s) }   
-    
-  private def primDecl = 
-    (prim ~> rep1sep(primDefn,comma)) ~ (coco ~> `type`) ^^ {
-      case ps~ty => PrimDecl(ps,ty) 
-    }
 
   // ---------------------------------------------------------------------
   // Declarations
   // ---------------------------------------------------------------------
      
   private def topDecl = $(
-      synDecl     |
-      dataDecl    |
-      newtyDecl   |
-      classDecl   |
-      instDecl    |
-      defaultDecl |
-      primDecl)   | 
-      decl        | 
+      synDecl      |
+      dataDecl     |
+      newtyDecl    |
+      classDecl    |
+      instDecl     |
+      defaultDecl) | 
+      decl         | 
       lexError
       
   // Type signatures

@@ -212,19 +212,19 @@ object BuiltIns {
     ExportedId(Name.qualName(modName, op.name))
 
   private def primTyCon(name:ScopedName) =
-    TyCon(name, Nil, Nil, Nil)
+    TyCon(name, Nil, Nil)
 
   private def unitTyCon = 
     primTyCon(nmUnit)
  
   private def arrowTyCon = 
-    TyCon(nmArrow, Nil, List(tyVar('a),tyVar('b)), Nil) 
+    TyCon(nmArrow, List(tyVar('a),tyVar('b)), Nil) 
 
   private def boolTyCon = {
     val boolType = PolyTy(Nil,conTy(Name.qualName(wiredInModName, nmBool)))
     val `false` = DataCon(nmFalse, boolType, Nil, Nil, 0)
     val `true` = DataCon(nmTrue, boolType, Nil, Nil, 1)
-    val bool = TyCon(nmBool, Nil, Nil, List(`false`,`true`))
+    val bool = TyCon(nmBool, Nil, List(`false`,`true`))
     `false`.tycon = bool
     `true`.tycon = bool
     bool
@@ -240,7 +240,7 @@ object BuiltIns {
 
     val nil = DataCon(nmNil, nilType, Nil, Nil, 0)
     val cons = DataCon(nmCons, consType, List(false,false), Nil, 1)
-    val list = TyCon(nmList, Nil, List(tyVar('a)), List(nil,cons))
+    val list = TyCon(nmList, List(tyVar('a)), List(nil,cons))
     nil.tycon = list
     cons.tycon = list
     list
