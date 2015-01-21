@@ -56,7 +56,8 @@ case class ExportedTc(
       case Nil => 
         empty
       case _ if exportsParent => 
-        between("{",pprMany(children.tail.map(asId(_)),","),"}")
+        if (children.tail.isEmpty) empty else 
+          between("{",pprMany(children.tail.map(asId(_)),","),"}")
       case _ =>
         between("|{",pprMany(children.map(asId(_)),","),"}") 
     }
