@@ -141,6 +141,31 @@ class ImportTest extends FunSuite with TestResourceReader {
     })  
   }
 
+  test("Importing entities not fully exported must work") {
+    doImport("import A(Point)", (_,nameTab) => {
+      assert(nameTab.hasName(tcName('Point)))
+      assert(!nameTab.hasName(idName('P)))
+    })
+  }
+
+  test("Fully importing entities not fully exported must work") {
+    doImport("import A(Point(..))", (_,nameTab) => {
+      assert(nameTab.hasName(tcName('Point)))
+      assert(!nameTab.hasName(idName('P)))
+    })
+  }
+
+  test("Importing entities not fully exported using empty children lists must work") {
+    doImport("import A(Point())", (_,nameTab) => {
+      assert(nameTab.hasName(tcName('Point)))
+      assert(!nameTab.hasName(idName('P)))
+    })
+  }
+
+  test("Importing non-visible children must fail") {
+    doImport("import A(Point(P))", (bjc,_) => assert(bjc.hasErrors))
+  }
+
   // ---------------------------------------------------------------------
   // Hiding imports
   // ---------------------------------------------------------------------

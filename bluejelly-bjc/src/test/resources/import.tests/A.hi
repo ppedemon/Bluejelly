@@ -4,9 +4,12 @@ module A
   ,A.Arrow(A.arr)         -- *just* arr, *NOT* Arrow(arr)
   ,M.Color(M.Color,M.Red,M.Black)
   ,A.id
+  ,A.Point(A.Point)
   ) where
 
 data D a = C a | D a
+
+data Point a = P (a,a)
 
 class C a where
   op1 :: a -> a
