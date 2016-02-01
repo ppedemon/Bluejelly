@@ -555,17 +555,13 @@ object BluejellyParser extends Parsers {
   }
 
   // ---------------------------------------------------------------------
-  // Primitive and default declarations
+  // Default declarations
   // ---------------------------------------------------------------------
 
   // Default declarations
   private def defaultDecl = 
     default ~> lpar ~> repsep(`type`,comma) <~ rpar ^^ { DefaultDecl(_) }
   
-  // Primitive declarations
-  private def primDefn = 
-    `var` ~ elem(_.isInstanceOf[StringLit]) ^^ { case v~StringLit(s) => (v,s) }   
-
   // ---------------------------------------------------------------------
   // Declarations
   // ---------------------------------------------------------------------
@@ -623,8 +619,8 @@ object BluejellyParser extends Parsers {
     case g~e => new Guarded(g,e)
   }
 
-  private def funbind = funlhs ~ opt(coco ~> `type`) ~ rhs ~ wherePart ^^ {
-    case (f,args) ~ ty ~ rhs ~ w => FunBind(f,args,ty,rhs,w)
+  private def funbind = funlhs ~ rhs ~ wherePart ^^ {
+    case (f,args) ~ rhs ~ w => FunBind(f,args,rhs,w)
   }
     
   private def patbind = infixPat ~ rhs ~ wherePart ^^ {

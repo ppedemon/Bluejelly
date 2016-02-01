@@ -153,9 +153,9 @@ object ModIfaceParser {
     t.vars.foldRight(List.empty[IfaceId])((n,ids) => defs.contains(n) match {
       case true =>
         val idName = Symbol("$dm" + n)
-        val allTvs = tvs.toSet ++ tyVarsIn(t.ty)
-        val allPreds = pred::predsIn(modName, t.ty)
-        val idTy = mkTy(allTvs.toList, allPreds, convert(modName)(t.ty))
+        val innerTvs = tyVarsIn(t.ty) -- tvs
+        val innerTy = mkTy(innerTvs.toList, Nil, convert(modName)(t.ty))
+        val idTy = mkTy(tvs, List(pred), innerTy)
         IfaceId(idName, idTy, IfaceVanillaId) :: ids
       case false => ids
     })
@@ -171,8 +171,8 @@ object ModIfaceParser {
     val qctx = qualifyPred(modName, ctx)
     val ops = ds.foldRight[List[IfaceClsOp]](Nil)((d,ds) => d match {
       case decls.TySigDecl(ns,ty) =>
-        val allTvs = tvs.toSet ++ tyVarsIn(ty)
-        val opTy = mkTy(allTvs.toList, List(qctx), convert(modName)(ty))
+        val polyTvs = tyVarsIn(ty) -- tvs.toSet
+        val opTy = mkTy(polyTvs.toList, Nil, convert(modName)(ty))
         ns.map(n => new IfaceClsOp(n.toSymbol, opTy, defs.contains(n))) ++ ds
       case _ => ds
     })
@@ -291,7 +291,7 @@ object ModIfaceParser {
     val ctx = cls.ctx map (_ map mkPred(modName)) getOrElse Nil
     val pred = mkPred(modName)(cls.pred)
     val defs = cls.ds.foldRight[List[Name]](Nil)((d,ds) => d match {
-      case f@decls.FunBind(n,_,_,_,_) => n::ds 
+      case f@decls.FunBind(n,_,_,_) => n::ds 
       case _ => ds
     })
     val (ops,ids) = mkClsOps(modName, defs, tvs, pred, cls.ds)

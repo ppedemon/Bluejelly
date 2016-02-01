@@ -78,7 +78,7 @@ class NameTable(val nameTab:Map[ScopedName,Set[NameEntry]] = Map.empty) {
         addToNameTab(nameTab, nameEntry(n, imp))
       case ExportedTc(_,ns) => 
         ns.foldLeft(nameTab)((nameTab,n) => 
-          addToNameTab(nameTab,nameEntry(n,imp)))
+          addToNameTab(nameTab,nameEntry(n, imp)))
     })
     new NameTable(n_nameTab)
   }

@@ -60,12 +60,10 @@ object ProdLoader extends IfaceLoader {
  */
 class ModuleLoader(val loader:IfaceLoader = ProdLoader) {
 
-  def load(env:BjcEnv, modName:Symbol):BjcEnv = 
-    if (env.hasModDefn(modName)) env else {
-      val iface = loader.load(modName)
-      val modDefn = translate(iface)
-      iface.deps.foldLeft(env addModDefn modDefn)(load)
-    }
+  def load(modName:Symbol):ModDefn = {
+    val iface = loader.load(modName)
+    translate(iface)
+  }
 
   private def translate(iface:ModIface) = {    
     // Create fixity table

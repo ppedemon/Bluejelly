@@ -48,8 +48,8 @@ class Bjc(
   }
 
   def chaseImports(bjcEnv:BjcEnv, mod:module.Module) = {
-    val importChaser = new ImportChaser(loader, bjcErrs)
-    importChaser.chaseImports(bjcEnv, mod)    
+    val importChaser = new ImportChaser(bjcEnv)
+    importChaser.chaseImports(mod)    
   }
 
   def pipeline(r:Reader) {
@@ -58,8 +58,8 @@ class Bjc(
       val mod = bjcTry(parse(r)).get
       
       // Import chasing
-      val bjcEnv = BjcEnv(mod.name)
-      val (n_bjcEnv,nameTab) = bjcTry(chaseImports(bjcEnv, mod))
+      val bjcEnv = new BjcEnv(mod.name, bjcErrs, loader)
+      val nameTab = bjcTry(chaseImports(bjcEnv, mod))
 
       // TODO: add the rest...
       println(nameTab)

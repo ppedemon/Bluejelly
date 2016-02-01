@@ -59,6 +59,13 @@ import java.io.StringWriter
   // Import chasing errors
   // ---------------------------------------------------------------------
 
+  def implicitIfaceLoadError(modName:Symbol, msg:String) {
+    val d = gnest(
+      gnest("Failed to load interface for" :/: 
+        group(q(modName) :: text(":"))) :/: text(msg))
+    error(null, ppr(d))
+  }
+
   def ifaceLoadError(imp:module.ImpDecl, msg:String) {
     val d = gnest(
       gnest("Failed to load interface for" :/: 
@@ -71,5 +78,5 @@ import java.io.StringWriter
       :/: "does not export" :/: q(ispec))
     locError(imp.pos, d)
   }
- }
+}
  

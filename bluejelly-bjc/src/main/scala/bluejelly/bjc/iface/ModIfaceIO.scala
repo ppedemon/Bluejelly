@@ -81,10 +81,10 @@ private class IfaceWriter(
     cw:ClassWriter, 
     iface:ModIface) extends ClassAdapter(cw) {
 
-  private val bytes = ifaceBytes(iface) 
+  private lazy val bytes = ifaceBytes(iface) 
   
   override def visitEnd() {
-    val attr = new IfaceAttr(ifaceBytes(iface))
+    val attr = new IfaceAttr(bytes)
     super.visitAttribute(attr)
     super.visitEnd()
   }

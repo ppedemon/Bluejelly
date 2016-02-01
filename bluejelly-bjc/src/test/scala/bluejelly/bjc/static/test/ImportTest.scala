@@ -39,16 +39,15 @@ class ImportTest extends FunSuite with TestResourceReader {
         bjc.dumpErrors
         fail("Test failed")
       case Some(mod) =>
-        val bjcEnv = BjcEnv(Symbol(unnamed))
-        val (n_bjcEnv,nameTab) = bjc.chaseImports(bjcEnv, mod)
+        val bjcEnv = BjcEnv(mod.name, bjc.bjcErrs, bjc.loader)
+        val nameTab = bjc.chaseImports(bjcEnv, mod)
         if (bjc.hasErrors) {
           bjc.dumpErrors
           if (shouldFail) fail("Test failed")
         } else {
-          f(bjc,nameTab)
+          f(bjc, nameTab)
         }
     }
-
   }
 
   // ---------------------------------------------------------------------

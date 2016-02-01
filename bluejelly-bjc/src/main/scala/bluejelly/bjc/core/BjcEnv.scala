@@ -10,6 +10,8 @@ import bluejelly.bjc.ast.{UnitCon,TupleCon,ArrowCon,ListCon,Con}
 import bluejelly.bjc.common.{Name,QualName}
 import bluejelly.bjc.common.ScopedName
 
+import scala.collection.mutable.{Map => MutableMap}
+
 /**
  * The compiler environment. Everything of interest
  * during compilation is held in this class.
@@ -17,22 +19,32 @@ import bluejelly.bjc.common.ScopedName
  * @author ppedemon
  */
 class BjcEnv(
-    private val modName:Symbol, // Name of module being compiled
-    private val modEnv:Map[Symbol,ModDefn],
-    private val instEnv:Map[QualName,List[Inst]]) {
+  val modName: Symbol,
+  val bjcErrors:BjcErrors,
+  private val modLoader:ModuleLoader,
+  private val modEnv:MutableMap[Symbol,ModDefn] = MutableMap.empty,
+  private val globalInstEnv:MutableMap[QualName,List[Inst]] = MutableMap.empty) {
 
-  def this(modName:Symbol) = this(modName, Map.empty, Map.empty) 
+  @throws[LoaderException]
+  def load(modName:Symbol) {
+    if (!hasModDefn(modName)) {
+      val modDefn = modLoader.load(modName)
+      addModDefn(modDefn)    
+    }
+  }
 
-  def addModDefn(modDefn:ModDefn) = {
-    val n_modEnv = modEnv + (modDefn.name -> modDefn)
-    val n_instEnv = modDefn.insts.foldLeft(instEnv)((instEnv,inst) => {
-      instEnv + (inst.clsName -> (inst::instEnv.get(inst.clsName).getOrElse(Nil)))
-    })
-    new BjcEnv(modName, n_modEnv, n_instEnv)
+  private def addModDefn(modDefn:ModDefn) {
+    modEnv += (modDefn.name -> modDefn)
+    modDefn.insts.foreach {inst => 
+      globalInstEnv += (inst.clsName -> (inst::globalInstEnv.get(inst.clsName).getOrElse(Nil)))
+    }
   } 
   
-  def getModDefn(modName:Symbol) = modEnv(modName)
   def hasModDefn(modName:Symbol) = modEnv.contains(modName)
+  def getModDefn(modName:Symbol) = {
+    if (!hasModDefn(modName)) load(modName)
+    modEnv(modName)
+  }
 
   private def getModDecl[T <: ModDecl](
       extractor:PartialFunction[(ModDefn,ScopedName),T]):PartialFunction[QualName,T] = {
@@ -51,16 +63,15 @@ class BjcEnv(
     getModDecl({case (m,n) => m.getCls(n)})
   def getDataCon:PartialFunction[QualName,DataCon] = 
     getModDecl({case (m,n) => m.getDataCon(n)})
-
-  override def toString = modEnv.toString  
 }
 
 object BjcEnv {
-  def apply(modName:Symbol) = {
+  def apply(modName:Symbol, bjcErrors:BjcErrors, modLoader:ModuleLoader) = {
     val currMod = new ModDefn(modName)
-    val env = new BjcEnv(modName)
-      .addModDefn(BuiltIns.wiredInMod)
-      .addModDefn(currMod)
-    BuiltIns.primMods.foldLeft(env)(_ addModDefn _)
+    val env = new BjcEnv(modName, bjcErrors, modLoader)
+    env.addModDefn(BuiltIns.wiredInMod)
+    env.addModDefn(currMod)
+    BuiltIns.primMods.foreach(env.addModDefn(_))
+    env
   }
 }

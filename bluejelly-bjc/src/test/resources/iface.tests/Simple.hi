@@ -36,6 +36,9 @@ class Eq a where
   (==),(/=) :: a -> a -> bluejelly.Base.Bool
   x /= y = not (x == y)
 
+class C a where
+  c :: Eq b => b -> a -> a
+
 type Set a = [a]
 type Point = (bluejelly.Int.Int,bluejelly.Int.Int)
 

@@ -22,21 +22,19 @@ import scala.util.parsing.input.Position
  *
  * @author ppedemon
  */
-class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
+class ImportChaser(bjcEnv:BjcEnv) {
 
   /**
    * Chase imports for the given module.
-
-   * @return a [[GlobalEnv]] with the visible exports resulting
+   *
+   * @return a [[NameTable]] with the visible exports resulting
    * from processing the import declarations in the module
    */
-  def chaseImports(bjcEnv:BjcEnv, mod:module.Module):(BjcEnv,NameTable) = {
+  def chaseImports(mod:module.Module):NameTable = {
     val allImpDecls = addBuiltIns(mod.impDecls)
-    allImpDecls.foldLeft((bjcEnv,new NameTable())){
-      case ((bjcEnv,nt),imp) => 
-      val (n_bjcEnv,exps) = chaseOne(bjcEnv, imp)
-      val n_nt = nt.grow(exps,imp)
-      (n_bjcEnv, n_nt)
+    allImpDecls.foldLeft(new NameTable()){(nt,imp) =>
+      val exps = chaseOne(imp)
+      nt.grow(exps, imp)
     }
   }
 
@@ -60,17 +58,15 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
   }
 
   // Chase a single import declaration.
-  private def chaseOne(
-      env:BjcEnv,
-      imp:module.ImpDecl):(BjcEnv,List[ExportInfo]) = {
+  private def chaseOne(imp:module.ImpDecl):(List[ExportInfo]) = {
     try {
-      val n_env = modLoader.load(env, imp.modId)
-      val exps = visibleExports(imp, n_env.getModDefn(imp.modId).exports)
-      (n_env, normalizeExports(exps))
+      bjcEnv.load(imp.modId)
+      val exps = visibleExports(imp, bjcEnv.getModDefn(imp.modId).exports)
+      normalizeExports(exps)
     } catch {
       case e:LoaderException => 
-        errors.ifaceLoadError(imp, e.msg)
-        (env,List.empty)
+        bjcEnv.bjcErrors.ifaceLoadError(imp, e.msg)
+        List.empty
     }
   }
 
@@ -266,7 +262,7 @@ class ImportChaser(modLoader:ModuleLoader, errors:BjcErrors) {
 
   // Utility function for signaling an import error
   private def err(imp:module.ImpDecl, i:module.ISpec):Option[ExportInfo] = {
-    errors.ifaceImportError(imp, i)
+    bjcEnv.bjcErrors.ifaceImportError(imp, i)
     None
   }
 }
