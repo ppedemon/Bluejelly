@@ -109,8 +109,11 @@ object BluejellyBuild extends Build {
     id = "bluejelly-bjc",
     base = file("bluejelly-bjc"),
     settings = Project.defaultSettings ++ assemblySettings ++ Seq(
+      scalacOptions ++= Seq(
+        "-language:higherKinds"
+      ),
       initialize ~= { _ => sys.props("scalac.patmat.analysisBudget") = "off" },
-      libraryDependencies += Deps.scalaTest,
+      libraryDependencies ++= Seq(Deps.scalaz, Deps.scalazEffect, Deps.pickling, Deps.scalaTest),
       test in assembly := {},
       jarName in assembly := "%s-%s.jar" format (name.value,version.value),
       distTask
@@ -121,9 +124,12 @@ object BluejellyBuild extends Build {
    * Bag of dependency specifications.
    */
   private object Deps {
-    val asmWeb    = "asm" % "asm-all" % "3.2"
-    val junit     = "com.novocode" % "junit-interface" % "0.10-M1" % "test"
-    val scalaTest = "org.scalatest" %% "scalatest" % "1.9.1" % "test"
+    val asmWeb       = "asm" % "asm-all" % "3.2"
+    val scalaz       = "org.scalaz" %% "scalaz-core" % "7.2.0"
+    val scalazEffect = "org.scalaz" %% "scalaz-effect" % "7.2.0"
+    val pickling     = "org.scala-lang.modules" %% "scala-pickling" % "0.10.1"
+    val junit        = "com.novocode" % "junit-interface" % "0.10-M1" % "test"
+    val scalaTest    = "org.scalatest" %% "scalatest" % "1.9.1" % "test"
   }
 
   /**
