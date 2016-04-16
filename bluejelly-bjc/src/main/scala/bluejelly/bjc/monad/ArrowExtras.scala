@@ -13,6 +13,7 @@ trait ArrowLoop[=>:[_,_]] {
 trait ArrowPlus[=>:[_,_]] {
   def aempty[B,C](implicit A:Arrow[=>:]):B =>: C
   def aplus[B,C](f:B =>: C, g:B =>: C)(implicit A:Arrow[=>:]):B =>: C
+  def lazyplus[B,C](f: => (B =>: C), g: => (B =>: C))(implicit A:Arrow[=>:]):B =>: C
 }
 
 import KleisliArrow._
@@ -41,6 +42,7 @@ sealed trait KleisliArrowPlusInstance[M[_]] extends ArrowPlus[K[M]#t] {
 
   def aempty[B,C](implicit A:Arrow[=>:]):B =>: C = kleisli(_ => M.empty)
   def aplus[B,C](f:B =>: C, g:B =>: C)(implicit A:Arrow[=>:]):B =>: C = kleisli(b => M.plus(f(b), g(b)))
+  def lazyplus[B,C](f: => (B =>: C), g: => (B =>: C))(implicit A:Arrow[=>:]):B =>: C = kleisli(b => M.plus(f(b), g(b)))
 }
 
 object KleisliArrow {
@@ -76,7 +78,12 @@ object Test {
     }))))
   }
 
+  def testPlus(n:Int)(implicit P:ArrowPlus[K]) {
+    println(Seq.fill(10)(kfact).foldLeft[K[Int,Int]](P.aempty)(P.aplus)(n))
+  }
+
   def main(args:Array[String]) {
-    1 to 10 map kfact.run foreach println
+    1 to 10 map kfact foreach println
+    testPlus(5)
   }
 }

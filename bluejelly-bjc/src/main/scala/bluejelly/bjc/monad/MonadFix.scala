@@ -30,7 +30,7 @@ object MonadFixTest {
 
   def mfact(x:Int)(implicit MF:MonadFix[Option]):Option[Int] = {
     val rec:(=> (Int => Int)) => Option[Int => Int] = f => Monad[Option].point(x => if (x == 0) 1 else x*f.apply(x-1))
-    MF.mfix(rec) >>= (f => some(f(x)))
+    MF.mfix(rec) >>= (f => Monad[Option].point(f(x)))
   }
 
   def main(args:Array[String]) {
