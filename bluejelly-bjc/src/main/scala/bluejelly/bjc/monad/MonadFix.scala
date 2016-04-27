@@ -23,7 +23,7 @@ object MonadFixOption {
 }
 
 // -----------------------------------------------------------------------
-// Test it!
+// TODO: Remove tests
 // -----------------------------------------------------------------------
 object MonadFixTest {
   import MonadFixOption._
