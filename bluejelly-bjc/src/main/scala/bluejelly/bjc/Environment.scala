@@ -41,7 +41,7 @@ class Environment(
   types:Map[Qualified[ProperName[TypeName.type]], TypeConProps],
   dataConstructors:Map[Qualified[ProperName[ConstructorName.type]], DataConProps],
   typeSynonyms: Map[Qualified[ProperName[TypeName.type]], TypeSynProps],
-  typeClassDictionaries:Map[Option[ModuleName], Map[Qualified[ProperName[ClassName.type]], Map[Qualified[Ident], TypeClassDictionaryInScope]]],
+  typeClassDictionaries:Environment.DictsInScope,
   typeClasses:Map[Qualified[ProperName[ClassName.type]], TypeClassProps]) {
 
   def lookupConstructor(ctor:Qualified[ProperName[ConstructorName.type]]):DataConProps = 
@@ -59,6 +59,8 @@ class Environment(
 }
 
 object Environment {
+  type DictsInScope = Map[Option[ModuleName], Map[Qualified[ProperName[ClassName.type]], Map[Qualified[Ident], TypeClassDictionaryInScope]]]
+
   def primName[T <: ProperNameType](s:String):Qualified[ProperName[T]] = 
     Qualified(Some(Names.toModuleName(C.prim)), ProperName[T](s))
 
@@ -71,14 +73,21 @@ object Environment {
   val tyInt = primTy("Int")
   val tyBool = primTy("Bool")
   val tyList = primTy("List")
-  val tyTuple = primTy("Tuple")
 
   def isTypeOrApp(intended:Type, ty:Type):Boolean = ty match {
     case TypeApp(ty,_) => ty == intended
     case ty => ty == intended
   }
 
-  def isTuple2(ty:Type) = isTypeOrApp(tyTuple, ty)
+  def isTuple(ty:Type):Boolean = ty match {
+    case TypeApp(ty,_) => isTuple(ty)
+    case TupleConstructor(_) => true
+    case _ => false
+  }
+
+  def tupleConProps(tupleCon:TupleConstructor) =
+    TypeConProps(kind = Seq.fill(tupleCon.arity)(KStar).reduceRight[Kind](KFun(_,_)), typeKind = ExternData)
+
   def isFunction(ty:Type) = isTypeOrApp(tyFunction, ty)
   def isList(ty:Type) = isTypeOrApp(tyList, ty)
 
@@ -86,7 +95,6 @@ object Environment {
 
   def primTypes:Map[Qualified[ProperName[TypeName.type]], TypeConProps] = Map(
     primName("Function") -> TypeConProps(KFun(KStar, KFun(KStar, KStar)), ExternData),
-    primName("Tuple") -> TypeConProps(KFun(KStar, KFun(KStar, KStar)), ExternData),
     primName("List") -> TypeConProps(KFun(KStar, KStar), ExternData),
     primName("String") -> TypeConProps(KStar, ExternData),
     primName("Char") -> TypeConProps(KStar, ExternData),

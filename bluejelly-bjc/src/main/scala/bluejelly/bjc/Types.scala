@@ -33,6 +33,7 @@ case object TypeWildcard extends Type
 case class TUnknown(val n:Int) extends Type
 case class TypeVar(val name:String) extends Type
 case class TypeConstructor(val name:Qualified[ProperName[TypeName.type]]) extends Type
+case class TupleConstructor(val arity:Int) extends Type
 case class TypeApp(val ty0:Type, val ty1:Type) extends Type
 case class ForAll(val v:String, val ty:Type, val scope:Option[SkolemScope]) extends Type
 case class ConstrainedType(val constraints:Seq[Constraint], val ty:Type) extends Type
