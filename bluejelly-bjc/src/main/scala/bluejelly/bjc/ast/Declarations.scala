@@ -1,6 +1,6 @@
 package bluejelly.bjc.ast
 
-import scalaz._
+import scalaz._, Id._, syntax.functor._
 
 import bluejelly.bjc.{Environment,DataDeclType,NameKind}
 import bluejelly.bjc.Kind
@@ -117,9 +117,6 @@ case class TypeClassDictionary(self:Constraint, typeClassDictionaries:Environmen
 // Placeholder for a super class dictionary to be solved into a type class dictionary. 
 case class SuperClassDictionary(name:Qualified[ProperName[ClassName.type]], args:Seq[Type]) extends Expr
 
-// -----------------------------------------------------------------------
-// Auxiliary
-// -----------------------------------------------------------------------
 case class CaseAlternative(binders:Seq[Binder], body:Seq[(Expr,Expr)] \/ Expr)
 
 trait DoNotationElem
@@ -176,9 +173,6 @@ case class BindingGroupDecl(decls:Seq[(Ident, NameKind, Expr)]) extends Declarat
 
 case class PositionedDecl(pos:SourceSpan, decl:Declaration) extends Declaration
 
-// -----------------------------------------------------------------------
-// Auxiliary stuff for declarations
-// -----------------------------------------------------------------------
 trait FixityAlias
 case class AliasValue(ident:Ident) extends FixityAlias
 case class AliasConstructor(name:ProperName[ConstructorName.type]) extends FixityAlias
@@ -187,6 +181,38 @@ case class AliasType(name:ProperName[TypeName.type]) extends FixityAlias
 trait TypeInstanceBody
 case object DerivedInstance extends TypeInstanceBody
 case class ExplicitInstance(members:Seq[Declaration]) extends TypeInstanceBody
+
+object Declaration {
+  def foldFixityAlias[A](f:Ident => A)
+      (g:ProperName[ConstructorName.type] => A)
+      (h:ProperName[TypeName.type] => A)(alias:FixityAlias):A = alias match {
+    case AliasValue(ident) => f(ident)
+    case AliasConstructor(name) => g(name)
+    case AliasType(name) => h(name)
+  }
+
+  def getValueAlias(alias:FixityAlias):Option[Ident \/ ProperName[ConstructorName.type]] = alias match {
+    case AliasValue(ident) => Some(-\/(ident))
+    case AliasConstructor(name) => Some(\/-(name))
+    case _ => None
+  }
+
+  def getTypeAlias(alias:FixityAlias):Option[ProperName[TypeName.type]] = alias match {
+    case AliasType(name) => Some(name)
+    case _ => None
+  }
+
+  def traverseTypeInstanceBody[F[_]]
+    (f:Seq[Declaration] => F[Seq[Declaration]])
+    (t:TypeInstanceBody)
+    (implicit F:Applicative[F]):F[TypeInstanceBody] = t match {
+      case DerivedInstance => F.pure(t)
+      case ExplicitInstance(members) => f(members) map (ExplicitInstance.apply _)
+    }
+
+  def mapTypeInstanceBody(f:Seq[Declaration] => Seq[Declaration])(t:TypeInstanceBody):TypeInstanceBody = 
+    traverseTypeInstanceBody[Id](f)(t)
+}
 
 // -----------------------------------------------------------------------
 // Finally, top level modules
