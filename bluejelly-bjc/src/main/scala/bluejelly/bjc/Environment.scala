@@ -30,19 +30,19 @@ case object NewType extends DataDeclType
 // -----------------------------------------------------------------------
 // Environment
 // -----------------------------------------------------------------------
-case class NameProps(ty:Type, nameKind:NameKind, nameVisibility:NameVisibility)
-case class TypeConProps(kind:Kind, typeKind:TypeKind)
-case class DataConProps(dataDeclType:DataDeclType, tyconName:ProperName[TypeName.type], ty:Type, vars:Seq[Ident])
-case class TypeSynProps(vars:Seq[(String, Option[Kind])], ty:Type)
-case class TypeClassProps(vars:Seq[(String, Option[Kind])], members:Seq[(Ident,Type)], constraints:Seq[Constraint])
+case class NameProps(val ty:Type, val nameKind:NameKind, val nameVisibility:NameVisibility)
+case class TypeConProps(val kind:Kind, val typeKind:TypeKind)
+case class DataConProps(val dataDeclType:DataDeclType, val tyconName:ProperName[TypeName.type], val ty:Type, val vars:Seq[Ident])
+case class TypeSynProps(val vars:Seq[(String, Option[Kind])], val ty:Type)
+case class TypeClassProps(val vars:Seq[(String, Option[Kind])], val members:Seq[(Ident,Type)], val constraints:Seq[Constraint])
 
 class Environment(
-  names:Map[(ModuleName,Ident),NameProps],
-  types:Map[Qualified[ProperName[TypeName.type]], TypeConProps],
-  dataConstructors:Map[Qualified[ProperName[ConstructorName.type]], DataConProps],
-  typeSynonyms: Map[Qualified[ProperName[TypeName.type]], TypeSynProps],
-  typeClassDictionaries:Environment.DictsInScope,
-  typeClasses:Map[Qualified[ProperName[ClassName.type]], TypeClassProps]) {
+  val names:Map[(ModuleName,Ident),NameProps],
+  val types:Map[Qualified[ProperName[TypeName.type]], TypeConProps],
+  val dataConstructors:Map[Qualified[ProperName[ConstructorName.type]], DataConProps],
+  val typeSynonyms: Map[Qualified[ProperName[TypeName.type]], TypeSynProps],
+  val typeClassDictionaries:Environment.DictsInScope,
+  val typeClasses:Map[Qualified[ProperName[ClassName.type]], TypeClassProps]) {
 
   def lookupConstructor(ctor:Qualified[ProperName[ConstructorName.type]]):DataConProps = 
     dataConstructors.get(ctor) getOrElse Panic(s"Data constructor not found: ${ctor.showQualified(_.runProperName)}")

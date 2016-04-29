@@ -5,15 +5,15 @@ import bluejelly.bjc.Type
 
 trait Binder
 case object NullBinder extends Binder
-case class LiteralBinder(lit:Literal[Binder]) extends Binder
-case class VarBinder(ident:Ident) extends Binder
-case class ConstructorBinder(ctor:Qualified[ProperName[ConstructorName.type]], args:Seq[Binder]) extends Binder
-case class OpBinder(ident:Qualified[Ident]) extends Binder
-case class BinaryNoParensBinder(left:Binder, op:Binder, right:Binder) extends Binder
-case class ParensInBinder(binder:Binder) extends Binder
-case class NamedBinder(ident:Ident, binder:Binder) extends Binder
-case class PositionedBinder(posn:SourceSpan, binder:Binder) extends Binder
-case class TypedBinder(ty:Type, binder:Binder) extends Binder
+case class LiteralBinder(val lit:Literal[Binder]) extends Binder
+case class VarBinder(val ident:Ident) extends Binder
+case class ConstructorBinder(val ctor:Qualified[ProperName[ConstructorName.type]], val args:Seq[Binder]) extends Binder
+case class OpBinder(val ident:Qualified[Ident]) extends Binder
+case class BinaryNoParensBinder(val left:Binder, val op:Binder, val right:Binder) extends Binder
+case class ParensInBinder(val binder:Binder) extends Binder
+case class NamedBinder(val ident:Ident, val binder:Binder) extends Binder
+case class PositionedBinder(val posn:SourceSpan, val binder:Binder) extends Binder
+case class TypedBinder(val ty:Type, val binder:Binder) extends Binder
 
 object Binder {
   def binderNames(binder:Binder):Seq[Ident] = {
