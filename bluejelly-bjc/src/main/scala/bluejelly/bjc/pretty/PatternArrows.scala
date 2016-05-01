@@ -2,12 +2,14 @@ package bluejelly.bjc.pretty
 
 import scalaz._
 import scalaz.Kleisli._
+
 import syntax.arrow._
 import syntax.foldable1._
-import std.option._
 import syntax.std.option._
 
-import bluejelly.bjc.Fix._
+import std.option._
+import std.function._
+
 import bluejelly.bjc.monad.ArrowPlus
 import bluejelly.bjc.monad.KleisliArrow._
 
@@ -122,7 +124,7 @@ object TestPatternArrows {
     println(prettyPrint(Abs("x", Abs("y", Abs("z", App(App(Var("x"), Var("z")), App(Var("y"), Var("z"))))))))
     println(prettyPrint(App(Abs("x",Var("x")), Abs("x",Var("x")))))
 
-    val e = Bin(Bin(Const(1),'-',Const(2)),'-', Bin(Const(1),'-',Const(2)))
+    val e = Bin(Bin(Const(1),'+',Const(2)),'-', Bin(Const(1),'-',Const(2)))
     println(pprEqn(e))
   }
 }

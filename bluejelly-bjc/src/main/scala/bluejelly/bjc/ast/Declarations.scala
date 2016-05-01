@@ -168,7 +168,7 @@ case class TypeInstanceDeclaration(
 case class FixityDeclaration(
   val fixity:Fixity, 
   val op:String, 
-  val alias:Option[Qualified[FixityAlias]]) extends Declaration
+  val aliased:Option[Qualified[FixityAlias]]) extends Declaration
 
 case class TypeDeclaration(val ident:Ident, val ty:Type) extends Declaration
 
