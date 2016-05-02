@@ -1,6 +1,6 @@
 package bluejelly.bjc
 
-import bluejelly.bjc.{Constants => C}
+import bluejelly.bjc.{Constants => C}, Types._
 
 // -----------------------------------------------------------------------
 // Auxiliary definitions
@@ -103,5 +103,16 @@ object Environment {
     primName("Bool") -> TypeConProps(KStar, ExternData)  
   )
 
-  def initEnvironment = new Environment(Map(), primTypes, Map(), Map(), Map(), Map())
+  def primDataCons:Map[Qualified[ProperName[ConstructorName.type]], DataConProps] = {
+    def listOf(a:String) = TypeApp(tyList, TypeVar(a))
+    val listName = ProperName[TypeName.type]("List")
+    val tyNil = mkForAll(Seq("a"), listOf("a"))
+    val tyCons = mkForAll(Seq("a"), function(TypeVar("a"), function(listOf("a"), listOf("a"))))
+    Map(
+      primName("Nil") -> DataConProps(Data, listName, tyNil, Seq()),
+      primName("Cons") -> DataConProps(Data, listName, tyCons, Seq(Id("a")))
+    )
+  }
+
+  def initEnvironment = new Environment(Map(), primTypes, primDataCons, Map(), Map(), Map())
 }
